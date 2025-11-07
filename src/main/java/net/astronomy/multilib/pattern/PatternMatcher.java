@@ -4,15 +4,19 @@ import net.astronomy.multilib.utils.RotationUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
-import java.util.*;
 
 /**
- * PatternMatch — detects whether a given PatternManager structure exists in the world.
+ * PatternMatcher — detects whether a given PatternManager structure exists in the world
  */
 public class PatternMatcher {
 
-    /** Try to find a matching structure around the placed block. */
+    /**
+     * Attempts to find the origin of a pattern around the placed block
+     * @param level The world level
+     * @param placedPos The placed block position
+     * @param pattern The pattern definition
+     * @return The origin position if matched, or null if no match
+     */
     public static BlockPos matches(ServerLevel level, BlockPos placedPos, PatternManager pattern) {
         int layersCount = pattern.getLayerCount();
         int topLayer = layersCount - 1;
@@ -30,41 +34,53 @@ public class PatternMatcher {
                     char symbol = line.charAt(col);
                     if (symbol == ' ' || !blockMap.containsKey(symbol)) continue;
 
-                    // Candidate origin
                     int originX = placedPos.getX() - (col - centerX);
                     int originY = placedPos.getY() - (layerIndex - topLayer);
                     int originZ = placedPos.getZ() - (row - centerZ);
                     BlockPos origin = new BlockPos(originX, originY, originZ);
 
-                    // Check all 4 rotations
-                    for (int rotation = 0; rotation < 4; rotation++) {
-                        if (matchesWithRotation(level, origin, rotation, pattern)) {
-                            return origin;
-                        }
+                    if (matchesWithAllTransforms(level, origin, pattern)) {
+                        return origin;
                     }
                 }
             }
         }
 
-        return null; // no match
+        return null;
     }
 
-    private static boolean matchesAt(ServerLevel level, BlockPos origin, PatternManager pattern) {
+    /**
+     * Checks all transformations allowed by the pattern configuration
+     */
+    private static boolean matchesWithAllTransforms(ServerLevel level, BlockPos origin, PatternManager pattern) {
+        boolean allowVertical = pattern.allowsVerticalRotation();
+
         for (int rotation = 0; rotation < 4; rotation++) {
-            if (matchesWithRotation(level, origin, rotation, pattern)) {
+            if (matchesTransformed(level, origin, pattern, rotation, false, false, "X"))
                 return true;
+
+            if (allowVertical) {
+                if (matchesTransformed(level, origin, pattern, rotation, false, true, "X"))
+                    return true;
+                if (matchesTransformed(level, origin, pattern, rotation, false, true, "Z"))
+                    return true;
             }
         }
+
         return false;
     }
 
-    public static boolean matchesWithRotation(ServerLevel level, BlockPos origin, int rotation, PatternManager pattern) {
+    /**
+     * Performs a detailed block-by-block comparison using transformation parameters
+     */
+    public static boolean matchesTransformed(ServerLevel level, BlockPos origin, PatternManager pattern,
+                                             int rotation, boolean mirror, boolean vertical, String axis) {
         int layersCount = pattern.getLayerCount();
-        List<List<String>> layers = pattern.getLayers();
-        Map<Character, Block> blockMap = pattern.getBlockMap();
+        var layers = pattern.getLayers();
+        var blockMap = pattern.getBlockMap();
 
         for (int yOffset = 0; yOffset < layersCount; yOffset++) {
-            List<String> layer = layers.get(yOffset);
+            var layer = layers.get(yOffset);
             int height = layer.size();
             int width = layer.getFirst().length();
             int centerX = width / 2;
@@ -80,12 +96,31 @@ public class PatternMatcher {
                     if (expected == null) continue;
 
                     int relX = col - centerX;
+                    int relY = yOffset - (layersCount - 1);
                     int relZ = row - centerZ;
-                    int[] rotated = RotationUtils.rotate(relX, relZ, rotation);
-                    BlockPos checkPos = origin.offset(rotated[0], yOffset - (layersCount - 1), rotated[1]);
-                    BlockState state = level.getBlockState(checkPos);
 
-                    if (!state.is(expected)) return false;
+                    if (vertical) {
+                        switch (axis.toUpperCase()) {
+                            case "X" -> {
+                                int temp = relY;
+                                relY = relZ;
+                                relZ = temp;
+                            }
+                            case "Z" -> {
+                                int temp = relY;
+                                relY = relX;
+                                relX = temp;
+                            }
+                        }
+                    }
+
+                    int[] transformed = RotationUtils.transform(relX, relY, relZ, rotation, vertical, axis);
+                    BlockPos checkPos = origin.offset(transformed[0], transformed[1], transformed[2]);
+                    var state = level.getBlockState(checkPos);
+
+                    if (!state.is(expected)) {
+                        return false;
+                    }
                 }
             }
         }
