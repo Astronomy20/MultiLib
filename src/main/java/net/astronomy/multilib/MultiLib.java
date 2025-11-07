@@ -41,7 +41,10 @@ public class MultiLib {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-
+        event.enqueueWork(() -> {
+            net.astronomy.multilib.pattern.ExamplePattern.registerAll();
+            LOGGER.info("All patterns loaded");
+        });
     }
 
     // Add the example block item to the building blocks tab

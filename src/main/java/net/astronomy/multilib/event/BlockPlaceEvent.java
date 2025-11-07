@@ -23,12 +23,15 @@ public class BlockPlaceEvent {
         Block block = event.getPlacedBlock().getBlock();
 
         List<PatternManager> patterns = PatternRegistry.getPatternsFor(block);
+
         for (PatternManager pattern : patterns) {
             BlockPos origin = PatternMatcher.matches(level, pos, pattern);
             if (origin != null) {
+
                 PatternAction action = pattern.getAction();
-                if (action != null) action.onMatch(level, origin);
-                PatternAction.clearStructure(level, origin, pattern);
+                if (action != null) {
+                    action.onMatch(level, origin);
+                }
                 break;
             }
         }
