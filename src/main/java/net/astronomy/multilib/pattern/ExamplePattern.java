@@ -1,21 +1,19 @@
 package net.astronomy.multilib.pattern;
 
+import net.astronomy.multilib.pattern.type.SummonPattern;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Blocks;
 
 public class ExamplePattern {
     public static void registerAll() {
-        PatternManager testPattern = PatternManager.pattern2D()
+        PatternBuilder builder = PatternManager.pattern2D()
                 .key('D', Blocks.DIAMOND_BLOCK)
-                .layer(
-                        " D ",
-                        "DDD",
-                        " D "
-                )
-                .action((level, origin) -> {
-                    System.out.println("WORKED!");
-                })
-                .build();
+                .key('O', Blocks.OBSIDIAN)
+                .layer(" D ",
+                        "DDO",
+                        " D ")
+                .allowVerticalRotation(true);
 
-        PatternRegistry.register(testPattern, testPattern.getAction());
+        PatternManager pattern = builder.action(new SummonPattern(EntityType.ZOMBIE, true, builder.build())).build();
     }
 }

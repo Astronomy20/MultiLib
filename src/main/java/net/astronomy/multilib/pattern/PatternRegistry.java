@@ -4,7 +4,7 @@ import java.util.*;
 import net.minecraft.world.level.block.Block;
 
 /**
- * PatternRegistry — manages all pattern registrations and actions.
+ * PatternRegistry — manages all pattern registrations and actions
  */
 public class PatternRegistry {
 

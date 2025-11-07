@@ -27,7 +27,6 @@ public class BlockPlaceEvent {
         for (PatternManager pattern : patterns) {
             BlockPos origin = PatternMatcher.matches(level, pos, pattern);
             if (origin != null) {
-
                 PatternAction action = pattern.getAction();
                 if (action != null) {
                     action.onMatch(level, origin);

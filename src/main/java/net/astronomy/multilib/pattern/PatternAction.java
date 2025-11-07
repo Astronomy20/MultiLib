@@ -8,42 +8,47 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 /**
- * PatternAction — defines what happens when a pattern is matched.
- * Provides optional utilities for manipulating or clearing patterns.
+ * PatternAction — defines what happens when a pattern is matched
  */
 @FunctionalInterface
 public interface PatternAction {
 
-    /**
-     * Called when the pattern is successfully matched in the world.
-     *
-     * @param level  The world (server side)
-     * @param origin The origin position of the matched structure
-     */
     void onMatch(ServerLevel level, BlockPos origin);
 
-    // ───────────────────────────────
-    // UTILITY HELPERS
-    // ───────────────────────────────
-
     /**
-     * Clears the structure of a given pattern from the world,
-     * only if the structure still matches (via PatternMatcher).
+     * Clears the pattern structure from the world,
+     * supporting horizontal, mirrored, and vertical rotations
      */
     static void clearStructure(ServerLevel level, BlockPos origin, PatternManager pattern) {
+        boolean allowVertical = pattern.allowsVerticalRotation();
+
         for (int rotation = 0; rotation < 4; rotation++) {
-            if (PatternMatcher.matchesWithRotation(level, origin, rotation, pattern)) {
-                removeBlocks(level, origin, rotation, pattern);
+            if (PatternMatcher.matchesTransformed(level, origin, pattern, rotation, false, false, "X")) {
+                removeBlocks(level, origin, pattern, rotation, false, "X");
                 return;
+            }
+
+            if (allowVertical) {
+                if (PatternMatcher.matchesTransformed(level, origin, pattern, rotation, false, true, "X")) {
+                    removeBlocks(level, origin, pattern, rotation, true, "X");
+                    return;
+                }
+
+                if (PatternMatcher.matchesTransformed(level, origin, pattern, rotation, false, true, "Z")) {
+                    removeBlocks(level, origin, pattern, rotation, true, "Z");
+                    return;
+                }
             }
         }
     }
 
     /**
-     * Removes the blocks of a given pattern (no validation).
-     * Use {@link #clearStructure} if you want it to check first.
+     * Removes blocks according to transformation rules (horizontal, mirrored, vertical)
      */
-    private static void removeBlocks(ServerLevel level, BlockPos origin, int rotation, PatternManager pattern) {
+    private static void removeBlocks(ServerLevel level, BlockPos origin,
+                                     PatternManager pattern,
+                                     int rotation, boolean vertical, String axis) {
+
         int layersCount = pattern.getLayerCount();
 
         for (int yOffset = 0; yOffset < layersCount; yOffset++) {
@@ -60,22 +65,49 @@ public interface PatternAction {
                     if (symbol == ' ') continue;
 
                     int relX = col - centerX;
+                    int relY = yOffset - (layersCount - 1);
                     int relZ = row - centerZ;
-                    int[] rotated = RotationUtils.rotate(relX, relZ, rotation);
-                    BlockPos target = origin.offset(rotated[0], yOffset - (layersCount - 1), rotated[1]);
+
+                    if (vertical) {
+                        switch (axis.toUpperCase()) {
+                            case "X" -> {
+                                int temp = relY;
+                                relY = relZ;
+                                relZ = temp;
+                            }
+                            case "Z" -> {
+                                int temp = relY;
+                                relY = relX;
+                                relX = temp;
+                            }
+                        }
+                    }
+
+                    int[] transformed = RotationUtils.transform(relX, relY, relZ, rotation, vertical, axis);
+                    BlockPos target = origin.offset(transformed[0], transformed[1], transformed[2]);
                     level.removeBlock(target, false);
                 }
             }
         }
     }
 
-    /** Spawn visual feedback when a pattern activates */
+    /** Spawns particles when the pattern activates */
     static void spawnParticles(ServerLevel level, BlockPos origin) {
-        level.sendParticles(ParticleTypes.END_ROD, origin.getX(), origin.getY() + 1, origin.getZ(), 20, 0.3, 0.3, 0.3, 0);
+        level.sendParticles(
+                ParticleTypes.END_ROD,
+                origin.getX() + 0.5, origin.getY() + 1.0, origin.getZ() + 0.5,
+                10, 0.3, 0.3, 0.3, 0
+        );
     }
 
-    /** Play sound feedback when a pattern activates */
+    /** Plays sound when the pattern activates */
     static void playSound(ServerLevel level, BlockPos origin) {
-        level.playSound(null, origin, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 1.0F);
+        level.playSound(
+                null,
+                origin,
+                SoundEvents.AMETHYST_BLOCK_CHIME,
+                SoundSource.BLOCKS,
+                1.0F, 1.0F
+        );
     }
 }
