@@ -1,5 +1,6 @@
 package net.astronomy.multilib;
 
+import net.astronomy.multilib.pattern.type.ExamplePattern;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -42,7 +43,7 @@ public class MultiLib {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            net.astronomy.multilib.pattern.ExamplePattern.registerAll();
+            ExamplePattern.registerAll();
             LOGGER.info("All patterns loaded");
         });
     }
