@@ -9,10 +9,13 @@ public class ExamplePattern {
         PatternBuilder builder = PatternManager.pattern()
                 .key('D', Blocks.DIAMOND_BLOCK)
                 .key('O', Blocks.OBSIDIAN)
+                .key('E', Blocks.EMERALD_BLOCK)
                 .layer(" D ",
-                        "DDO",
+                        "EDO",
                         " D ")
-                .allowVerticalRotation(true);
+                .allowVerticalRotation(true)
+                .allowSideRotation(false)
+                .allowUpsideDown(false);
 
         PatternManager pattern = builder.action(new SummonPattern(EntityType.ZOMBIE, true, builder.build())).build();
     }
