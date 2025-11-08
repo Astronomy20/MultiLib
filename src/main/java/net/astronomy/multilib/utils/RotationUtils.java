@@ -63,20 +63,21 @@ public class RotationUtils {
 
         switch (axis.toUpperCase()) {
             case "X" -> {
-                for (int i = 0; i < rotation; i++) {
-                    int temp = newY;
-                    newY = -newZ;
-                    newZ = temp;
+                rotation = rotation % 4;
+                switch (rotation) {
+                    case 1 -> { int t = newY; newY = -newZ; newZ = t; }
+                    case 2 -> { newY = -newY; newZ = -newZ; }
+                    case 3 -> { int t = newY; newY = newZ; newZ = -t; }
                 }
             }
             case "Z" -> {
-                for (int i = 0; i < rotation; i++) {
-                    int temp = newX;
-                    newX = -newY;
-                    newY = temp;
+                rotation = rotation % 4;
+                switch (rotation) {
+                    case 1 -> { int t = newY; newY = newX; newX = -t; }
+                    case 2 -> { newY = -newY; newX = -newX; }
+                    case 3 -> { int t = newY; newY = -newX; newX = t; }
                 }
             }
-            default -> {}
         }
 
         return new int[]{newX, newY, newZ};
