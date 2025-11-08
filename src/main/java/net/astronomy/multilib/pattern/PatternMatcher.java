@@ -11,17 +11,23 @@ import net.minecraft.world.level.block.Block;
 public class PatternMatcher {
 
     /**
+     * Result of a pattern match, containing the origin and transformation used
+     */
+    public record MatchResult(BlockPos origin, PatternAction.TransformData transform) {}
+
+    /**
      * Attempts to find the origin of a pattern around the placed block
      * @param level The world level
      * @param placedPos The placed block position
      * @param pattern The pattern definition
-     * @return The origin position if matched, or null if no match
+     * @return The match result if found, or null if no match
      */
-    public static BlockPos matches(ServerLevel level, BlockPos placedPos, PatternManager pattern) {
+    public static MatchResult matches(ServerLevel level, BlockPos placedPos, PatternManager pattern) {
         int layersCount = pattern.getLayerCount();
         int topLayer = layersCount - 1;
         var layers = pattern.getLayers();
         var blockMap = pattern.getBlockMap();
+        boolean allowVertical = pattern.allowsVerticalRotation();
 
         for (int layerIndex = 0; layerIndex < layersCount; layerIndex++) {
             var layer = layers.get(layerIndex);
@@ -39,8 +45,31 @@ public class PatternMatcher {
                     int originZ = placedPos.getZ() - (row - centerZ);
                     BlockPos origin = new BlockPos(originX, originY, originZ);
 
-                    if (matchesWithAllTransforms(level, origin, pattern)) {
-                        return origin;
+                    MatchResult result = matchesWithAllTransforms(level, origin, pattern, false);
+                    if (result != null) {
+                        return result;
+                    }
+
+                    if (allowVertical) {
+                        origin = new BlockPos(
+                                placedPos.getX() - (col - centerX),
+                                placedPos.getY() - (row - centerZ),
+                                placedPos.getZ() - (layerIndex - topLayer)
+                        );
+                        result = matchesWithAllTransforms(level, origin, pattern, true);
+                        if (result != null) {
+                            return result;
+                        }
+
+                        origin = new BlockPos(
+                                placedPos.getX() - (layerIndex - topLayer),
+                                placedPos.getY() - (col - centerX),
+                                placedPos.getZ() - (row - centerZ)
+                        );
+                        result = matchesWithAllTransforms(level, origin, pattern, true);
+                        if (result != null) {
+                            return result;
+                        }
                     }
                 }
             }
@@ -52,29 +81,35 @@ public class PatternMatcher {
     /**
      * Checks all transformations allowed by the pattern configuration
      */
-    private static boolean matchesWithAllTransforms(ServerLevel level, BlockPos origin, PatternManager pattern) {
-        boolean allowVertical = pattern.allowsVerticalRotation();
-
+    private static MatchResult matchesWithAllTransforms(ServerLevel level, BlockPos origin, PatternManager pattern, boolean checkVertical) {
         for (int rotation = 0; rotation < 4; rotation++) {
-            if (matchesTransformed(level, origin, pattern, rotation, false, false, "X"))
-                return true;
-
-            if (allowVertical) {
-                if (matchesTransformed(level, origin, pattern, rotation, false, true, "X"))
-                    return true;
-                if (matchesTransformed(level, origin, pattern, rotation, false, true, "Z"))
-                    return true;
+            if (matchesTransformed(level, origin, pattern, rotation, false, "Y")) {
+                return new MatchResult(origin, new PatternAction.TransformData(rotation, false, "Y"));
             }
         }
 
-        return false;
+        if (checkVertical && pattern.allowsVerticalRotation()) {
+            for (int rotation = 0; rotation < 4; rotation++) {
+                if (matchesTransformed(level, origin, pattern, rotation, true, "X")) {
+                    return new MatchResult(origin, new PatternAction.TransformData(rotation, true, "X"));
+                }
+            }
+
+            for (int rotation = 0; rotation < 4; rotation++) {
+                if (matchesTransformed(level, origin, pattern, rotation, true, "Z")) {
+                    return new MatchResult(origin, new PatternAction.TransformData(rotation, true, "Z"));
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
      * Performs a detailed block-by-block comparison using transformation parameters
      */
     public static boolean matchesTransformed(ServerLevel level, BlockPos origin, PatternManager pattern,
-                                             int rotation, boolean mirror, boolean vertical, String axis) {
+                                             int rotation, boolean vertical, String axis) {
         int layersCount = pattern.getLayerCount();
         var layers = pattern.getLayers();
         var blockMap = pattern.getBlockMap();
@@ -100,21 +135,22 @@ public class PatternMatcher {
                     int relZ = row - centerZ;
 
                     if (vertical) {
+                        int temp;
                         switch (axis.toUpperCase()) {
                             case "X" -> {
-                                int temp = relY;
-                                relY = relZ;
+                                temp = relY;
+                                relY = -relZ;
                                 relZ = temp;
                             }
                             case "Z" -> {
-                                int temp = relY;
-                                relY = relX;
-                                relX = temp;
+                                temp = relX;
+                                relX = -relY;
+                                relY = temp;
                             }
                         }
                     }
 
-                    int[] transformed = RotationUtils.transform(relX, relY, relZ, rotation, vertical, axis);
+                    int[] transformed = RotationUtils.transform(relX, relY, relZ, rotation, false, axis);
                     BlockPos checkPos = origin.offset(transformed[0], transformed[1], transformed[2]);
                     var state = level.getBlockState(checkPos);
 
