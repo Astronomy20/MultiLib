@@ -10,13 +10,19 @@ public class PatternManager {
     private final PatternAction action;
     private final boolean allowsHorizontalRotation;
     private final boolean allowVerticalRotation;
+    private final boolean allowSideRotation;
+    private final boolean allowUpsideDown;
 
-    PatternManager(Map<Character, Block> blockMap, List<List<String>> layers, PatternAction action, boolean allowsHorizontalRotation,boolean allowVerticalRotation) {
+    PatternManager(Map<Character, Block> blockMap, List<List<String>> layers, PatternAction action,
+                   boolean allowsHorizontalRotation, boolean allowVerticalRotation,
+                   boolean allowSideRotation, boolean allowUpsideDown) {
         this.blockMap = Map.copyOf(blockMap);
         this.layers = List.copyOf(layers);
         this.action = action;
         this.allowsHorizontalRotation = allowsHorizontalRotation;
         this.allowVerticalRotation = allowVerticalRotation;
+        this.allowSideRotation = allowSideRotation;
+        this.allowUpsideDown = allowUpsideDown;
     }
 
     public Map<Character, Block> getBlockMap() {
@@ -49,6 +55,14 @@ public class PatternManager {
 
     public boolean allowsVerticalRotation() {
         return allowVerticalRotation;
+    }
+
+    public boolean allowsSideRotation() {
+        return allowSideRotation;
+    }
+
+    public boolean allowsUpsideDown() {
+        return allowUpsideDown;
     }
 
     public static PatternBuilder pattern() {

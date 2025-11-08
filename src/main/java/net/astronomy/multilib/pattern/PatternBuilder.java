@@ -13,6 +13,8 @@ public class PatternBuilder {
     private PatternAction action;
     private boolean allowHorizontalRotation = true;
     private boolean allowVerticalRotation = false;
+    private boolean allowSideRotation = false;
+    private boolean allowUpsideDown = false;
 
     public PatternBuilder() {}
 
@@ -41,12 +43,34 @@ public class PatternBuilder {
         return this;
     }
 
+    public PatternBuilder allowSideRotation(boolean value) {
+        this.allowSideRotation = value;
+        return this;
+    }
+
+    public PatternBuilder allowUpsideDown(boolean value) {
+        this.allowUpsideDown = value;
+        return this;
+    }
+
     public PatternManager build() {
         if (layers.isEmpty()) {
             throw new IllegalStateException("Pattern must have at least one layer!");
         }
 
-        PatternManager pattern = new PatternManager(blockMap, layers, action, allowHorizontalRotation, allowVerticalRotation);
+        if ((allowSideRotation || allowUpsideDown) && !allowVerticalRotation) {
+            throw new IllegalStateException("Side rotation and upside-down rotation require vertical rotation to be enabled!");
+        }
+
+        PatternManager pattern = new PatternManager(
+                blockMap,
+                layers,
+                action,
+                allowHorizontalRotation,
+                allowVerticalRotation,
+                allowSideRotation,
+                allowUpsideDown
+        );
 
         if (action != null) {
             PatternRegistry.register(pattern, action);
