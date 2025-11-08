@@ -10,14 +10,11 @@ public class PatternBuilder {
 
     private final Map<Character, Block> blockMap = new HashMap<>();
     private final List<List<String>> layers = new ArrayList<>();
-    private final boolean is3D;
     private PatternAction action;
-    private boolean allowMirror = false;
+    private boolean allowHorizontalRotation = true;
     private boolean allowVerticalRotation = false;
 
-    public PatternBuilder(boolean is3D) {
-        this.is3D = is3D;
-    }
+    public PatternBuilder() {}
 
     public PatternBuilder key(char symbol, Block block) {
         blockMap.put(symbol, block);
@@ -34,6 +31,11 @@ public class PatternBuilder {
         return this;
     }
 
+    public PatternBuilder allowHorizontalRotation(boolean value) {
+        this.allowHorizontalRotation = value;
+        return this;
+    }
+
     public PatternBuilder allowVerticalRotation(boolean value) {
         this.allowVerticalRotation = value;
         return this;
@@ -44,7 +46,7 @@ public class PatternBuilder {
             throw new IllegalStateException("Pattern must have at least one layer!");
         }
 
-        PatternManager pattern = new PatternManager(blockMap, layers, is3D, action, allowMirror, allowVerticalRotation);
+        PatternManager pattern = new PatternManager(blockMap, layers, action, allowHorizontalRotation, allowVerticalRotation);
 
         if (action != null) {
             PatternRegistry.register(pattern, action);

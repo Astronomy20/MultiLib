@@ -6,7 +6,7 @@ import net.minecraft.world.level.block.Blocks;
 
 public class ExamplePattern {
     public static void registerAll() {
-        PatternBuilder builder = PatternManager.pattern2D()
+        PatternBuilder builder = PatternManager.pattern()
                 .key('D', Blocks.DIAMOND_BLOCK)
                 .key('O', Blocks.OBSIDIAN)
                 .layer(" D ",
