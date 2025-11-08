@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.Block;
 import net.astronomy.multilib.pattern.*;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 
 import java.util.List;
 
@@ -15,21 +15,20 @@ import java.util.List;
 public class BlockPlaceEvent {
 
     @SubscribeEvent
-    public static void onBlockPlace(EntityPlaceEvent event) {
-        var snapshot = event.getBlockSnapshot();
-        if (!(snapshot.getLevel() instanceof ServerLevel level)) return;
+    public static void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
 
-        BlockPos pos = snapshot.getPos();
+        BlockPos pos = event.getPos();
         Block block = event.getPlacedBlock().getBlock();
 
         List<PatternManager> patterns = PatternRegistry.getPatternsFor(block);
 
         for (PatternManager pattern : patterns) {
-            BlockPos origin = PatternMatcher.matches(level, pos, pattern);
-            if (origin != null) {
+            PatternMatcher.MatchResult result = PatternMatcher.matches(level, pos, pattern);
+            if (result != null) {
                 PatternAction action = pattern.getAction();
                 if (action != null) {
-                    action.onMatch(level, origin);
+                    action.onMatch(level, result.origin(), result.transform());
                 }
                 break;
             }

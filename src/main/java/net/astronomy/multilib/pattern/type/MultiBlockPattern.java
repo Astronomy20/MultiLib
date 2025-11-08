@@ -9,17 +9,10 @@ import net.minecraft.server.level.ServerLevel;
  */
 public class MultiBlockPattern implements PatternAction {
 
-    private final boolean clearAfterActivation;
-
-    public MultiBlockPattern(boolean clearAfterActivation) {
-        this.clearAfterActivation = clearAfterActivation;
-    }
+    public MultiBlockPattern() {}
 
     @Override
     public void onMatch(ServerLevel level, BlockPos origin) {
-        if (clearAfterActivation) {
-            // You can override this to get the right pattern reference,
-            // or let the registry invoke it with a known pattern.
-        }
+
     }
 }

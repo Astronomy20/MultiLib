@@ -13,42 +13,36 @@ import net.minecraft.sounds.SoundSource;
 @FunctionalInterface
 public interface PatternAction {
 
+    /**
+     * Represents the transformation used to match a pattern
+     */
+    record TransformData(int rotation, boolean vertical, String axis) {}
+
+    /**
+     * Called when a pattern is matched
+     * @param level The world level
+     * @param origin The origin position of the pattern
+     */
     void onMatch(ServerLevel level, BlockPos origin);
 
     /**
-     * Clears the pattern structure from the world,
-     * supporting horizontal, mirrored, and vertical rotations
+     * Called when a pattern is matched with full transformation data.
+     * Default implementation calls the basic onMatch method.
+     * Override this if you need access to the transformation data.
+     *
+     * @param level The world level
+     * @param origin The origin position of the pattern
+     * @param transform The transformation used to match the pattern
      */
-    static void clearStructure(ServerLevel level, BlockPos origin, PatternManager pattern) {
-        boolean allowVertical = pattern.allowsVerticalRotation();
-
-        for (int rotation = 0; rotation < 4; rotation++) {
-            if (PatternMatcher.matchesTransformed(level, origin, pattern, rotation, false, false, "X")) {
-                removeBlocks(level, origin, pattern, rotation, false, "X");
-                return;
-            }
-
-            if (allowVertical) {
-                if (PatternMatcher.matchesTransformed(level, origin, pattern, rotation, false, true, "X")) {
-                    removeBlocks(level, origin, pattern, rotation, true, "X");
-                    return;
-                }
-
-                if (PatternMatcher.matchesTransformed(level, origin, pattern, rotation, false, true, "Z")) {
-                    removeBlocks(level, origin, pattern, rotation, true, "Z");
-                    return;
-                }
-            }
-        }
+    default void onMatch(ServerLevel level, BlockPos origin, TransformData transform) {
+        onMatch(level, origin);
     }
 
     /**
-     * Removes blocks according to transformation rules (horizontal, mirrored, vertical)
+     * Clears the pattern structure from the world using the exact transformation
+     * that was used to match it
      */
-    private static void removeBlocks(ServerLevel level, BlockPos origin,
-                                     PatternManager pattern,
-                                     int rotation, boolean vertical, String axis) {
-
+    static void clearStructure(ServerLevel level, BlockPos origin, PatternManager pattern, TransformData transform) {
         int layersCount = pattern.getLayerCount();
 
         for (int yOffset = 0; yOffset < layersCount; yOffset++) {
@@ -64,26 +58,32 @@ public interface PatternAction {
                     char symbol = line.charAt(col);
                     if (symbol == ' ') continue;
 
+                    // Calculate relative position in pattern space
                     int relX = col - centerX;
                     int relY = yOffset - (layersCount - 1);
                     int relZ = row - centerZ;
 
-                    if (vertical) {
-                        switch (axis.toUpperCase()) {
+                    // Apply vertical transformation first (before rotation)
+                    if (transform.vertical) {
+                        int temp;
+                        switch (transform.axis.toUpperCase()) {
                             case "X" -> {
-                                int temp = relY;
-                                relY = relZ;
+                                // Rotate around X axis: Y becomes -Z, Z becomes Y
+                                temp = relY;
+                                relY = -relZ;
                                 relZ = temp;
                             }
                             case "Z" -> {
-                                int temp = relY;
-                                relY = relX;
-                                relX = temp;
+                                // Rotate around Z axis: X becomes -Y, Y becomes X
+                                temp = relX;
+                                relX = -relY;
+                                relY = temp;
                             }
                         }
                     }
 
-                    int[] transformed = RotationUtils.transform(relX, relY, relZ, rotation, vertical, axis);
+                    // Apply horizontal rotation
+                    int[] transformed = RotationUtils.transform(relX, relY, relZ, transform.rotation, false, transform.axis);
                     BlockPos target = origin.offset(transformed[0], transformed[1], transformed[2]);
                     level.removeBlock(target, false);
                 }

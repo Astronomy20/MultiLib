@@ -32,9 +32,21 @@ public class SummonPattern implements PatternAction {
 
         PatternAction.spawnParticles(level, origin);
         PatternAction.playSound(level, origin);
+    }
+
+    @Override
+    public void onMatch(ServerLevel level, BlockPos origin, TransformData transform) {
+        Entity entity = entityType.create(level);
+        if (entity != null) {
+            entity.moveTo(origin.getX() + 0.5, origin.getY() + 1, origin.getZ() + 0.5, 0, 0);
+            level.addFreshEntity(entity);
+        }
+
+        PatternAction.spawnParticles(level, origin);
+        PatternAction.playSound(level, origin);
 
         if (clearAfterSummon && pattern != null) {
-            PatternAction.clearStructure(level, origin, pattern);
+            PatternAction.clearStructure(level, origin, pattern, transform);
         }
     }
 }

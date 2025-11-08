@@ -1,6 +1,5 @@
 package net.astronomy.multilib.api;
 
-import net.astronomy.multilib.pattern.PatternAction;
 import net.astronomy.multilib.pattern.PatternBuilder;
 import net.astronomy.multilib.pattern.PatternManager;
 import net.astronomy.multilib.pattern.PatternRegistry;
@@ -13,23 +12,18 @@ import java.util.List;
  *
  * Usage:
  *   PatternAPI.createPattern2D()
- *       .key('D', Blocks.DIAMOND_BLOCK)
- *       .layer(" D ", "DDD", " D ")
+ *       .key('X', Blocks.XXX)
+ *       .layer(" X ", "XXX", " X ")
  *       .action((level, origin) -> { ... })
  *       .build();
  */
 public class MultiLibAPI {
 
     /** Create a new 2D pattern builder */
-    public static PatternBuilder pattern2D() {
-        return new PatternBuilder(false);
-    }
+    public static PatternBuilder pattern() {
+        return new PatternBuilder();
 
-    /** Create a new 3D pattern builder */
-    public static PatternBuilder pattern3D() {
-        return new PatternBuilder(true);
     }
-
 
     /** Returns all registered patterns */
     public static List<PatternManager> getAllPatterns() {
@@ -40,6 +34,4 @@ public class MultiLibAPI {
     public static List<PatternManager> getPatternsFor(Block block) {
         return PatternRegistry.getPatternsFor(block);
     }
-
-
 }
