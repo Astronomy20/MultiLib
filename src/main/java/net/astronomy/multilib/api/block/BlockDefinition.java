@@ -17,14 +17,16 @@ public final class BlockDefinition {
     private final Boolean wallSharingOverride;
     private final boolean ioPort;
     private final boolean dropOriginalOnBreak;
+    private final boolean mainFace;
 
     BlockDefinition(Block block, Set<ResourceLocation> coreOfMultiblocks, Boolean wallSharingOverride,
-                    boolean ioPort, boolean dropOriginalOnBreak) {
+                    boolean ioPort, boolean dropOriginalOnBreak, boolean mainFace) {
         this.block = block;
         this.coreOfMultiblocks = Set.copyOf(coreOfMultiblocks);
         this.wallSharingOverride = wallSharingOverride;
         this.ioPort = ioPort;
         this.dropOriginalOnBreak = dropOriginalOnBreak;
+        this.mainFace = mainFace;
     }
 
     public Block getBlock() { return block; }
@@ -34,4 +36,12 @@ public final class BlockDefinition {
     public Optional<Boolean> getWallSharingOverride() { return Optional.ofNullable(wallSharingOverride); }
     public boolean isIoPort() { return ioPort; }
     public boolean isDropOriginalOnBreak() { return dropOriginalOnBreak; }
+
+    /**
+     * Whether this block, when used as a multiblock's core, has its own meaningful placed facing
+     * (e.g. a {@code FACING}/{@code HORIZONTAL_FACING} block-state property) that should pin the
+     * ghost overlay/auto-place orientation to the block's actual placement instead of the player's
+     * look direction. See {@link BlockDefinitionBuilder#mainFace()}.
+     */
+    public boolean hasMainFace() { return mainFace; }
 }

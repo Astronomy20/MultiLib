@@ -12,6 +12,19 @@ public interface BlockIngredient {
     boolean matches(BlockState state);
     Set<Block> getCandidateBlocks();
 
+    /**
+     * The {@link BlockState} previews (JEI/REI/EMI 3D model, ghost overlay) should render for this
+     * ingredient. Defaults to the first candidate block's default state — blocks with meaningful
+     * facing/property variants (furnaces, droppers, etc.) should override this to force a specific
+     * orientation, e.g. via {@link StatePropertyIngredient}, which already applies any properties
+     * required by {@code .require(...)}.
+     */
+    default BlockState getRenderState() {
+        Set<Block> candidates = getCandidateBlocks();
+        if (candidates.isEmpty()) return null;
+        return candidates.iterator().next().defaultBlockState();
+    }
+
     static BlockIngredient of(Block block) {
         return new SingleBlockIngredient(block);
     }

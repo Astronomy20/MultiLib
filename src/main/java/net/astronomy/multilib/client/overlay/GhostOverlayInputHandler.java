@@ -43,7 +43,16 @@ public class GhostOverlayInputHandler {
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.SUCCESS);
 
+        // Horizontal orientation follows the direction the player is facing, not the face of the
+        // block they happened to click — clicking the west wall of the core while facing north must
+        // still preview the structure facing north. The UP/DOWN flip trigger is the one case that
+        // genuinely depends on which face was clicked (there's no "vertical" player facing), so that
+        // part still reads the clicked face.
         net.minecraft.core.Direction face = event.getFace();
-        PacketDistributor.sendToServer(new RequestOverlayPacket(pos, 0, face != null ? face.ordinal() : -1));
+        net.minecraft.core.Direction orientationFace =
+                (face == net.minecraft.core.Direction.UP || face == net.minecraft.core.Direction.DOWN)
+                        ? face
+                        : player.getDirection();
+        PacketDistributor.sendToServer(new RequestOverlayPacket(pos, 0, orientationFace != null ? orientationFace.ordinal() : -1));
     }
 }

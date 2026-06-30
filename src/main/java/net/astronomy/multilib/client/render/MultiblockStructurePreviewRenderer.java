@@ -13,7 +13,6 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -23,7 +22,6 @@ import org.joml.Vector4f;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Renders a {@link MultiblockDefinition}'s pattern as a small rotating 3D assembly, for use inside
@@ -194,9 +192,7 @@ public final class MultiblockStructurePreviewRenderer {
 
     @Nullable
     private static BlockState representativeState(BlockIngredient ingredient) {
-        Set<Block> candidates = ingredient.getCandidateBlocks();
-        if (candidates.isEmpty()) return null;
-        return candidates.iterator().next().defaultBlockState();
+        return ingredient.getRenderState();
     }
 
     /** Wraps a VertexConsumer and multiplies each vertex's RGBA by fixed tint factors. */

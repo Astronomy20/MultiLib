@@ -31,7 +31,7 @@ public class ExamplePattern {
         // being confused with example_simple.json's diamond/emerald blocks, which 'D'/'E' reuse here
         // purely as plain body blocks with no activation/core role.
         MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("multilib", "example"))
-                .name("example_multiblock")
+                .name("multiblock.multilib.example_multiblock")
                 .layers("GGG", " G ", " G ")
                 .layers("EOD", " I ", " G ")
                 .key('E', BlockIngredient.of(Blocks.EMERALD_BLOCK))

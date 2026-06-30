@@ -353,6 +353,14 @@ public final class MultiblockBuilder {
         if (layers.isEmpty() && patternProvider == null && !shapeless) {
             throw new IllegalStateException("MultiblockDefinition must have at least one layer, a PatternProvider, or be shapeless");
         }
+        // Not a toggleable feature — every multiblock without a .name(...) translation key always
+        // gets this warning, so the fallback to the core/activation block's own display name (see
+        // MultiblockRecipeCategory.multiblockName) is a visible, intentional choice rather than a
+        // silently missing translation that's easy to mistake for a bug.
+        if (nameTranslationKey == null || nameTranslationKey.isBlank()) {
+            MultiLib.LOGGER.warn("[MultiLib] Multiblock '{}' has no display name set via .name(...) — "
+                    + "falling back to the core/activation block's own name in JEI/REI/EMI.", id);
+        }
         boolean valid = resolveAndValidateCore(id) && validateGeometryConstraints(id);
         Map<Character, FreeBlockSpec> effectiveFreeBlocks = applyUniqueToFreeBlocks();
         MultiblockDefinition definition = new MultiblockDefinition(
@@ -383,6 +391,10 @@ public final class MultiblockBuilder {
         }
         if (layers.isEmpty() && patternProvider == null && !shapeless) {
             throw new IllegalStateException("MultiblockDefinition must have at least one layer, a PatternProvider, or be shapeless");
+        }
+        if (nameTranslationKey == null || nameTranslationKey.isBlank()) {
+            MultiLib.LOGGER.warn("[MultiLib] Multiblock '{}' has no display name set via .name(...) — "
+                    + "falling back to the core/activation block's own name in JEI/REI/EMI.", id);
         }
         resolveAndValidateCore(id);
         validateGeometryConstraints(id);

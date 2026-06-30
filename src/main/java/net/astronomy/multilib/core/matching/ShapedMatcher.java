@@ -42,7 +42,6 @@ public class ShapedMatcher implements IPatternMatcher {
         for (List<List<String>> filteredLayers : layerCombinations) {
             if (filteredLayers.isEmpty()) continue;
             int layersCount = filteredLayers.size();
-            int bottomLayer = layersCount - 1; // layers[0] = topmost declared layer, layers[bottomLayer] = bottommost
 
             for (int layerIndex = 0; layerIndex < layersCount; layerIndex++) {
                 var layer = filteredLayers.get(layerIndex);
@@ -55,32 +54,22 @@ public class ShapedMatcher implements IPatternMatcher {
                         char symbol = line.charAt(col);
                         if (symbol == ' ' || !definition.getBlockMap().containsKey(symbol)) continue;
 
-                        if (allowHorizontal) {
-                            BlockPos origin = activationPos.offset(
-                                    -(col - centerX), (layerIndex - bottomLayer), -(row - centerZ));
-                            MatchData found = tryAllTransformsForOrigin(
-                                    level, origin, definition, filteredLayers, allowHorizontal, allowVertical);
-                            if (found != null) return new MatchResult.Success(found);
-                            orientationsTried += countTransforms(allowHorizontal, allowVertical);
-                        }
+                        // This cell's pattern-local offset (axis=Y, rotation=0 convention — same one
+                        // matchesTransformed/applyTransform use). The candidate origin depends on which
+                        // (axis, rotation) is being tried, so it's computed per-transform inside
+                        // tryAllTransformsForCell rather than fixed once here: a single origin guessed
+                        // under the rotation=0 assumption is only correct for rotation=0 itself, so
+                        // testing other rotations against it (as the old code did) could never actually
+                        // find a structure built in any rotated orientation.
+                        int relX = col - centerX;
+                        int relY = (layersCount - 1) - layerIndex;
+                        int relZ = row - centerZ;
 
-                        if (allowVertical) {
-                            // Must satisfy activationPos = origin.offset(applyTransform(cellRel, axis, rotation=0))
-                            // for this cell — i.e. origin = activationPos - applyTransform(cellRel, axis, 0).
-                            BlockPos originX = activationPos.offset(
-                                    (layerIndex - bottomLayer), (col - centerX), -(row - centerZ));
-                            MatchData found = tryAllTransformsForOrigin(
-                                    level, originX, definition, filteredLayers, allowHorizontal, allowVertical);
-                            if (found != null) return new MatchResult.Success(found);
-                            orientationsTried += countTransforms(allowHorizontal, allowVertical);
-
-                            BlockPos originZ = activationPos.offset(
-                                    -(col - centerX), (row - centerZ), (layerIndex - bottomLayer));
-                            found = tryAllTransformsForOrigin(
-                                    level, originZ, definition, filteredLayers, allowHorizontal, allowVertical);
-                            if (found != null) return new MatchResult.Success(found);
-                            orientationsTried += countTransforms(allowHorizontal, allowVertical);
-                        }
+                        MatchData found = tryAllTransformsForCell(
+                                level, activationPos, relX, relY, relZ, definition, filteredLayers,
+                                allowHorizontal, allowVertical);
+                        if (found != null) return new MatchResult.Success(found);
+                        orientationsTried += countTransforms(allowHorizontal, allowVertical);
                     }
                 }
             }
@@ -93,37 +82,36 @@ public class ShapedMatcher implements IPatternMatcher {
         return new MatchResult.Failure(report);
     }
 
-    private MatchData tryAllTransformsForOrigin(ServerLevel level, BlockPos origin,
-                                                MultiblockDefinition definition,
-                                                List<List<String>> filteredLayers,
-                                                boolean allowHorizontal, boolean allowVertical) {
+    /**
+     * Tries every candidate (axis, rotation) transform for one pattern cell, assuming that cell is the
+     * block at {@code activationPos}. Each transform gets its own origin — {@code origin = activationPos
+     * - applyTransform(relX, relY, relZ, axis, rotation)} — since a structure actually built rotated
+     * only lines up against the origin computed for that same rotation, not against the rotation=0
+     * origin tested at a different angle.
+     */
+    private MatchData tryAllTransformsForCell(ServerLevel level, BlockPos activationPos,
+                                              int relX, int relY, int relZ,
+                                              MultiblockDefinition definition,
+                                              List<List<String>> filteredLayers,
+                                              boolean allowHorizontal, boolean allowVertical) {
         if (!definition.getAllowedRotations().isEmpty()) {
-            return tryGranularTransforms(level, origin, definition, filteredLayers);
+            return tryGranularTransformsForCell(level, activationPos, relX, relY, relZ, definition, filteredLayers);
         }
         if (allowHorizontal) {
             for (int rotation = 0; rotation < 4; rotation++) {
+                BlockPos origin = originForTransform(activationPos, relX, relY, relZ, "Y", rotation);
                 if (matchesTransformed(level, origin, definition, filteredLayers, rotation, "Y")) {
                     return collectMatchData(level, origin, definition, filteredLayers, rotation, "Y");
                 }
             }
         }
         if (allowVertical) {
-            for (int rotation = 0; rotation < 4; rotation++) {
-                if (matchesTransformed(level, origin, definition, filteredLayers, rotation, "X")) {
-                    return collectMatchData(level, origin, definition, filteredLayers, rotation, "X");
-                }
-            }
-            for (int rotation = 0; rotation < 4; rotation++) {
-                if (matchesTransformed(level, origin, definition, filteredLayers, rotation, "Z")) {
-                    return collectMatchData(level, origin, definition, filteredLayers, rotation, "Z");
-                }
-            }
-            for (int rotation = 0; rotation < 4; rotation++) {
-                if (matchesTransformed(level, origin, definition, filteredLayers, rotation, "X_FLIP")) {
-                    return collectMatchData(level, origin, definition, filteredLayers, rotation, "X_FLIP");
-                }
-                if (matchesTransformed(level, origin, definition, filteredLayers, rotation, "Z_FLIP")) {
-                    return collectMatchData(level, origin, definition, filteredLayers, rotation, "Z_FLIP");
+            for (String axis : new String[]{"X", "Z", "X_FLIP", "Z_FLIP"}) {
+                for (int rotation = 0; rotation < 4; rotation++) {
+                    BlockPos origin = originForTransform(activationPos, relX, relY, relZ, axis, rotation);
+                    if (matchesTransformed(level, origin, definition, filteredLayers, rotation, axis)) {
+                        return collectMatchData(level, origin, definition, filteredLayers, rotation, axis);
+                    }
                 }
             }
         }
@@ -134,10 +122,13 @@ public class ShapedMatcher implements IPatternMatcher {
      * Tries only the unrotated orientation plus the specific axis/angle combinations declared via
      * {@code .allowRotation(...)}, instead of every rotation the coarse {@link RotationMode} allows.
      */
-    private MatchData tryGranularTransforms(ServerLevel level, BlockPos origin, MultiblockDefinition definition,
-                                            List<List<String>> filteredLayers) {
-        if (matchesTransformed(level, origin, definition, filteredLayers, 0, "Y")) {
-            return collectMatchData(level, origin, definition, filteredLayers, 0, "Y");
+    private MatchData tryGranularTransformsForCell(ServerLevel level, BlockPos activationPos,
+                                                    int relX, int relY, int relZ,
+                                                    MultiblockDefinition definition,
+                                                    List<List<String>> filteredLayers) {
+        BlockPos baseOrigin = originForTransform(activationPos, relX, relY, relZ, "Y", 0);
+        if (matchesTransformed(level, baseOrigin, definition, filteredLayers, 0, "Y")) {
+            return collectMatchData(level, baseOrigin, definition, filteredLayers, 0, "Y");
         }
         for (AllowedRotation allowed : definition.getAllowedRotations()) {
             int step = allowed.normalizedAngle() / 90;
@@ -147,12 +138,20 @@ public class ShapedMatcher implements IPatternMatcher {
                 case Z -> new String[]{"Z", "Z_FLIP"};
             };
             for (String axisStr : axesToTry) {
+                BlockPos origin = originForTransform(activationPos, relX, relY, relZ, axisStr, step);
                 if (matchesTransformed(level, origin, definition, filteredLayers, step, axisStr)) {
                     return collectMatchData(level, origin, definition, filteredLayers, step, axisStr);
                 }
             }
         }
         return null;
+    }
+
+    /** origin such that {@code activationPos == origin.offset(applyTransform(relX, relY, relZ, axis, rotation))}. */
+    private static BlockPos originForTransform(BlockPos activationPos, int relX, int relY, int relZ,
+                                               String axis, int rotation) {
+        int[] t = applyTransform(relX, relY, relZ, axis, rotation);
+        return activationPos.offset(-t[0], -t[1], -t[2]);
     }
 
     private boolean matchesTransformed(ServerLevel level, BlockPos origin, MultiblockDefinition definition,
