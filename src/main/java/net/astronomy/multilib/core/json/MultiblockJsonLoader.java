@@ -120,6 +120,11 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
                 .ifPresent(builder::formationMode);
         }
 
+        // name (translation key for the display name, e.g. JEI's recipe-page title)
+        if (obj.has("name")) {
+            builder.name(obj.get("name").getAsString());
+        }
+
         // priority
         if (obj.has("priority")) {
             builder.priority(obj.get("priority").getAsInt());

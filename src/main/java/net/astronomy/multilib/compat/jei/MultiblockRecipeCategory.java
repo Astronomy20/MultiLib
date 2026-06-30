@@ -330,7 +330,7 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
                     gfx.pose().pushPose();
                     gfx.pose().translate(iconRight - 1, iconBottom - 1, 200);
                     gfx.pose().scale(textScale, textScale, 1f);
-                    gfx.drawString(font, label, -font.width(label), -font.lineHeight, 0xFFFFFF, true);
+                    gfx.drawString(font, label, -font.width(label), -font.lineHeight, 0xFFFFFF, false);
                     gfx.pose().popPose();
                 }
 
@@ -515,7 +515,7 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
         int maxTitleW = WIDTH - 2 * P_X1;
         boolean hoveringTitle = mx >= 0 && mx < WIDTH && my >= TITLE_Y && my < TITLE_Y + TITLE_H;
         if (font.width(title) <= maxTitleW) {
-            gfx.drawCenteredString(font, title, WIDTH / 2, TITLE_Y + (TITLE_H - font.lineHeight) / 2, 0x404040);
+            drawCenteredNoShadow(gfx, font, title, WIDTH / 2, TITLE_Y + (TITLE_H - font.lineHeight) / 2, 0x404040);
         } else {
             drawTicker(gfx, font, title, P_X1, TITLE_Y + (TITLE_H - font.lineHeight) / 2, maxTitleW,
                     0x404040, hoveringTitle, vs.titleTicker);
@@ -529,6 +529,10 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
         boolean persistentAutoRotate = ClientConfig.JEI_PREVIEW_AUTO_ROTATE.get();
         boolean effectiveAutoRotate = isEffectiveAutoRotate(vs);
         float yaw = effectiveYaw(vs);
+        // Flush everything drawn so far (title) before the model renders, so its own synchronous GPU
+        // draw can never end up sandwiched between earlier and later GuiGraphics-buffered 2D draws in
+        // an order GuiGraphics — not this method — ultimately decides.
+        gfx.flush();
         // Clip to MODEL_* so a zoomed-in model can never paint outside its designated area (e.g. over
         // the layer-nav row below it). enableScissor uses absolute window coordinates, not
         // pose-stack-relative ones like fill()/blit() do, so the recipe-local corners have to be run
@@ -539,11 +543,16 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
         MultiblockStructurePreviewRenderer.render(
                 gfx, def, P_CX, P_CY, Math.round(P_SZ * vs.zoom), yaw, vs.pitch, onlyLayerIndex, vs.selectedHit);
         gfx.disableScissor();
+        // Force the model's geometry (already submitted to the GPU by render()'s own endBatch()) to be
+        // fully composited before anything else queues up, so the overlay below can never lose an
+        // ordering/flush race against it regardless of zoom or depth-buffer contents.
+        gfx.flush();
 
-        // Everything from here on must render strictly in front of the model, regardless of zoom —
-        // the model's buffered block draws flush at a different point than GuiGraphics' own 2D draws,
-        // so a plain "drawn later in code" order doesn't reliably win the depth test once a large
-        // zoomed-in block is in front of these overlays. Pushing them to a clearly-nearer Z forces it.
+        // Everything from here on must render strictly in front of the model, regardless of zoom.
+        // render() leaves depth testing disabled when it returns, but explicitly disabling it again
+        // here removes any dependency on that being true — these overlays must never be occludable by
+        // the model's depth buffer, full stop.
+        RenderSystem.disableDepthTest();
         gfx.pose().pushPose();
         gfx.pose().translate(0, 0, 300);
 
@@ -591,12 +600,12 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
             boolean hoverR = mx >= ARR_R && mx < ARR_R + ARR_W && my >= LR_Y && my < LR_Y + LR_H;
 
             gfx.fill(ARR_L, LR_Y, ARR_L + ARR_W, LR_Y + LR_H, hoverL ? 0xFF909090 : 0xFF707070);
-            gfx.drawCenteredString(font, "◀", ARR_L + ARR_W / 2, LR_Y + (LR_H - font.lineHeight) / 2, 0xFFFFFF);
+            drawCenteredNoShadow(gfx, font, "◀", ARR_L + ARR_W / 2, LR_Y + (LR_H - font.lineHeight) / 2, 0xFFFFFF);
 
             gfx.fill(ARR_R, LR_Y, ARR_R + ARR_W, LR_Y + LR_H, hoverR ? 0xFF909090 : 0xFF707070);
-            gfx.drawCenteredString(font, "▶", ARR_R + ARR_W / 2, LR_Y + (LR_H - font.lineHeight) / 2, 0xFFFFFF);
+            drawCenteredNoShadow(gfx, font, "▶", ARR_R + ARR_W / 2, LR_Y + (LR_H - font.lineHeight) / 2, 0xFFFFFF);
 
-            gfx.drawCenteredString(font, layerLabel, WIDTH / 2, LR_Y + (LR_H - font.lineHeight) / 2, labelColor);
+            drawCenteredNoShadow(gfx, font, layerLabel, WIDTH / 2, LR_Y + (LR_H - font.lineHeight) / 2, labelColor);
         }
 
         // ── "Required blocks:" label ──────────────────────────────────────────
@@ -695,6 +704,11 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
         gfx.drawString(font, text, x0, y, color, false);
         gfx.drawString(font, text, x0 + cycle, y, color, false);
         gfx.disableScissor();
+    }
+
+    /** Like {@link GuiGraphics#drawCenteredString}, but without the drop shadow. */
+    private static void drawCenteredNoShadow(GuiGraphics gfx, Font font, String text, int centerX, int y, int color) {
+        gfx.drawString(font, text, centerX - font.width(text) / 2, y, color, false);
     }
 
     /** Transforms a recipe-local coordinate through the current pose stack into absolute window pixels. */

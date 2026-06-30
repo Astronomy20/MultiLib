@@ -19,6 +19,7 @@ public final class BlockDefinitionBuilder {
     private Boolean wallSharingOverride = null;
     private boolean ioPort = false;
     private boolean dropOriginalOnBreak = false;
+    private boolean mainFace = false;
 
     public BlockDefinitionBuilder(Block block) {
         this.block = block;
@@ -63,9 +64,20 @@ public final class BlockDefinitionBuilder {
         return this;
     }
 
+    /**
+     * Marks this block as having a meaningful placed facing of its own (e.g. a furnace-like block
+     * with a {@code FACING}/{@code HORIZONTAL_FACING} property) — when used as a multiblock's core,
+     * the ghost overlay/auto-place preview orientation is pinned to the block's actual in-world
+     * facing instead of following the player's look direction.
+     */
+    public BlockDefinitionBuilder mainFace() {
+        this.mainFace = true;
+        return this;
+    }
+
     public BlockDefinition build() {
         BlockDefinition definition = new BlockDefinition(
-                block, coreOfMultiblocks, wallSharingOverride, ioPort, dropOriginalOnBreak);
+                block, coreOfMultiblocks, wallSharingOverride, ioPort, dropOriginalOnBreak, mainFace);
         BlockDefinitionRegistry.register(definition);
         return definition;
     }

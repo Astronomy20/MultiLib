@@ -16,7 +16,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -27,7 +26,6 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -70,20 +68,38 @@ public class OverlayRequestHandler {
                 nextMode = 0;
             }
 
-            // Re-clicking the same core keeps previewing the orientation already chosen for it; a
-            // fresh click (different core, or a face supplied this time) re-derives it from the face.
+            // Re-clicking the same core only cycles through layers/full view — the orientation chosen
+            // on the activating click must be kept fixed for as long as the overlay stays open on
+            // that core (regardless of which face is clicked to cycle); only a fresh activation
+            // (different core, or no overlay active yet) re-derives it.
             String axis;
             int rotation;
-            if (packet.faceOrdinal() >= 0 && packet.faceOrdinal() < Direction.values().length) {
-                int[] ar = orientationForFace(definition, Direction.values()[packet.faceOrdinal()]);
-                axis = AXIS_NAMES[ar[0]];
-                rotation = ar[1];
-            } else if (current != null && current.corePos().equals(corePos)) {
+            if (current != null && current.corePos().equals(corePos)) {
                 axis = current.axis();
                 rotation = current.rotation();
             } else {
-                axis = "Y";
-                rotation = 0;
+                // A core block declaring .mainFace() (BlockDefinitionBuilder) has a meaningful placed
+                // facing of its own (e.g. a furnace-like FACING property) — the preview must stay
+                // pinned to that, ignoring the player's look direction entirely. Otherwise, the face
+                // supplied by the client already encodes the player's facing (see
+                // GhostOverlayInputHandler), so the existing face-based derivation still applies.
+                Direction mainFace = net.astronomy.multilib.core.registry.BlockDefinitionRegistry
+                        .get(level.getBlockState(corePos).getBlock())
+                        .filter(net.astronomy.multilib.api.block.BlockDefinition::hasMainFace)
+                        .map(bd -> extractMainFace(level.getBlockState(corePos)))
+                        .orElse(null);
+                Direction effectiveFace = mainFace != null
+                        ? mainFace
+                        : (packet.faceOrdinal() >= 0 && packet.faceOrdinal() < Direction.values().length
+                                ? Direction.values()[packet.faceOrdinal()] : null);
+                if (effectiveFace != null) {
+                    int[] ar = orientationForFace(definition, effectiveFace);
+                    axis = AXIS_NAMES[ar[0]];
+                    rotation = ar[1];
+                } else {
+                    axis = "Y";
+                    rotation = 0;
+                }
             }
 
             PLAYER_STATES.put(player.getUUID(), new PlayerOverlayState(corePos, nextMode, axis, rotation));
@@ -155,6 +171,25 @@ public class OverlayRequestHandler {
             }
             default -> new int[]{0, 0}; // UP, or anything else: default upright
         };
+    }
+
+    /**
+     * Reads the core block's own placed facing, for cores declared via
+     * {@link net.astronomy.multilib.api.block.BlockDefinitionBuilder#mainFace()}. Tries the common
+     * horizontal-only property first (furnaces, chests, etc.), then the full 6-way one (droppers,
+     * dispensers, etc.), projecting a vertical facing onto the nearest horizontal direction since the
+     * overlay's orientation system only has horizontal yaw rotations. Returns null if the block has
+     * neither property (declaring .mainFace() on such a block is a no-op, falling back to player facing).
+     */
+    private static Direction extractMainFace(BlockState state) {
+        if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)) {
+            return state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING);
+        }
+        if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING)) {
+            Direction facing = state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING);
+            return facing.getAxis() == Direction.Axis.Y ? Direction.NORTH : facing;
+        }
+        return null;
     }
 
     private static void sendOverlayUpdate(ServerPlayer player, ServerLevel level, BlockPos corePos,
@@ -280,8 +315,6 @@ public class OverlayRequestHandler {
     }
 
     private static BlockState getRepresentativeState(BlockIngredient ingredient) {
-        Set<Block> candidates = ingredient.getCandidateBlocks();
-        if (!candidates.isEmpty()) return candidates.iterator().next().defaultBlockState();
-        return null;
+        return ingredient.getRenderState();
     }
 }

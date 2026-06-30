@@ -37,6 +37,25 @@ public final class StatePropertyIngredient implements BlockIngredient {
         return Set.of(block);
     }
 
+    /**
+     * Applies every required property (e.g. a forced FACING) on top of the block's default state, so
+     * previews/ghost overlays render directional blocks (furnaces, droppers, etc.) in the orientation
+     * this ingredient actually demands, instead of always falling back to the block's default facing.
+     */
+    @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public BlockState getRenderState() {
+        BlockState state = block.defaultBlockState();
+        for (var entry : requiredProperties.entrySet()) {
+            Property prop = entry.getKey();
+            Comparable value = entry.getValue();
+            if (state.hasProperty(prop)) {
+                state = state.setValue(prop, value);
+            }
+        }
+        return state;
+    }
+
     public static final class Builder {
         private final Block block;
         private final Map<Property<?>, Comparable<?>> properties = new LinkedHashMap<>();
