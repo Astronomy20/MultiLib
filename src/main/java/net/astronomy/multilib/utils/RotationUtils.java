@@ -1,85 +1,73 @@
 package net.astronomy.multilib.utils;
 
+import net.minecraft.world.phys.Vec3;
+
 /**
- * Utility for rotating and mirroring coordinates around different axes.
+ * Utility for rotating 3D coordinates around all three axes (X, Y, Z).
+ * Supports 0°, 90°, 180°, and 270° rotations.
  *
- * Supports:
- *  - Horizontal rotation (Y-axis)
- *  - Vertical rotation (X/Z-axis)
- *  - Mirroring (X/Z)
+ * Designed for Minecraft NeoForge 21.1.213.
  */
 public class RotationUtils {
 
-    public static int[] transform(int x, int y, int z, int rotation, boolean vertical, String axis) {
-        int newX = x;
-        int newY = y;
-        int newZ = z;
+    /**
+     * Rotates a coordinate around the specified axis by a given angle (in degrees).
+     *
+     * @param x The X coordinate
+     * @param y The Y coordinate
+     * @param z The Z coordinate
+     * @param axis The axis to rotate around ("X", "Y", "Z")
+     * @param angle The rotation angle in degrees (only multiples of 90 are supported)
+     * @return The rotated coordinates as {x, y, z}
+     */
+    public static int[] rotate(int x, int y, int z, String axis, int angle) {
+        int normalized = ((angle % 360) + 360) % 360;
+        normalized = (normalized / 90) % 4; // convert to 0–3 (representing 0°, 90°, 180°, 270°)
 
-        if (vertical) {
-            int[] v = rotateVertical(x, y, z, axis, rotation);
-            newX = v[0];
-            newY = v[1];
-            newZ = v[2];
-        } else {
-            int[] r = rotate(x, z, rotation);
-            newX = r[0];
-            newZ = r[1];
-        }
-
-        return new int[]{newX, newY, newZ};
+        return switch (axis.toUpperCase()) {
+            case "X" -> rotateAroundX(x, y, z, normalized);
+            case "Y" -> rotateAroundY(x, y, z, normalized);
+            case "Z" -> rotateAroundZ(x, y, z, normalized);
+            default -> new int[]{x, y, z};
+        };
     }
 
-    /**
-     * Rotates a coordinate around the Y axis (horizontal rotation).
-     * @param x X offset
-     * @param z Z offset
-     * @param rotation number of 90° clockwise turns (0–3)
-     * @return rotated {x, z}
-     */
-    public static int[] rotate(int x, int z, int rotation) {
-        return switch (rotation) {
-            case 1 -> new int[]{z, -x};
-            case 2 -> new int[]{-x, -z};
-            case 3 -> new int[]{-z, x};
-            default -> new int[]{x, z};
+    /** Rotate around the X-axis in 90° steps. */
+    private static int[] rotateAroundX(int x, int y, int z, int step) {
+        return switch (step) {
+            case 1 -> new int[]{x, -z, y};     // 90°
+            case 2 -> new int[]{x, -y, -z};    // 180°
+            case 3 -> new int[]{x, z, -y};     // 270°
+            default -> new int[]{x, y, z};     // 0°
+        };
+    }
+
+    /** Rotate around the Y-axis in 90° steps. */
+    private static int[] rotateAroundY(int x, int y, int z, int step) {
+        return switch (step) {
+            case 1 -> new int[]{-z, y, x};     // 90°
+            case 2 -> new int[]{-x, y, -z};    // 180°
+            case 3 -> new int[]{z, y, -x};     // 270°
+            default -> new int[]{x, y, z};     // 0°
+        };
+    }
+
+    /** Rotate around the Z-axis in 90° steps. */
+    private static int[] rotateAroundZ(int x, int y, int z, int step) {
+        return switch (step) {
+            case 1 -> new int[]{y, -x, z};     // 90°
+            case 2 -> new int[]{-x, -y, z};    // 180°
+            case 3 -> new int[]{-y, x, z};     // 270°
+            default -> new int[]{x, y, z};     // 0°
         };
     }
 
     /**
-     * Rotates a 3D coordinate vertically around the X or Z axis.
-     * Useful for allowing "standing" or "lying" pattern orientations.
-     *
-     * @param x X offset
-     * @param y Y offset
-     * @param z Z offset
-     * @param axis "X" (rotate around X axis) or "Z" (rotate around Z axis)
-     * @param rotation number of 90° clockwise turns (0–3)
-     * @return rotated {x, y, z}
+     * Helper for Vec3-based rotation (useful for block/entity positions).
+     * Returns a new Vec3 rotated around a given axis.
      */
-    public static int[] rotateVertical(int x, int y, int z, String axis, int rotation) {
-        int newX = x;
-        int newY = y;
-        int newZ = z;
-
-        switch (axis.toUpperCase()) {
-            case "X" -> {
-                rotation = rotation % 4;
-                switch (rotation) {
-                    case 1 -> { int t = newY; newY = -newZ; newZ = t; }
-                    case 2 -> { newY = -newY; newZ = -newZ; }
-                    case 3 -> { int t = newY; newY = newZ; newZ = -t; }
-                }
-            }
-            case "Z" -> {
-                rotation = rotation % 4;
-                switch (rotation) {
-                    case 1 -> { int t = newY; newY = newX; newX = -t; }
-                    case 2 -> { newY = -newY; newX = -newX; }
-                    case 3 -> { int t = newY; newY = -newX; newX = t; }
-                }
-            }
-        }
-
-        return new int[]{newX, newY, newZ};
+    public static Vec3 rotate(Vec3 vec, String axis, int angle) {
+        int[] result = rotate((int) Math.round(vec.x), (int) Math.round(vec.y), (int) Math.round(vec.z), axis, angle);
+        return new Vec3(result[0], result[1], result[2]);
     }
 }
