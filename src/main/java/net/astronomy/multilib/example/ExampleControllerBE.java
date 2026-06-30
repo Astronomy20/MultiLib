@@ -5,6 +5,7 @@ import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBE;
 import net.astronomy.multilib.api.callback.MultiblockBrokenContext;
 import net.astronomy.multilib.api.callback.MultiblockFormedContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -28,11 +29,24 @@ public class ExampleControllerBE extends AbstractMultiblockControllerBE {
     @Override
     protected void onFormed(MultiblockFormedContext ctx) {
         MultiLib.LOGGER.info("[MultiLib] Example structure formed at {}", ctx.instance().getOrigin());
+        // Part-block hiding is handled automatically by the framework (definition has .model()).
+        // Only the core's own visual needs to be toggled here.
+        BlockState myState = getBlockState();
+        if (myState.hasProperty(ExampleControllerBlock.FORMED)) {
+            ctx.level().setBlock(worldPosition, myState.setValue(ExampleControllerBlock.FORMED, true),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        }
     }
 
     @Override
     protected void onBroken(MultiblockBrokenContext ctx) {
         MultiLib.LOGGER.info("[MultiLib] Example structure broken, removed pos: {}", ctx.removedPos());
+        // Part-block un-hiding is handled automatically by the framework.
+        BlockState myState = getBlockState();
+        if (myState.hasProperty(ExampleControllerBlock.FORMED)) {
+            ctx.level().setBlock(worldPosition, myState.setValue(ExampleControllerBlock.FORMED, false),
+                    Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+        }
     }
 
     @Override

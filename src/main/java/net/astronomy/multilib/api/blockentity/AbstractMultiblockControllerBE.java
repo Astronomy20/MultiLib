@@ -22,7 +22,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public abstract class AbstractMultiblockControllerBE extends BlockEntity {
@@ -81,7 +83,13 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
         setState(StandardMultiblockState.IDLE);
         if (ctx.definition().hasModel() && level != null) {
             this.activeModelId = ctx.definition().getModelId().orElse(null);
-            AbstractMultiblockPartBlock.setModelHidden(level, worldPosition, true);
+            // Compute positions to keep visible: core + any keepVisible symbols
+            Set<BlockPos> keepVisible = buildKeepVisibleSet(ctx);
+            for (BlockPos pos : ctx.instance().getPositions()) {
+                if (!keepVisible.contains(pos)) {
+                    AbstractMultiblockPartBlock.setModelHidden(level, pos, true);
+                }
+            }
         }
         onFormed(ctx);
         markDirtyAndSync();
@@ -91,11 +99,25 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
         this.instanceId = null;
         setState(StandardMultiblockState.UNFORMED);
         if (this.activeModelId != null && level != null) {
-            AbstractMultiblockPartBlock.setModelHidden(level, worldPosition, false);
+            BlockPos removed = ctx.removedPos();
+            for (BlockPos pos : ctx.instance().getPositions()) {
+                if (!pos.equals(removed)) {
+                    AbstractMultiblockPartBlock.setModelHidden(level, pos, false);
+                }
+            }
         }
         this.activeModelId = null;
         onBroken(ctx);
         markDirtyAndSync();
+    }
+
+    private Set<BlockPos> buildKeepVisibleSet(MultiblockFormedContext ctx) {
+        Set<BlockPos> keep = new HashSet<>();
+        keep.add(worldPosition);  // core is always kept visible
+        for (char sym : ctx.definition().getKeepVisibleSymbols()) {
+            keep.addAll(ctx.instance().getPositionsFor(sym));
+        }
+        return keep;
     }
 
     // ---- Developer-overridable hooks ----

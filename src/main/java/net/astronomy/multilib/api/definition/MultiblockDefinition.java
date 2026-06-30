@@ -64,6 +64,8 @@ public final class MultiblockDefinition {
     private final Set<Character> surfaceOnlySymbols;
     private final Set<Character> frameOnlySymbols;
     private final Set<Character> insideOnlySymbols;
+    /** Symbols whose block positions are NOT auto-hidden when {@link #hasModel()} is true. */
+    private final Set<Character> keepVisibleSymbols;
     private final boolean autoPlace;
     private final Set<AllowedRotation> allowedRotations;
 
@@ -100,6 +102,7 @@ public final class MultiblockDefinition {
                          Set<Character> surfaceOnlySymbols,
                          Set<Character> frameOnlySymbols,
                          Set<Character> insideOnlySymbols,
+                         Set<Character> keepVisibleSymbols,
                          boolean autoPlace,
                          Set<AllowedRotation> allowedRotations) {
         this.id = id;
@@ -139,6 +142,7 @@ public final class MultiblockDefinition {
         this.surfaceOnlySymbols = Set.copyOf(surfaceOnlySymbols);
         this.frameOnlySymbols = Set.copyOf(frameOnlySymbols);
         this.insideOnlySymbols = Set.copyOf(insideOnlySymbols);
+        this.keepVisibleSymbols = Set.copyOf(keepVisibleSymbols);
         this.autoPlace = autoPlace;
         this.allowedRotations = Set.copyOf(allowedRotations);
     }
@@ -190,6 +194,7 @@ public final class MultiblockDefinition {
     public Set<Character> getSurfaceOnlySymbols() { return surfaceOnlySymbols; }
     public Set<Character> getFrameOnlySymbols() { return frameOnlySymbols; }
     public Set<Character> getInsideOnlySymbols() { return insideOnlySymbols; }
+    public Set<Character> getKeepVisibleSymbols() { return keepVisibleSymbols; }
     public boolean isAutoPlace() { return autoPlace; }
     public Set<AllowedRotation> getAllowedRotations() { return allowedRotations; }
 

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "multilib:block/example_directional_controller" },
+    "facing=east":  { "model": "multilib:block/example_directional_controller", "y": 90 },
+    "facing=south": { "model": "multilib:block/example_directional_controller", "y": 180 },
+    "facing=west":  { "model": "multilib:block/example_directional_controller", "y": 270 }
+  }
+}

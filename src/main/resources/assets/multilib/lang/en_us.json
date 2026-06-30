@@ -1,8 +1,13 @@
 {
   "item.multilib.wrench": "Multiblock Wrench",
+  "block.multilib.example_part": "Example Multiblock Part",
+  "item.multilib.example_part": "Example Multiblock Part",
   "block.multilib.example_controller": "Example Multiblock Controller",
   "item.multilib.example_controller": "Example Multiblock Controller",
+  "block.multilib.example_directional_controller": "Example Directional Multiblock Controller",
+  "item.multilib.example_directional_controller": "Example Directional Multiblock Controller",
   "multiblock.multilib.example_multiblock": "Example Multiblock",
+  "multiblock.multilib.example_directional": "Example Directional Multiblock",
   "multilib.wrench.formed": "Structure %s is formed (state: %s)",
   "multilib.wrench.formed_success": "Structure formed successfully!",
   "multilib.wrench.failed": "Formation failed: %s",
