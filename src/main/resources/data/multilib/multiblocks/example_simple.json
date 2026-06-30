@@ -1,0 +1,23 @@
+{
+  "layers": [
+    ["DDD", "D D", "DDD"],
+    ["DDD", "DED", "DDD"],
+    ["FFF", "DDD", "AAA"],
+    ["GGG", "DDD", "BBB"],
+    ["HHH", "DDD", "CCC"]
+  ],
+  "keys": {
+    "D": { "block": "minecraft:diamond_block" },
+    "E": { "block": "minecraft:emerald_block" },
+    "A": { "block": "minecraft:coal_block" },
+    "B": { "block": "minecraft:slime_block" },
+    "C": { "block": "minecraft:oak_log" },
+    "F": { "block": "minecraft:amethyst_block" },
+    "G": { "block": "minecraft:pink_wool" },
+    "H": { "block": "minecraft:iron_block" }
+  },
+  "core": "E",
+  "rotations": "horizontal",
+  "priority": 0,
+  "on_formed_sound": "minecraft:block.amethyst_block.chime"
+}

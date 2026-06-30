@@ -1,1 +1,18 @@
-{}
+{
+  "item.multilib.wrench": "Multiblock Wrench",
+  "block.multilib.example_controller": "Example Multiblock Controller",
+  "item.multilib.example_controller": "Example Multiblock Controller",
+  "multiblock.multilib.example_multiblock": "Example Multiblock",
+  "multilib.wrench.formed": "Structure %s is formed (state: %s)",
+  "multilib.wrench.formed_success": "Structure formed successfully!",
+  "multilib.wrench.failed": "Formation failed: %s",
+  "multilib.wrench.mode_disallows_wrench": "This structure's formation mode does not allow wrench-triggered formation",
+  "multilib.overlay.enabled": "Ghost overlay: full render",
+  "multilib.overlay.layer": "Ghost overlay: layer %d",
+  "multilib.overlay.disabled": "Ghost overlay disabled",
+  "jei.multilib.category.multiblock_structure": "Multiblock Structure",
+  "jei.multilib.layer.all": "All Layers",
+  "jei.multilib.required_blocks": "Required blocks:",
+  "jei.multilib.auto_rotate.on": "Preview auto-rotating (drag to rotate manually)",
+  "jei.multilib.auto_rotate.off": "Preview auto-rotate paused"
+}
