@@ -1,0 +1,28 @@
+{
+  "name": "Example Multiblock",
+  "category": "multilib:examples",
+  "icon": "multilib:example_controller",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)example_multiblock$() is registered in Java (see $(italic)ExamplePattern$()) rather than through a datapack, so it can attach custom behavior when it forms and breaks. Its pattern uses two 3x3 layers:"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Bottom layer: $(bold)Example Multiblock Part$() blocks in a plus shape, with a $(bold)Gold Block$() on one edge.\n\nTop layer: identical, except the center Part block is replaced by the $(bold)Example Multiblock Controller$() - the core."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Because the controller is also the activation symbol, you build every other block first and place the controller last to complete the structure - no wrench needed, though the wrench works too since this pattern allows both automatic and wrench-triggered formation. The structure also accepts being rotated to any of the 4 horizontal facings."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "$(bold)On formation:$() a lightning bolt strikes the core block's position (server-side only, purely visual/audio flair - it deals no damage in this example).\n\n$(bold)On breaking:$() any block being removed from the structure breaks it; every player within 30 blocks gets a chat message announcing the collapse, and a glass-break sound plays at the core."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "This entry has no interactive multiblock preview because the pattern's two layers are easiest to understand as a diagram - build the plus-shaped ring first, then close it off by placing the $(bold)Example Multiblock Controller$() in the center of the top layer."
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Example Structures",
+  "description": "The demo blocks and multiblock structures bundled with MultiLib, used to show off what the library can do.",
+  "icon": "multilib:example_controller",
+  "sortnum": 0
+}

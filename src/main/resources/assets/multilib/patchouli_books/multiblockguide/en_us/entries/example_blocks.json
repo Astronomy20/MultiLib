@@ -1,0 +1,36 @@
+{
+  "name": "The Example Blocks",
+  "category": "multilib:examples",
+  "icon": "multilib:example_controller",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "MultiLib ships with a small set of demo blocks so you can see multiblock structures working in-game without writing any code of your own. This entry introduces each one."
+    },
+    {
+      "type": "patchouli:spotlight",
+      "item": "multilib:example_part",
+      "title": "Example Multiblock Part",
+      "text": "A plain structural block used to fill out the body of the $(l:example_multiblock)$(bold)Example Multiblock$(). It has no special behavior on its own - it's just an ingredient the pattern matcher looks for."
+    },
+    {
+      "type": "patchouli:spotlight",
+      "item": "multilib:example_controller",
+      "title": "Example Multiblock Controller",
+      "text": "The $(bold)core$() block of the Example Multiblock. Placing this block once the rest of the pattern is already assembled triggers formation automatically - see $(l:example_multiblock)$(bold)Example Multiblock$() for the full pattern."
+    },
+    {
+      "type": "patchouli:spotlight",
+      "item": "multilib:example_directional_controller",
+      "title": "Example Directional Multiblock Controller",
+      "text": "A variant core block that remembers the direction it was placed in, like a furnace. Its multiblock pattern is asymmetric, so the ghost preview always shows the structure facing the way the core is actually pointed, instead of rotating to face the player."
+    },
+    {
+      "type": "patchouli:spotlight",
+      "item": "multilib:wrench",
+      "title": "Multiblock Wrench",
+      "text": "A tool item for manually triggering multiblock formation on structures that support wrench activation, instead of relying purely on automatic detection. Right-click the core block of an assembled pattern with the wrench to attempt formation."
+    }
+  ]
+}

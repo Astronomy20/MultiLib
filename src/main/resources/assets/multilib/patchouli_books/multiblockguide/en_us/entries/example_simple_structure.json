@@ -1,0 +1,65 @@
+{
+  "name": "The Ceremonial Pillar",
+  "category": "multilib:examples",
+  "icon": "minecraft:emerald_block",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "This datapack-defined multiblock ($(bold)multilib:example_simple$()) is a 5-layer decorative pillar built entirely from vanilla blocks. It has no custom logic attached - it exists purely to show off datapack-driven multiblock definitions."
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Its core is the $(bold)Emerald Block$() buried in the second layer. The structure can be rotated freely around the vertical axis (any of the 4 horizontal facings are accepted), and it supports MultiLib's auto-place preview overlay. Assemble the pattern shown below, then it will complete on its own once the last block is placed."
+    },
+    {
+      "type": "patchouli:multiblock",
+      "name": "Ceremonial Pillar",
+      "text": "The full 5-layer pattern, shown from bottom to top on the visualizer. The marked center block is the Emerald Block core.",
+      "multiblock": {
+        "pattern": [
+          [
+            "DDD",
+            "D D",
+            "DDD"
+          ],
+          [
+            "DDD",
+            "D0D",
+            "DDD"
+          ],
+          [
+            "FFF",
+            "DDD",
+            "AAA"
+          ],
+          [
+            "GGG",
+            "DDD",
+            "BBB"
+          ],
+          [
+            "HHH",
+            "DDD",
+            "CCC"
+          ]
+        ],
+        "mapping": {
+          "D": "minecraft:diamond_block",
+          "0": "minecraft:emerald_block",
+          "A": "minecraft:coal_block",
+          "B": "minecraft:slime_block",
+          "C": "minecraft:oak_log",
+          "F": "minecraft:amethyst_block",
+          "G": "minecraft:pink_wool",
+          "H": "minecraft:iron_block"
+        },
+        "symmetrical": false
+      }
+    },
+    {
+      "type": "patchouli:text",
+      "text": "Tip: layer 1 (the bottom ring, directly below the core layer) is hollow in the middle - only the four sides and corners are Diamond Blocks, leaving the center open beneath the core."
+    }
+  ]
+}

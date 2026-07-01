@@ -1,0 +1,14 @@
+{
+  "item_settings": {
+    "display_name": {
+      "type": "translatable",
+      "translate": "multilib.guide.item_name"
+    },
+    "tooltip_lines": [
+      {
+        "translate": "multilib.guide.tooltip",
+        "color": "dark_gray"
+      }
+    ]
+  }
+}
