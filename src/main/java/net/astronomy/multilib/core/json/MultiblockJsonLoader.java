@@ -72,14 +72,14 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
                         for (int i = 0; i < rows.length; i++) {
                             rows[i] = layerArr.get(i).getAsString();
                         }
-                        builder.layers(rows);
+                        builder.layer(rows);
                     }
                 } else {
                     String[] rows = new String[layersArr.size()];
                     for (int i = 0; i < layersArr.size(); i++) {
                         rows[i] = layersArr.get(i).getAsString();
                     }
-                    builder.layers(rows);
+                    builder.layer(rows);
                 }
             }
         }
@@ -165,6 +165,17 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
         // shapeless
         if (obj.has("shapeless") && obj.get("shapeless").getAsBoolean()) {
             builder.shapeless();
+        }
+
+        // auto_place: lets players Ctrl+Right-click the core to place missing blocks from inventory
+        if (obj.has("auto_place") && obj.get("auto_place").getAsBoolean()) {
+            builder.autoPlace();
+        }
+
+        // auto_place_overlay: previews (ghost-overlay style) which missing positions the currently
+        // held item could fill via auto_place. Only meaningful alongside auto_place.
+        if (obj.has("auto_place_overlay") && obj.get("auto_place_overlay").getAsBoolean()) {
+            builder.autoPlaceOverlay();
         }
 
         // min_size / max_size

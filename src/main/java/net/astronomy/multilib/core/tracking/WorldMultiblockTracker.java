@@ -131,11 +131,12 @@ public class WorldMultiblockTracker extends SavedData {
         WorldMultiblockTracker tracker = new WorldMultiblockTracker();
         ListTag list = tag.getList("instances", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
-            MultiblockInstance instance = MultiblockInstance.load(list.getCompound(i));
-            if (instance == null) {
+            Optional<MultiblockInstance> loaded = MultiblockInstance.load(list.getCompound(i));
+            if (loaded.isEmpty()) {
                 MultiLib.LOGGER.warn("[MultiLib] Discarding orphaned MultiblockInstance: definition not found or data corrupted");
                 continue;
             }
+            MultiblockInstance instance = loaded.get();
             MultiblockDefinition def = MultiblockRegistry.get(instance.getDefinitionId()).orElse(null);
             if (def != null) {
                 tracker.register(instance, def);

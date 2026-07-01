@@ -140,8 +140,9 @@ public final class MultiblockCodecs {
         s -> {
             // "manual" is a legacy alias for "wrench" (the old MANUAL constant's semantics).
             String id = s.equalsIgnoreCase("manual") ? "wrench" : s.toLowerCase();
-            FormationMode mode = FormationMode.byId(id);
-            return mode != null ? DataResult.success(mode) : DataResult.error(() -> "Unknown formation mode: " + s);
+            return FormationMode.byId(id)
+                    .<DataResult<FormationMode>>map(DataResult::success)
+                    .orElseGet(() -> DataResult.error(() -> "Unknown formation mode: " + s));
         },
         FormationMode::getId
     );

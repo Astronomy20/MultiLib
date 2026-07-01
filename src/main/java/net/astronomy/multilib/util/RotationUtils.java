@@ -1,6 +1,4 @@
-package net.astronomy.multilib.utils;
-
-import net.minecraft.world.phys.Vec3;
+package net.astronomy.multilib.util;
 
 /**
  * Utility for rotating 3D coordinates around all three axes (X, Y, Z).
@@ -60,14 +58,5 @@ public class RotationUtils {
             case 3 -> new int[]{-y, x, z};     // 270°
             default -> new int[]{x, y, z};     // 0°
         };
-    }
-
-    /**
-     * Helper for Vec3-based rotation (useful for block/entity positions).
-     * Returns a new Vec3 rotated around a given axis.
-     */
-    public static Vec3 rotate(Vec3 vec, String axis, int angle) {
-        int[] result = rotate((int) Math.round(vec.x), (int) Math.round(vec.y), (int) Math.round(vec.z), axis, angle);
-        return new Vec3(result[0], result[1], result[2]);
     }
 }

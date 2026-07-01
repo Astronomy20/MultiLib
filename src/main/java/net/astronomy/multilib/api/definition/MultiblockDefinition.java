@@ -67,6 +67,7 @@ public final class MultiblockDefinition {
     /** Symbols whose block positions are NOT auto-hidden when {@link #hasModel()} is true. */
     private final Set<Character> keepVisibleSymbols;
     private final boolean autoPlace;
+    private final boolean autoPlaceOverlay;
     private final Set<AllowedRotation> allowedRotations;
 
     MultiblockDefinition(ResourceLocation id, Map<Character, BlockIngredient> blockMap,
@@ -104,6 +105,7 @@ public final class MultiblockDefinition {
                          Set<Character> insideOnlySymbols,
                          Set<Character> keepVisibleSymbols,
                          boolean autoPlace,
+                         boolean autoPlaceOverlay,
                          Set<AllowedRotation> allowedRotations) {
         this.id = id;
         this.blockMap = Map.copyOf(blockMap);
@@ -144,6 +146,7 @@ public final class MultiblockDefinition {
         this.insideOnlySymbols = Set.copyOf(insideOnlySymbols);
         this.keepVisibleSymbols = Set.copyOf(keepVisibleSymbols);
         this.autoPlace = autoPlace;
+        this.autoPlaceOverlay = autoPlaceOverlay;
         this.allowedRotations = Set.copyOf(allowedRotations);
     }
 
@@ -196,6 +199,7 @@ public final class MultiblockDefinition {
     public Set<Character> getInsideOnlySymbols() { return insideOnlySymbols; }
     public Set<Character> getKeepVisibleSymbols() { return keepVisibleSymbols; }
     public boolean isAutoPlace() { return autoPlace; }
+    public boolean isAutoPlaceOverlay() { return autoPlaceOverlay; }
     public Set<AllowedRotation> getAllowedRotations() { return allowedRotations; }
 
     public WallSharingMode getWallSharingMode(char symbol) {

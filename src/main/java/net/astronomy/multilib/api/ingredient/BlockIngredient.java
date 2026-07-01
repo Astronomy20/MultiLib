@@ -3,6 +3,7 @@ package net.astronomy.multilib.api.ingredient;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -19,6 +20,7 @@ public interface BlockIngredient {
      * orientation, e.g. via {@link StatePropertyIngredient}, which already applies any properties
      * required by {@code .require(...)}.
      */
+    @Nullable
     default BlockState getRenderState() {
         Set<Block> candidates = getCandidateBlocks();
         if (candidates.isEmpty()) return null;

@@ -79,23 +79,23 @@ public final class MultiblockInstance {
         return tag;
     }
 
-    public static MultiblockInstance load(CompoundTag tag) {
-        if (!tag.contains("id", Tag.TAG_INT_ARRAY)) return null;
-        if (!tag.contains("definition", Tag.TAG_STRING)) return null;
+    public static Optional<MultiblockInstance> load(CompoundTag tag) {
+        if (!tag.contains("id", Tag.TAG_INT_ARRAY)) return Optional.empty();
+        if (!tag.contains("definition", Tag.TAG_STRING)) return Optional.empty();
 
         UUID id;
         try {
             id = NbtUtils.loadUUID(tag.get("id"));
         } catch (Exception e) {
             MultiLib.LOGGER.warn("[MultiLib] Failed to load MultiblockInstance UUID", e);
-            return null;
+            return Optional.empty();
         }
 
         String defStr = tag.getString("definition");
         ResourceLocation definitionId = ResourceLocation.tryParse(defStr);
-        if (definitionId == null) return null;
+        if (definitionId == null) return Optional.empty();
 
-        if (MultiblockRegistry.get(definitionId).isEmpty()) return null;
+        if (MultiblockRegistry.get(definitionId).isEmpty()) return Optional.empty();
 
         BlockPos origin = BlockPos.of(tag.getLong("origin"));
         int rotation = tag.getInt("rotation");
@@ -126,6 +126,6 @@ public final class MultiblockInstance {
                         .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue))
         );
 
-        return new MultiblockInstance(id, definitionId, origin, transform, matchData);
+        return Optional.of(new MultiblockInstance(id, definitionId, origin, transform, matchData));
     }
 }

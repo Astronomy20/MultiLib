@@ -2,6 +2,7 @@ package net.astronomy.multilib.api.definition;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Governs how a structure is allowed to form. Not a plain enum so third-party mods can register
@@ -38,8 +39,8 @@ public final class FormationMode {
         return mode;
     }
 
-    public static FormationMode byId(String id) {
-        return REGISTRY.get(id);
+    public static Optional<FormationMode> byId(String id) {
+        return Optional.ofNullable(REGISTRY.get(id));
     }
 
     public String getId() { return id; }

@@ -62,6 +62,7 @@ public final class MultiblockBuilder {
     private final Map<Character, WallSharingMode> symbolWallSharingOverrides = new HashMap<>();
     private boolean ghostOverlayDebug = false;
     private boolean autoPlace = false;
+    private boolean autoPlaceOverlay = false;
     private ResourceLocation modelId = null;
     private ResourceLocation iconItem = null;
     private String nameTranslationKey = null;
@@ -79,7 +80,12 @@ public final class MultiblockBuilder {
         return this;
     }
 
-    public MultiblockBuilder layers(String... rows) {
+    /**
+     * Adds one horizontal (Y) slice of the structure. The <em>first</em> {@code .layer(...)} call is
+     * the <b>top</b> of the structure; each subsequent call stacks one level lower, with the
+     * <em>last</em> call being the bottom.
+     */
+    public MultiblockBuilder layer(String... rows) {
         this.layers.add(Arrays.asList(rows));
         return this;
     }
@@ -291,6 +297,18 @@ public final class MultiblockBuilder {
     }
 
     /**
+     * Opts this definition into the auto-place preview overlay: while a player looks at the core
+     * block of an unformed structure holding an item that matches one or more missing positions, those
+     * positions are highlighted ghost-overlay style (no need to trigger the regular ghost overlay
+     * first). Only meaningful combined with {@link #autoPlace()} — the preview promises the block can
+     * actually be auto-placed there.
+     */
+    public MultiblockBuilder autoPlaceOverlay() {
+        this.autoPlaceOverlay = true;
+        return this;
+    }
+
+    /**
      * Associates a Master-Dummy render model with this multiblock: once formed, every block of the
      * structure becomes invisible except the core, which renders this model in its place instead of
      * its own block model. Physics/hitboxes of every block remain unaffected. {@code modelId} is the
@@ -389,7 +407,7 @@ public final class MultiblockBuilder {
                 shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
                 wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug,
                 modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
-                keepVisibleSymbols, autoPlace, allowedRotations
+                keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations
         );
         if (valid) {
             MultiblockRegistry.register(definition);
@@ -428,7 +446,7 @@ public final class MultiblockBuilder {
                 shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
                 wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug,
                 modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
-                keepVisibleSymbols, autoPlace, allowedRotations
+                keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations
         );
     }
 

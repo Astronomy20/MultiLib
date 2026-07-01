@@ -1,6 +1,8 @@
 package net.astronomy.multilib.core.matching;
 
+import net.astronomy.multilib.api.definition.AllowedRotation;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
+import net.astronomy.multilib.api.definition.RotationAxis;
 import net.astronomy.multilib.api.definition.RotationMode;
 import net.astronomy.multilib.api.ingredient.BlockIngredient;
 import net.astronomy.multilib.api.pattern.PatternProvider;
@@ -33,8 +35,13 @@ public class FunctionalMatcher implements IPatternMatcher {
         int centerX = sx / 2;
         int centerZ = sz / 2;
 
-        boolean allowHorizontal = definition.getRotationMode() != RotationMode.NONE;
-        boolean allowVertical = definition.getRotationMode() == RotationMode.ALL;
+        Set<AllowedRotation> allowedRotations = definition.getAllowedRotations();
+        boolean allowHorizontal = !allowedRotations.isEmpty()
+                ? true // the unrotated/Y-axis origin candidate is always needed as the baseline
+                : definition.getRotationMode() != RotationMode.NONE;
+        boolean allowVertical = !allowedRotations.isEmpty()
+                ? allowedRotations.stream().anyMatch(ar -> ar.axis() != RotationAxis.Y)
+                : definition.getRotationMode() == RotationMode.ALL;
 
         int orientationsTried = 0;
 
@@ -59,6 +66,14 @@ public class FunctionalMatcher implements IPatternMatcher {
                     int relY = y - (sy - 1);
                     int relZ = z - centerZ;
 
+                    if (!allowedRotations.isEmpty()) {
+                        MatchData found = tryGranularTransformsForCell(
+                                level, activationPos, relX, relY, relZ, definition, provider, size);
+                        if (found != null) return new MatchResult.Success(found);
+                        orientationsTried += 1 + countGranularTransforms(allowedRotations);
+                        continue;
+                    }
+
                     List<String[]> axes = buildAxes(allowHorizontal, allowVertical);
                     for (String[] axisInfo : axes) {
                         String axis = axisInfo[0];
@@ -81,6 +96,46 @@ public class FunctionalMatcher implements IPatternMatcher {
         String summary = orientationsTried == 0 ? "No orientations tried"
                 : "No matching orientation found after " + orientationsTried + " attempts";
         return new MatchResult.Failure(new MatchFailureReport(orientationsTried, List.of(), summary));
+    }
+
+    /**
+     * Tries only the unrotated orientation plus the specific axis/angle combinations declared via
+     * {@code .allowRotation(...)}, instead of every rotation the coarse {@link RotationMode} allows.
+     * Mirrors {@link ShapedMatcher#tryGranularTransformsForCell}.
+     */
+    private MatchData tryGranularTransformsForCell(ServerLevel level, BlockPos activationPos,
+                                                    int relX, int relY, int relZ,
+                                                    MultiblockDefinition definition,
+                                                    PatternProvider provider, Vec3i size) {
+        int[] baseTransformed = ShapedMatcher.applyTransform(relX, relY, relZ, "Y", 0);
+        BlockPos baseOrigin = activationPos.offset(-baseTransformed[0], -baseTransformed[1], -baseTransformed[2]);
+        if (matchesProvider(level, baseOrigin, provider, definition, size, "Y", 0)) {
+            return collectMatchData(level, baseOrigin, provider, definition, size, "Y", 0);
+        }
+        for (AllowedRotation allowed : definition.getAllowedRotations()) {
+            int step = allowed.normalizedAngle() / 90;
+            String[] axesToTry = switch (allowed.axis()) {
+                case Y -> new String[]{"Y"};
+                case X -> new String[]{"X", "X_FLIP"};
+                case Z -> new String[]{"Z", "Z_FLIP"};
+            };
+            for (String axisStr : axesToTry) {
+                int[] t = ShapedMatcher.applyTransform(relX, relY, relZ, axisStr, step);
+                BlockPos origin = activationPos.offset(-t[0], -t[1], -t[2]);
+                if (matchesProvider(level, origin, provider, definition, size, axisStr, step)) {
+                    return collectMatchData(level, origin, provider, definition, size, axisStr, step);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static int countGranularTransforms(Set<AllowedRotation> allowedRotations) {
+        int count = 0;
+        for (AllowedRotation allowed : allowedRotations) {
+            count += allowed.axis() == RotationAxis.Y ? 1 : 2;
+        }
+        return count;
     }
 
     private boolean matchesProvider(ServerLevel level, BlockPos origin, PatternProvider provider,

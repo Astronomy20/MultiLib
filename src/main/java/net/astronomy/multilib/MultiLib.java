@@ -4,10 +4,13 @@ import net.astronomy.multilib.client.ClientConfig;
 import net.astronomy.multilib.client.network.ClientPacketHandler;
 import net.astronomy.multilib.core.capability.IOPortCapabilityHandler;
 import net.astronomy.multilib.core.json.MultiblockJsonSetup;
+import net.astronomy.multilib.event.AutoPlacePreviewRequestHandler;
 import net.astronomy.multilib.event.AutoPlaceRequestHandler;
 import net.astronomy.multilib.event.OverlayRequestHandler;
+import net.astronomy.multilib.network.AutoPlacePreviewDataPacket;
 import net.astronomy.multilib.network.OverlayDataPacket;
 import net.astronomy.multilib.network.RequestAutoPlacePacket;
+import net.astronomy.multilib.network.RequestAutoPlacePreviewPacket;
 import net.astronomy.multilib.network.RequestOverlayPacket;
 import org.slf4j.Logger;
 
@@ -42,6 +45,7 @@ public class MultiLib {
         NeoForge.EVENT_BUS.register(this);
 
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -67,11 +71,21 @@ public class MultiLib {
             RequestAutoPlacePacket.STREAM_CODEC,
             AutoPlaceRequestHandler::handleRequest
         );
+        registrar.playToServer(
+            RequestAutoPlacePreviewPacket.TYPE,
+            RequestAutoPlacePreviewPacket.STREAM_CODEC,
+            AutoPlacePreviewRequestHandler::handleRequest
+        );
         // playToClient handler is only invoked on the client side by NeoForge
         registrar.playToClient(
             OverlayDataPacket.TYPE,
             OverlayDataPacket.STREAM_CODEC,
             ClientPacketHandler::handleOverlayData
+        );
+        registrar.playToClient(
+            AutoPlacePreviewDataPacket.TYPE,
+            AutoPlacePreviewDataPacket.STREAM_CODEC,
+            ClientPacketHandler::handleAutoPlacePreviewData
         );
     }
 }
