@@ -16,8 +16,10 @@
     "G": { "block": "minecraft:pink_wool" },
     "H": { "block": "minecraft:iron_block" }
   },
+  "auto_place": true,
+  "auto_place_overlay": true,
   "core": "E",
   "rotations": "horizontal",
   "priority": 0,
-  "on_formed_sound": "minecraft:block.amethyst_block.chime"
+  "on_formed_sound": "minecraft:block.glass.break"
 }

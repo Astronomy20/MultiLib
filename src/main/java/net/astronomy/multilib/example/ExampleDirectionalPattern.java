@@ -24,7 +24,7 @@ public class ExampleDirectionalPattern {
     public static void registerAll() {
         MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("multilib", "example_directional"))
                 .name("example_directional")
-                .layers(
+                .layer(
                         " G ",
                         "IOD",
                         " E "

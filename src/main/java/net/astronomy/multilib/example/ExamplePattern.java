@@ -32,8 +32,8 @@ public class ExamplePattern {
         // purely as plain body blocks with no activation/core role.
         MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("multilib", "example"))
                 .name("example_multiblock")
-                .layers("PPP", " P ", " G ")
-                .layers("POP", " P ", " G ")
+                .layer("PPP", " P ", " G ")
+                .layer("POP", " P ", " G ")
                 .key('P', BlockIngredient.of(ExampleSetup.PART_BLOCK))
                 .key('O', BlockIngredient.of(ExampleSetup.CONTROLLER_BLOCK))
                 .key('G', BlockIngredient.of(Blocks.GOLD_BLOCK))
@@ -43,15 +43,16 @@ public class ExamplePattern {
                 .rotations(RotationMode.HORIZONTAL)
                 .allowRotation(RotationAxis.values(), 90, 180, 270, -90)
                 .ghostOverlayDebug()
+                .autoPlace().autoPlaceOverlay()
                 .onFormed(ctx -> {
                     Level level = ctx.level();
                     BlockPos origin = ctx.instance().getOrigin();
 
-                    // Controlliamo di essere sul lato Server prima di spawnare entità
+                    // Check to be on server side before spawn entity
                     if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
                         LightningBolt lightning = EntityType.LIGHTNING_BOLT.create(serverLevel);
                         if (lightning != null) {
-                            // Posiziona il fulmine al centro del blocco controller
+                            // Summon lightning on core block coords
                             lightning.moveTo(Vec3.atBottomCenterOf(origin));
                             serverLevel.addFreshEntity(lightning);
                         }
@@ -62,10 +63,10 @@ public class ExamplePattern {
                     BlockPos origin = ctx.instance().getOrigin();
 
                     if (!level.isClientSide()) {
-                        // Crea il messaggio da inviare in chat (puoi personalizzare il testo e il colore)
+                        // Message to send in chat
                         Component messaggio = Component.literal("§cLa struttura multiblocco è stata distrutta!");
 
-                        // Trova tutti i giocatori in un raggio di 30 blocchi dalla struttura e invia il messaggio
+                        // Find player in 30 blocks radius
                         AABB area = new AABB(origin).inflate(30);
                         List<Player> players = level.getEntitiesOfClass(Player.class, area);
 
@@ -73,7 +74,7 @@ public class ExamplePattern {
                             player.sendSystemMessage(messaggio);
                         }
 
-                        // Riproduce comunque il suono del vetro rotto di default (opzionale, puoi rimuoverlo)
+                        // Also plays the broken glass sound
                         level.playSound(null, origin, SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 1.0F, 0.8F);
                     }
                 })
