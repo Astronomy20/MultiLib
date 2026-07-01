@@ -25,6 +25,7 @@ public class MultiblockJeiPlugin implements IModPlugin {
 
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
+        JeiScreenResetHandler.init();
         registration.addRecipeCategories(
                 new MultiblockRecipeCategory(registration.getJeiHelpers().getGuiHelper())
         );

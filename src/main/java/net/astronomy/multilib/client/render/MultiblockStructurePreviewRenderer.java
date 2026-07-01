@@ -85,7 +85,7 @@ public final class MultiblockStructurePreviewRenderer {
             int height = rows.size();
             if (height == 0) continue;
             int width = rows.get(0).length();
-            // layers[0] is the topmost declared layer (same convention as MultiblockBuilder.layers()
+            // layers[0] is the topmost declared layer (same convention as MultiblockBuilder.layer()
             // call order / OverlayRequestHandler's ghost preview), layers[last] the bottommost.
             float relY = (layersCount - 1) / 2.0F - layerIdx;
 
@@ -121,9 +121,17 @@ public final class MultiblockStructurePreviewRenderer {
 
     /**
      * Finds which pattern cell, if any, projects under (mouseX, mouseY) given the same camera
-     * parameters {@link #render} would use. Picks the cell whose screen-projected center is closest
-     * to the mouse, within a hit radius proportional to the current block size on screen. Independent
-     * of any live {@link GuiGraphics}/pose stack — builds its own matrix replicating render()'s chain.
+     * parameters {@link #render} would use. Among every cell whose screen-projected center falls
+     * within a hit radius proportional to the current block size on screen, picks the FRONTMOST one
+     * (largest resulting depth after the full rotation/translation chain — empirically verified: with
+     * this pose-stack chain, larger transformed Z is nearer the viewer, not smaller as first assumed)
+     * rather than the one whose center is nominally closest in 2D — with rotation applied, a block
+     * further back can easily have a center that lines up slightly better in screen-space than the
+     * block actually in front of it, which is what previously made the pick feel arbitrary ("sometimes
+     * the front one, sometimes the one behind"), and picking by the wrong depth sign made it worse
+     * (consistently selecting the occluded block behind whatever was actually visible/clicked).
+     * Independent of any live {@link GuiGraphics}/pose stack — builds its own matrix replicating
+     * render()'s chain.
      */
     @Nullable
     public static BlockHit pick(MultiblockDefinition definition, int centerX, int centerY, int viewSize,
@@ -150,8 +158,9 @@ public final class MultiblockStructurePreviewRenderer {
         Matrix4f matrix = new Matrix4f(poseStack.last().pose());
 
         float hitRadius = Math.max(4f, Math.abs(scale) * 0.6f);
+        float hitRadius2 = hitRadius * hitRadius;
         BlockHit best = null;
-        float bestDist2 = hitRadius * hitRadius;
+        float bestDepth = Float.NEGATIVE_INFINITY;
 
         for (int layerIdx = 0; layerIdx < layersCount; layerIdx++) {
             if (onlyLayer != null && layerIdx != onlyLayer) continue;
@@ -180,8 +189,16 @@ public final class MultiblockStructurePreviewRenderer {
                     float dx = (float) mouseX - center.x();
                     float dy = (float) mouseY - center.y();
                     float dist2 = dx * dx + dy * dy;
-                    if (dist2 < bestDist2) {
-                        bestDist2 = dist2;
+                    if (dist2 > hitRadius2) continue;
+
+                    // Among every cell under the cursor, the frontmost one (largest depth in this
+                    // convention — verified empirically: the initial "smaller Z = nearer camera"
+                    // assumption was backwards, it was picking the block visually behind/occluded
+                    // ones instead of the one actually clicked) is the one actually visible/clicked —
+                    // not whichever has the nominally closest projected center, which rotation can
+                    // easily make a background block win.
+                    if (center.z() > bestDepth) {
+                        bestDepth = center.z();
                         best = new BlockHit(layerIdx, row, col, symbol);
                     }
                 }
@@ -193,60 +210,5 @@ public final class MultiblockStructurePreviewRenderer {
     @Nullable
     private static BlockState representativeState(BlockIngredient ingredient) {
         return ingredient.getRenderState();
-    }
-
-    /** Wraps a VertexConsumer and multiplies each vertex's RGBA by fixed tint factors. */
-    private static final class TintedVertexConsumer implements VertexConsumer {
-        private final VertexConsumer delegate;
-        private final float tr, tg, tb, ta;
-
-        TintedVertexConsumer(VertexConsumer delegate, float tr, float tg, float tb, float ta) {
-            this.delegate = delegate;
-            this.tr = tr;
-            this.tg = tg;
-            this.tb = tb;
-            this.ta = ta;
-        }
-
-        @Override
-        public VertexConsumer addVertex(float x, float y, float z) {
-            delegate.addVertex(x, y, z);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-            delegate.setColor(
-                    Math.min(255, (int) (red * tr)),
-                    Math.min(255, (int) (green * tg)),
-                    Math.min(255, (int) (blue * tb)),
-                    Math.min(255, (int) (alpha * ta))
-            );
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv(float u, float v) {
-            delegate.setUv(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv1(int u, int v) {
-            delegate.setUv1(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv2(int u, int v) {
-            delegate.setUv2(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setNormal(float nx, float ny, float nz) {
-            delegate.setNormal(nx, ny, nz);
-            return this;
-        }
     }
 }

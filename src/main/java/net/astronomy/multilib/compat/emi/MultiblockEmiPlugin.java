@@ -3,6 +3,7 @@ package net.astronomy.multilib.compat.emi;
 import dev.emi.emi.api.EmiEntrypoint;
 import dev.emi.emi.api.EmiPlugin;
 import dev.emi.emi.api.EmiRegistry;
+import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
 
@@ -16,9 +17,17 @@ public class MultiblockEmiPlugin implements EmiPlugin {
 
     @Override
     public void register(EmiRegistry registry) {
-        registry.addCategory(MultiblockEmiRecipe.getOrCreateCategory()); // TODO: verify API version compatibility
+        EmiInputBridge.init();
+        EmiRecipeCategory category = MultiblockEmiRecipe.getOrCreateCategory();
+        registry.addCategory(category);
+        // Deliberately NOT registered as a "workstation" (dev.emi.emi.api.EmiRegistry#addWorkstation):
+        // EmiApi#displayUses merges byWorkstation results in on TOP of the normal input/output-based
+        // lookup, so a workstation-bound item always surfaced every recipe in the category regardless
+        // of which one it actually belonged to — that's what caused every structure to show up no
+        // matter which core/activation block was opened. MultiblockRecipeDisplay.of(...) now gives
+        // each recipe a real per-definition output (see MultiblockEmiRecipe#getOutputs), so EMI's
+        // standard "Recipes" lookup on an item already filters correctly without a workstation.
         MultiblockRegistry.getAllDefinitions().forEach(def ->
-                registry.addRecipe(new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(def)))
-        );
+                registry.addRecipe(new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(def))));
     }
 }

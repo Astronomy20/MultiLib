@@ -11,8 +11,6 @@ import java.util.stream.Collectors;
 
 /**
  * REI Display wrapper for {@link MultiblockRecipeDisplay}.
- * inputs/outputs are empty by default; they become populated when a definition
- * provides item stacks.
  */
 public class MultiblockDisplay implements Display {
 
@@ -28,18 +26,16 @@ public class MultiblockDisplay implements Display {
 
     @Override
     public List<EntryIngredient> getInputEntries() {
-        if (data.inputs().isEmpty()) return List.of();
-        return data.inputs().stream()
-                .map(EntryIngredients::of)
-                .collect(Collectors.toList());
+        // data.inputs() already lists a representative stack per component block (see
+        // MultiblockRecipeDisplay.of), so REI's "Uses" lookup finds this recipe from any of them.
+        return data.inputs().stream().map(EntryIngredients::of).collect(Collectors.toList());
     }
 
     @Override
     public List<EntryIngredient> getOutputEntries() {
-        if (data.outputs().isEmpty()) return List.of();
-        return data.outputs().stream()
-                .map(EntryIngredients::of)
-                .collect(Collectors.toList());
+        // data.outputs() is just the core/activation block (see MultiblockRecipeDisplay.of), so
+        // REI's "Recipes" lookup on it shows only this specific multiblock, not the whole category.
+        return data.outputs().stream().map(EntryIngredients::of).collect(Collectors.toList());
     }
 
     @Override
