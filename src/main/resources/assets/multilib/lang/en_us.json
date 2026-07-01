@@ -16,8 +16,14 @@
   "multilib.overlay.layer": "Ghost overlay: layer %d",
   "multilib.overlay.disabled": "Ghost overlay disabled",
   "jei.multilib.category.multiblock_structure": "Multiblock Structure",
-  "jei.multilib.layer.all": "All Layers",
-  "jei.multilib.required_blocks": "Required blocks:",
-  "jei.multilib.auto_rotate.on": "Preview auto-rotating (drag to rotate manually)",
-  "jei.multilib.auto_rotate.off": "Preview auto-rotate paused"
+  "rei.multilib.category.multiblock_structure": "Multiblock Structure",
+  "emi.category.multilib.multiblock_structure": "Multiblock Structure",
+  "multilib.preview.layer_all": "All Layers",
+  "multilib.preview.required_blocks": "Required blocks:",
+  "multilib.preview.auto_rotate.on": "Preview auto-rotating (drag to rotate manually)",
+  "multilib.preview.auto_rotate.off": "Preview auto-rotate paused",
+  "key.categories.multilib": "MultiLib",
+  "key.multilib.auto_place_modifier": "Auto-Place Modifier",
+  "multilib.guide.item_name": "MultiLib Guide",
+  "multilib.guide.tooltip": "Examples of MultiLib's multiblock structures"
 }
