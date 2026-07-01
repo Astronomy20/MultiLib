@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.astronomy.multilib.MultiLib;
+import net.astronomy.multilib.client.overlay.AutoPlacePreviewState;
 import net.astronomy.multilib.client.overlay.GhostOverlayState;
 import net.astronomy.multilib.network.GhostBlockData;
 import net.minecraft.client.Camera;
@@ -21,7 +22,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = MultiLib.MODID, value = Dist.CLIENT)
@@ -58,9 +62,27 @@ public class GhostBlockRenderer {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
-        if (!GhostOverlayState.INSTANCE.isActive()) return;
 
-        List<GhostBlockData> blocks = GhostOverlayState.INSTANCE.getBlocksToRender();
+        List<GhostBlockData> overlayBlocks = GhostOverlayState.INSTANCE.isActive()
+                ? GhostOverlayState.INSTANCE.getBlocksToRender() : List.of();
+        List<GhostBlockData> previewBlocks = AutoPlacePreviewState.INSTANCE.getBlocksToRender();
+        if (overlayBlocks.isEmpty() && previewBlocks.isEmpty()) return;
+
+        // The preview is more specific/actionable than a plain "missing" ghost at the same spot, so
+        // it takes priority where the two would otherwise overlap.
+        List<GhostBlockData> blocks;
+        if (previewBlocks.isEmpty()) {
+            blocks = overlayBlocks;
+        } else if (overlayBlocks.isEmpty()) {
+            blocks = previewBlocks;
+        } else {
+            Set<BlockPos> previewPositions = new HashSet<>();
+            for (GhostBlockData g : previewBlocks) previewPositions.add(g.pos());
+            blocks = new ArrayList<>(previewBlocks);
+            for (GhostBlockData g : overlayBlocks) {
+                if (!previewPositions.contains(g.pos())) blocks.add(g);
+            }
+        }
         if (blocks.isEmpty()) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -107,6 +129,9 @@ public class GhostBlockRenderer {
                 case WRONG -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 1f, 0.27f, 0.27f, 0.5f);
                 // CORE: already-correct core block, highlighted green so it always stands out.
                 case CORE -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 0.3f, 1f, 0.3f, 0.4f);
+                // PLACEABLE: the held item can fill this position right now — no color tint, just
+                // the plain translucent ghost so the block's real texture reads clearly.
+                case PLACEABLE -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 1f, 1f, 1f, 0.55f);
             }
 
             poseStack.popPose();
@@ -142,61 +167,5 @@ public class GhostBlockRenderer {
             false,
             Minecraft.getInstance().level.random
         );
-    }
-
-    /** Wraps a VertexConsumer and multiplies each vertex's RGBA by fixed tint factors. */
-    private static final class TintedVertexConsumer implements VertexConsumer {
-
-        private final VertexConsumer delegate;
-        private final float tr, tg, tb, ta;
-
-        TintedVertexConsumer(VertexConsumer delegate, float tr, float tg, float tb, float ta) {
-            this.delegate = delegate;
-            this.tr = tr;
-            this.tg = tg;
-            this.tb = tb;
-            this.ta = ta;
-        }
-
-        @Override
-        public VertexConsumer addVertex(float x, float y, float z) {
-            delegate.addVertex(x, y, z);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setColor(int red, int green, int blue, int alpha) {
-            delegate.setColor(
-                Math.min(255, (int)(red * tr)),
-                Math.min(255, (int)(green * tg)),
-                Math.min(255, (int)(blue * tb)),
-                Math.min(255, (int)(alpha * ta))
-            );
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv(float u, float v) {
-            delegate.setUv(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv1(int u, int v) {
-            delegate.setUv1(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setUv2(int u, int v) {
-            delegate.setUv2(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer setNormal(float nx, float ny, float nz) {
-            delegate.setNormal(nx, ny, nz);
-            return this;
-        }
     }
 }

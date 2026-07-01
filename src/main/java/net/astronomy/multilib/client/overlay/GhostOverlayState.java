@@ -13,19 +13,22 @@ public class GhostOverlayState {
 
     public static final GhostOverlayState INSTANCE = new GhostOverlayState();
 
-    private static final long TIMEOUT_MS = 30_000L;
-
     private List<GhostBlockData> blocks = new ArrayList<>();
     private int activeMode = -1;
-    private long lastInteractionTime = 0;
     private boolean debugTiming = false;
 
     private GhostOverlayState() {}
 
+    /**
+     * Called on every OverlayDataPacket received from the server. The server is the sole authority
+     * on when the overlay is active: it manages the session timer and sends activeMode=-1 when the
+     * duration expires. No client-side timer is needed — and adding one caused a race condition
+     * where isActive() set activeMode=-1 locally, then the server's next refresh packet (with
+     * activeMode>=0) was incorrectly treated as a fresh activation, resetting the timer indefinitely.
+     */
     public void update(OverlayDataPacket packet) {
         this.blocks = new ArrayList<>(packet.blocks());
         this.activeMode = packet.activeMode();
-        this.lastInteractionTime = System.currentTimeMillis();
         this.debugTiming = packet.debugTiming();
     }
 
@@ -35,12 +38,7 @@ public class GhostOverlayState {
     }
 
     public boolean isActive() {
-        if (activeMode < 0) return false;
-        if (System.currentTimeMillis() - lastInteractionTime > TIMEOUT_MS) {
-            activeMode = -1;
-            return false;
-        }
-        return true;
+        return activeMode >= 0;
     }
 
     public List<GhostBlockData> getBlocksToRender() {

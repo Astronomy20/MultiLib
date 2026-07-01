@@ -1,13 +1,14 @@
 package net.astronomy.multilib.event;
 
+import net.astronomy.multilib.CommonConfig;
 import net.astronomy.multilib.MultiLib;
-import net.astronomy.multilib.api.definition.AllowedRotation;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
-import net.astronomy.multilib.api.definition.RotationAxis;
+import net.astronomy.multilib.api.event.MultiblockFormedEvent;
 import net.astronomy.multilib.api.ingredient.BlockIngredient;
 import net.astronomy.multilib.core.matching.MatchResult;
 import net.astronomy.multilib.core.matching.PatternMatcher;
 import net.astronomy.multilib.core.matching.ShapedMatcher;
+import net.astronomy.multilib.core.matching.StructureOrientation;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
 import net.astronomy.multilib.network.GhostBlockData;
 import net.astronomy.multilib.network.OverlayDataPacket;
@@ -19,6 +20,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -39,7 +41,26 @@ public class OverlayRequestHandler {
     private static final int REFRESH_INTERVAL_TICKS = 10;
     private static int tickCounter = 0;
 
-    private record PlayerOverlayState(BlockPos corePos, int currentMode, String axis, int rotation) {}
+    /**
+     * @param activationTimeMs wall-clock time (ms) when this overlay session was first opened; never
+     *                         updated on layer-cycle clicks, only on fresh activation (different core
+     *                         or no prior state). Used to auto-disable after the configured duration,
+     *                         independently of the live-refresh loop that would otherwise reset the
+     *                         client-side timeout on every packet.
+     */
+    private record PlayerOverlayState(BlockPos corePos, int currentMode, String axis, int rotation,
+                                      long activationTimeMs) {}
+
+    /**
+     * The (axis, rotation) a player currently has previewed via the ghost overlay on the given core,
+     * if any — used by auto-place to place blocks in the same orientation the player is looking at
+     * instead of silently assuming the default upright placement.
+     */
+    static StructureOrientation.Orientation getActiveOrientation(UUID playerId, BlockPos corePos) {
+        PlayerOverlayState state = PLAYER_STATES.get(playerId);
+        if (state == null || !state.corePos().equals(corePos)) return null;
+        return new StructureOrientation.Orientation(state.axis(), state.rotation());
+    }
 
     public static void handleRequest(RequestOverlayPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
@@ -93,17 +114,45 @@ public class OverlayRequestHandler {
                         : (packet.faceOrdinal() >= 0 && packet.faceOrdinal() < Direction.values().length
                                 ? Direction.values()[packet.faceOrdinal()] : null);
                 if (effectiveFace != null) {
-                    int[] ar = orientationForFace(definition, effectiveFace);
-                    axis = AXIS_NAMES[ar[0]];
-                    rotation = ar[1];
+                    StructureOrientation.Orientation o = StructureOrientation.orientationForFace(definition, effectiveFace);
+                    axis = o.axis();
+                    rotation = o.rotation();
                 } else {
                     axis = "Y";
                     rotation = 0;
                 }
             }
 
-            PLAYER_STATES.put(player.getUUID(), new PlayerOverlayState(corePos, nextMode, axis, rotation));
+            // Preserve the original activation time when cycling layers on the same core — the
+            // duration timeout must count from when the overlay was first opened, not from the most
+            // recent layer-cycle click (which would keep resetting it indefinitely).
+            long activationTimeMs = (current != null && current.corePos().equals(corePos))
+                    ? current.activationTimeMs()
+                    : System.currentTimeMillis();
+            PLAYER_STATES.put(player.getUUID(), new PlayerOverlayState(corePos, nextMode, axis, rotation, activationTimeMs));
             sendOverlayUpdate(player, level, corePos, definition, nextMode, totalLayers, axis, rotation);
+        });
+    }
+
+    /**
+     * Immediately disables any active ghost overlay anchored on the core that just formed — e.g. the
+     * structure was completed by placing its last block while a player had the overlay open on it.
+     * Without this, the overlay would just keep showing "0 mismatches" (an empty but still-active
+     * preview) until the next {@link #REFRESH_INTERVAL_TICKS} periodic refresh or the player manually
+     * closes it, instead of disappearing the instant the structure is actually done.
+     */
+    @SubscribeEvent
+    public static void onMultiblockFormed(MultiblockFormedEvent event) {
+        event.getInstance().getCorePos().ifPresent(corePos -> {
+            ServerLevel level = event.getLevel();
+            for (Map.Entry<UUID, PlayerOverlayState> entry : new ArrayList<>(PLAYER_STATES.entrySet())) {
+                if (!entry.getValue().corePos().equals(corePos)) continue;
+                PLAYER_STATES.remove(entry.getKey());
+                ServerPlayer player = level.getServer().getPlayerList().getPlayer(entry.getKey());
+                if (player != null) {
+                    PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+                }
+            }
         });
     }
 
@@ -127,6 +176,17 @@ public class OverlayRequestHandler {
             ServerLevel level = player.serverLevel();
             BlockPos corePos = entry.getValue().corePos();
 
+            // Session duration expired — stop refreshing so the server stops sending packets and the
+            // client-side timeout can fire. This is the primary mechanism: the client's own fallback
+            // timeout (GhostOverlayState.isActive) would also fire eventually, but only after the
+            // server has already stopped sending updates (which reset the client timer each time).
+            long durationMs = CommonConfig.GHOST_OVERLAY_DURATION_SECONDS.get() * 1000L;
+            if (System.currentTimeMillis() - entry.getValue().activationTimeMs() > durationMs) {
+                PLAYER_STATES.remove(entry.getKey());
+                PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+                continue;
+            }
+
             // The block that triggered the overlay is gone (broken) — disable instead of refreshing
             // against an empty position.
             if (level.getBlockState(corePos).isAir()) {
@@ -142,35 +202,14 @@ public class OverlayRequestHandler {
         }
     }
 
-    private static final String[] AXIS_NAMES = {"Y", "X", "X_FLIP", "Z", "Z_FLIP"};
-
     /**
-     * Picks which (axis, rotation) the ghost preview should show for a shift-click on the given face
-     * of the core. The four horizontal faces always cycle the four Y-axis (yaw) rotations — that
-     * works for every definition, rotated or not, since axis=Y rotation=0 is always the baseline.
-     * UP keeps the default upright placement. DOWN previews the structure flipped onto its head, but
-     * only if the definition actually declared an X/Z-axis rotation via {@code .allowRotation(...)} —
-     * otherwise DOWN falls back to the same default as UP, since flipping isn't a valid placement.
-     *
-     * @return {axisIndex into AXIS_NAMES, rotationStep 0-3}
+     * Immediately drops a disconnecting player's overlay state — otherwise the entry lingers in
+     * {@link #PLAYER_STATES} until the periodic {@link #onLevelTick} check notices the configured
+     * {@link CommonConfig#GHOST_OVERLAY_DURATION_SECONDS} has elapsed, which is bounded but avoidable.
      */
-    private static int[] orientationForFace(MultiblockDefinition definition, Direction face) {
-        return switch (face) {
-            case SOUTH -> new int[]{0, 0};
-            case WEST -> new int[]{0, 1};
-            case NORTH -> new int[]{0, 2};
-            case EAST -> new int[]{0, 3};
-            case DOWN -> {
-                if (definition != null) {
-                    for (AllowedRotation ar : definition.getAllowedRotations()) {
-                        if (ar.axis() == RotationAxis.X) yield new int[]{2, 0}; // X_FLIP
-                        if (ar.axis() == RotationAxis.Z) yield new int[]{4, 0}; // Z_FLIP
-                    }
-                }
-                yield new int[]{0, 0};
-            }
-            default -> new int[]{0, 0}; // UP, or anything else: default upright
-        };
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        PLAYER_STATES.remove(event.getEntity().getUUID());
     }
 
     /**
@@ -196,6 +235,15 @@ public class OverlayRequestHandler {
                                            MultiblockDefinition definition, int mode, int totalLayers,
                                            String axis, int rotation) {
         List<GhostBlockData> ghostData = calculateGhostBlocks(level, corePos, definition, mode, axis, rotation);
+        if (ghostData == null) {
+            // null (as opposed to an empty list) signals the structure is already fully formed —
+            // disable outright instead of leaving an "active but empty" overlay. This is a defensive
+            // fallback alongside onMultiblockFormed's immediate disable, for cases that path doesn't
+            // cover (e.g. the overlay is (re)activated by clicking a core that's already formed).
+            PLAYER_STATES.remove(player.getUUID());
+            PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+            return;
+        }
         boolean debugTiming = definition != null && definition.isGhostOverlayDebug();
         PacketDistributor.sendToPlayer(player, new OverlayDataPacket(ghostData, totalLayers, mode, debugTiming));
     }
@@ -212,6 +260,7 @@ public class OverlayRequestHandler {
         return null;
     }
 
+    /** @return ghost data for the requested view, or null if the structure is already fully formed. */
     private static List<GhostBlockData> calculateGhostBlocks(ServerLevel level, BlockPos corePos,
                                                                MultiblockDefinition definition, int mode,
                                                                String axis, int rotation) {
@@ -219,7 +268,7 @@ public class OverlayRequestHandler {
 
         MatchResult result = PatternMatcher.matches(level, corePos, definition);
         if (result instanceof MatchResult.Success) {
-            return List.of();
+            return null;
         }
 
         List<GhostBlockData> ghostData = new ArrayList<>();
@@ -229,7 +278,7 @@ public class OverlayRequestHandler {
         // The overlay only ever triggers from the core block (findDefinitionAt already verified
         // that), so anchor directly on the core symbol's cell.
         char coreSymbol = definition.getCoreSymbol();
-        BlockPos origin = findSymbolOrigin(corePos, layers, coreSymbol, axis, rotation);
+        BlockPos origin = StructureOrientation.findSymbolOrigin(corePos, layers, coreSymbol, axis, rotation);
 
         for (int layerIdx = 0; layerIdx < layers.size(); layerIdx++) {
             // mode counts up from the bottom (mode=1 = bottommost, displayed "1/N") while layers[]
@@ -277,41 +326,6 @@ public class OverlayRequestHandler {
             }
         }
         return ghostData;
-    }
-
-    /**
-     * Mirrors how ShapedMatcher derives a match's origin from a symbol's own cell, instead of the
-     * layer's geometric center, so the ghost preview lines up with the block that was clicked,
-     * wherever in the pattern it sits — for whichever (axis, rotation) is currently being previewed.
-     */
-    private static BlockPos findSymbolOrigin(BlockPos clickedPos, List<List<String>> layers, char symbol,
-                                             String axis, int rotation) {
-        int layersCount = layers.size();
-        for (int layerIdx = 0; layerIdx < layersCount; layerIdx++) {
-            List<String> layer = layers.get(layerIdx);
-            int height = layer.size();
-            if (height == 0) continue;
-            int width = layer.get(0).length();
-            int centerX = width / 2;
-            int centerZ = height / 2;
-
-            for (int row = 0; row < height; row++) {
-                String line = layer.get(row);
-                for (int col = 0; col < Math.min(width, line.length()); col++) {
-                    if (line.charAt(col) != symbol) continue;
-                    int relX = col - centerX;
-                    // layers[0] is the topmost declared layer (same convention as MultiblockBuilder.layers()
-                    // call order), layers[last] the bottommost — independent of ShapedMatcher's own internal
-                    // matching coordinates, which don't need this visual ordering to be correct.
-                    int relY = (layersCount - 1) - layerIdx;
-                    int relZ = row - centerZ;
-                    int[] t = ShapedMatcher.applyTransform(relX, relY, relZ, axis, rotation);
-                    return clickedPos.offset(-t[0], -t[1], -t[2]);
-                }
-            }
-        }
-        // Symbol not found in the pattern — fall back to treating clickedPos as the origin.
-        return clickedPos;
     }
 
     private static BlockState getRepresentativeState(BlockIngredient ingredient) {

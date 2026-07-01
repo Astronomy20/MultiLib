@@ -9,8 +9,11 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public record GhostBlockData(BlockPos pos, BlockState expectedState, Status status) {
 
-    /** CORE: the structure's core/main block position, always highlighted even when already correct. */
-    public enum Status { MISSING, WRONG, CORE }
+    /**
+     * CORE: the structure's core/main block position, always highlighted even when already correct.
+     * PLACEABLE: a missing position the player's currently held item can fill via auto-place.
+     */
+    public enum Status { MISSING, WRONG, CORE, PLACEABLE }
 
     public static final StreamCodec<ByteBuf, GhostBlockData> STREAM_CODEC = StreamCodec.composite(
         BlockPos.STREAM_CODEC,
