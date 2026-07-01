@@ -26,6 +26,10 @@ repositories {
     maven { name = "REI";       url = "https://maven.shedaniel.me" }
     maven { name = "EMI";       url = "https://maven.terraformersmc.com" }
     maven { name = "Patchouli"; url = "https://maven.blamejared.com" }
+    // Fabric Loader is pulled compileOnly, solely to supply net.fabricmc.api.EnvType so javac can
+    // resolve the @Environment(EnvType.CLIENT) annotations that ship on REI's NeoForge API classes
+    // (RoughlyEnoughItems-api-neoforge is built from Fabric-first sources). See hasReiLib below.
+    maven { name = "Fabric";    url = "https://maven.fabricmc.net" }
 }
 
 base {
@@ -133,6 +137,9 @@ if (ext.excludeExamples) {
     sourceSets.main.resources.exclude 'assets/multilib/blockstates/example_controller.json'
     sourceSets.main.resources.exclude 'assets/multilib/models/block/example_controller.json'
     sourceSets.main.resources.exclude 'assets/multilib/models/item/example_controller.json'
+    sourceSets.main.resources.exclude 'assets/multilib/blockstates/example_directional_controller.json'
+    sourceSets.main.resources.exclude 'assets/multilib/models/block/example_directional_controller.json'
+    sourceSets.main.resources.exclude 'assets/multilib/models/item/example_directional_controller.json'
     sourceSets.main.resources.exclude 'assets/multilib/models/item/wrench.json'
     sourceSets.main.resources.exclude 'data/multilib/multiblocks/example_simple.json'
 }
@@ -161,26 +168,31 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    // Compat integrations (JEI / REI / EMI / Patchouli): API used at compile time only; the full
-    // mod is added to localRuntime so it's present when you launch runClient for testing, but is
-    // never pulled in as a dependency by mods that depend on this library. Each one activates only
-    // when its *_version property is set in gradle.properties (see hasJeiLib/etc. above).
+    // Compat integrations (JEI / REI / EMI / Patchouli): API used at compile time only. Each one
+    // activates only when its *_version property is set in gradle.properties (see hasJeiLib/etc.
+    // above). The full mod jars are NOT added as localRuntime here on purpose: which of these
+    // recipe-viewer mods actually load in `runClient` is controlled entirely by what you drop into
+    // run/mods (and run/mods/disabled) — that's the only way to test "just REI" or "just EMI" in
+    // isolation without recompiling. Grab the matching jars from run/mods/disabled if you need them.
     if (project.ext.hasJeiLib) {
         compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
         compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
-        localRuntime "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
     }
     if (project.ext.hasReiLib) {
         compileOnly "me.shedaniel:RoughlyEnoughItems-api-neoforge:${rei_version}"
-        localRuntime "me.shedaniel:RoughlyEnoughItems-neoforge:${rei_version}"
+        // REI's NeoForge API classes still carry Fabric's @Environment(EnvType.CLIENT) annotation
+        // (carried over from its Fabric-first sources). Without net.fabricmc.api.EnvType on the
+        // compile classpath, javac can't resolve that annotation's enum constant and emits
+        // "warning: unknown enum constant EnvType.CLIENT" for every affected class it reads.
+        // fabric-loader is a small (~1MB), dependency-free jar; compileOnly keeps it out of the
+        // runtime classpath and the published jar entirely.
+        compileOnly "net.fabricmc:fabric-loader:${fabric_loader_version}"
     }
     if (project.ext.hasEmiLib) {
         compileOnly "dev.emi:emi-neoforge:${emi_version}:api"
-        localRuntime "dev.emi:emi-neoforge:${emi_version}"
     }
     if (project.ext.hasPatchouliLib) {
         compileOnly "vazkii.patchouli:Patchouli:${patchouli_version}:api"
-        localRuntime "vazkii.patchouli:Patchouli:${patchouli_version}"
     }
 }
 
