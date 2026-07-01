@@ -2,86 +2,88 @@
 
 # Pattern Design Guide
 
-A practical, how-to guide for laying out patterns correctly the first time. Assumes you've read [Core Concepts](Core-Concepts.md).
+Practical guidance for laying out a shaped pattern with `MultiblockBuilder`. Read [Core Concepts](Core-Concepts.md) first for the underlying model (symbols, `BlockIngredient`, layers, core/activation) — this page is about *design decisions* once you know the primitives.
 
-## 1. Sketch in three 2D grids before writing code
+## Sketch on paper (or in a comment) first
 
-Draw your structure as one grid per Y level (bottom to top), each cell either a key letter or blank. This maps directly onto `.layer(...)` calls:
+Before writing any `.layer(...)` calls, draw your structure top-down, one grid per Y level, **top level first** (⚠️ remember: the *first* `.layer(...)` call is the top of the structure, the *last* is the bottom — the reverse of the old `PatternBuilder` API). For each level, rows go from lowest Z (first string) to highest Z (last string), and characters go from lowest X (leftmost) to highest X (rightmost).
 
-```
-Y=2 (top):     Y=1 (middle):    Y=0 (bottom):
- . G .          . . .            B B B
- . G .          . W .            B B B
- . G .          . . .            B B B
-```
-
-becomes:
+`ExamplePattern` in the source tree lays out a small altar-like structure this way:
 
 ```java
-PatternManager.pattern()
-        .key('B', Blocks.STONE_BRICKS)
-        .key('W', Blocks.WATER) // careful: see "fluids and non-solid blocks" below
-        .key('G', Blocks.GOLD_BLOCK)
-        .layer("BBB", "BBB", "BBB")   // Y=0, bottom — first call
-        .layer(" . ", ".W.", " . ")   // wrong: '.' is not a registered key!
-        .layer(" G ", " G ", " G ")   // Y=2, top — last call
-        .build();
+.layer("PPP",   // top layer (relY = 0)
+       " P ",
+       " G ")
+.layer("POP",   // bottom layer (relY = -1) — 'O' is the core
+       " P ",
+       " G ")
 ```
 
-> The example above has a deliberate bug: `.` was used for "empty" instead of `' '` (space). MultiLib treats *any* unrecognized character as "no constraint," so `.` technically "works" the same as space today — but don't rely on that. Always use `' '` for empty cells; using arbitrary placeholder characters that happen to not be registered keys is fragile and will silently break if you ever reuse that character as a real key elsewhere.
+Reading this top-to-bottom as printed *is* reading it top level first, row-by-row within each level — which conveniently matches how you'd naturally draw the structure looking at it from the front with the top level above the bottom level on the page.
 
-## 2. Prefer odd dimensions
+## Pick your core and activation symbols deliberately
 
-Per [Core Concepts](Core-Concepts.md#layers-and-the-coordinate-system), the center of a layer is `length / 2` (integer division). With even width/height, the "center" falls between two cells, silently shifting your structure's effective center by half a block relative to what you might expect. Unless you've deliberately designed around this, keep each layer's width and height **odd** (1, 3, 5, ...).
+- If your structure has one obvious controller block (a block entity with a menu, a "master" block), make it the **core** with `.core(char)`. This also sets **activation** to the same symbol unless you call `.activation(char)` separately — so in the common case, placing the controller last both triggers the check and gives you a stable anchor for the ghost overlay, wrench diagnostics, and (if used) `AbstractMultiblockControllerBE` state.
+- Split core and activation only when the "block whose placement should trigger a check" genuinely isn't the "block that represents the structure." For example, if you want the structure to try forming whenever *any* body block is placed, but still track state on a separate controller elsewhere in the pattern.
+- The core doesn't have to be placed last in practice — `setValidationInterval(...)` on an `AbstractMultiblockControllerBE` lets an already-complete structure be discovered periodically even if the core was placed first (see [Core Concepts § Activation flow](Core-Concepts.md#activation-flow)).
 
-## 3. Keep every row in a layer the same length
+## Choosing ingredients per symbol
 
-The matcher derives a layer's width from its **first row only**. If later rows in the same `.layer(...)` call are shorter or longer, there's no validation — you'll get incorrect matching with no error message. Pad short rows with trailing spaces to match the longest row's length.
+Use the narrowest `BlockIngredient` that still expresses your intent — see the [performance note in the `BlockIngredient` reference](api-reference/BlockIngredient.md#performance-note): a tag/predicate/`any()` used on your **activation or core** symbol makes the whole definition "always-checked" against every block placement in the world, not just placements of specific blocks. Reserve those for body symbols where the cost doesn't apply:
 
 ```java
-// BAD — second row is missing a trailing space, widths don't match (3 vs 2)
-.layer("ABC", "AB")
-
-// GOOD
-.layer("ABC", "AB ")
+.key('B', BlockIngredient.tag(BlockTags.LOGS))       // body — fine, cheap to check
+.key('O', BlockIngredient.of(ExampleSetup.CONTROLLER_BLOCK)) // core/activation — enumerable, indexed
 ```
 
-## 4. Decide your reference point deliberately
+Use `BlockIngredient.ofState(...)` when a body block needs a specific facing or property, not just the right `Block` — e.g. matching a furnace that must face a specific way relative to the pattern.
 
-`origin` passed to your `PatternAction` is always the **top layer's center cell**, in the matched orientation — not the bottom, not the literal block that was placed. If your structure logically wants its "core" block (a controller, an altar focus, etc.) to be where effects spawn, **put that key on the top layer, centered**, or compute the offset yourself inside your action.
+## Empty cells
 
-## 5. Fluids and non-solid blocks as keys
+The space character (`' '`) means "don't care" and is never treated as a symbol — use it freely for cells that shouldn't constrain matching (like the corners of a 3×3 layer that aren't actually part of the structure). Any stray character in a layer string that was never bound with `.key(...)` is silently treated the same as a space, so double-check your layer strings against your symbol map — there's no validation that catches a typo here.
 
-`PatternMatcher` compares via `state.is(expectedBlock)` — this works for fluid blocks too (`Blocks.WATER`, `Blocks.LAVA`), since fluids have a corresponding `Block` in NeoForge/vanilla. Be aware that:
+If you actually need a cell to require **air** specifically (not "don't care"), that's what `.requireAirInEmptyPositions()` is for — but note it only takes effect for `PatternProvider`-backed/functional definitions; plain shaped layers already only check non-space symbols and won't enforce air on spaces even with this flag set.
 
-- Source vs. flowing fluid blocks are different `Block`s in some contexts — make sure you key on the one you actually expect in the finished structure.
-- There's no property-level matching (see [PatternMatcher caveats](api-reference/PatternMatcher.md#caveats)), so you can't distinguish e.g. waterlogged vs. non-waterlogged via the key system alone.
+## Optional cells and layers
 
-## 6. Designing for rotation
+- `.optional(char... symbols)` — lets specific symbols mismatch without failing the whole match. Good for decorative variance (e.g. a symbol that's "usually gold but the structure still works without it").
+- `.optionalLayer(String... rows)` — an entire layer the matcher tries both with and without. Useful for structures with an optional "extra tier" (e.g. a 2-block-tall or 3-block-tall variant of the same base). The matcher tries every combination of included/excluded optional layers, so keep the number of optional layers small — it's combinatorial.
 
-- If your structure is meant to be buildable facing any horizontal direction and is **not** rotationally symmetric, you don't need to do anything special — all 4 horizontal rotations are always tried regardless of flags (see [Rotation & Matching Deep Dive](Rotation-And-Matching.md)). Just design the shape once.
-- If your structure **must** have a fixed facing (a "front"), you need the manual `transform.rotation() != 0` rejection workaround described in [Rotation & Matching Deep Dive § What each rotation flag actually does](Rotation-And-Matching.md#what-each-rotation-flag-actually-does-today) — the builder flags alone cannot enforce this today.
-- Only enable `allowVerticalRotation` if your structure genuinely makes sense tipped onto its side (e.g. a symmetric machine core). It roughly triples matching cost and triples the number of orientations a player can accidentally trigger your structure from — make sure that's actually desirable for your design.
+## Free blocks
 
-## 7. Avoid key collisions across unrelated patterns
+`.freeBlock(char symbol, BlockIngredient ingredient, int min, int max)` declares a symbol that isn't pinned to a fixed layer position at all: MultiLib scans the pattern's bounding box for any unclaimed cell matching `ingredient` and counts matches toward `min`/`max`. Use this for "decorate with N of these somewhere in the structure" requirements rather than a fixed grid position — e.g. "between 2 and 4 lanterns anywhere in the frame." Restrict to specific candidate cells with the `List<BlockPos> allowedPositions` overload if "anywhere" is too permissive.
 
-Since [`PatternRegistry.getPatternsFor(Block)`](api-reference/PatternRegistry.md#getpatternsforblock-block) is checked for *every* registered pattern using that block, and only the **first matching pattern wins** at a given placement (see [Core Concepts § Activation flow](Core-Concepts.md#activation-flow)), two patterns that share a common, generic key block (e.g. both use `Blocks.STONE`) and could plausibly both match the same structure will have a registration-order-dependent winner. If you're designing a pattern meant to coexist with others (e.g. building a library of structures for your own mod), prefer distinctive, less common key blocks for the cells the matcher reaches first, or make sure overlapping structures are intentionally distinguishable.
+## Geometry constraints
 
-## 8. Test incrementally
+Four constraints are statically validated against your textual layers at `.build()` time (not re-checked per-match at runtime beyond the shape matching itself):
 
-Build your structure in-game one block at a time, watching for the action to fire only once the *true* last block goes in. If it fires early, your pattern likely has fewer required cells than you intended (e.g. a key character you meant to use isn't registered with `.key(...)`, silently turning it into "no constraint").
+| Constraint | Requires |
+|---|---|
+| `.unique(char... symbols)` | Symbol occurs exactly once in the whole structure (for `freeBlock` symbols, forces `min=max=1` instead) |
+| `.surfaceOnly(char... symbols)` | On at least one boundary axis (an outer face) |
+| `.frameOnly(char... symbols)` | On at least two boundary axes (an edge/corner) |
+| `.insideOnly(char... symbols)` | Touches no boundary at all |
 
-## Checklist before shipping a pattern
+Violations are logged as build-time errors — worth checking your logs after adding these, since a violated constraint doesn't throw, but it does block registration: `.build()` skips calling `MultiblockRegistry.register(...)` and still returns the (unregistered) definition object.
 
-- [ ] Every character used in `.layer(...)` rows is either `' '` or a registered `.key(...)`.
-- [ ] All rows within each `.layer(...)` call have equal length.
-- [ ] Layer dimensions are odd, or the even-dimension center shift is intentional and accounted for.
-- [ ] `.action(...)` is set before `.build()` (otherwise the pattern is never registered).
-- [ ] If the structure needs a fixed facing, the action rejects non-zero `transform.rotation()` (or you've otherwise confirmed rotation-invariance is acceptable).
-- [ ] Tested by physically building the structure and confirming the action fires exactly when expected.
+## Rotation
+
+Decide early whether your structure is meant to be built facing any horizontal direction (the common case — `RotationMode.HORIZONTAL`, the default), fully free (`RotationMode.ALL`, including tipped/upside-down), or fixed (`RotationMode.NONE`). If you need asymmetric per-axis control (e.g. allow 180° tipping but not 90°), use `.allowRotation(...)` instead — see the [Rotation & Matching Deep Dive](Rotation-And-Matching.md) for how these interact with the matcher's search.
+
+If the structure's core has its own meaningful facing (a furnace-like block placed by the player), see the [Directional Cores Guide](Directional-Cores-Guide.md) for pinning the ghost overlay/auto-place preview to that facing via `.mainFace()` — this is independent from whether the *matcher* allows rotation.
+
+## Wall sharing
+
+Wall sharing is **disabled by default** — non-core/non-activation symbols do *not* share a block with an adjacent structure's matching symbol unless you opt in. Call `.wallSharing(true)` to enable it definition-wide, then use `.noWallSharing(char...)` (or per-symbol overrides / an `IWallSharable` block) if specific symbols still need their own dedicated blocks. See [Advanced Features § Wall sharing](Advanced-Features.md#wall-sharing) for the full priority chain.
+
+## Visual polish
+
+Once the shape is solid: `.icon(...)` and `.name(...)` for recipe-browser presentation, `.model(...)` + `.keepVisible(...)` if you want a Master-Dummy single-block appearance once formed (see [Advanced Features § Master-Dummy model](Advanced-Features.md#master-dummy-model)), and `.ghostOverlayDebug()` temporarily while iterating on layout (remove before shipping).
 
 ## See also
 
 - [Core Concepts](Core-Concepts.md)
 - [Rotation & Matching Deep Dive](Rotation-And-Matching.md)
-- [PatternBuilder reference](api-reference/PatternBuilder.md)
+- [Directional Cores Guide](Directional-Cores-Guide.md)
+- [Advanced Features](Advanced-Features.md)
+- [MultiblockBuilder reference](api-reference/MultiblockBuilder.md)

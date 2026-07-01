@@ -2,81 +2,120 @@
 
 # Rotation & Matching Deep Dive
 
-This page explains *why* matching behaves the way it does, building on the method-level facts in the [`PatternMatcher` reference](api-reference/PatternMatcher.md). Read [Core Concepts](Core-Concepts.md) first if you haven't.
+This page explains *why* matching behaves the way it does, at the level of the actual matcher implementations. Read [Core Concepts](Core-Concepts.md) first if you haven't.
+
+⚠️ This entire matching system was rewritten from the old `PatternMatcher`. Most importantly: **rotation is now genuinely enforced.** In the old API, `allowHorizontalRotation`/`allowVerticalRotation` were stored but never actually gated the search — every pattern was checked in all 4 horizontal rotations regardless of the flag, and there was no way to lock a structure to a single facing. That bug is fixed: `RotationMode.NONE` now really does mean "only the exact placed orientation matches," and the granular `.allowRotation(...)` API gives you per-axis control that's actually read by the matcher.
+
+## Three matchers, one dispatcher
+
+`PatternMatcher.matches(level, placedPos, definition)` is a thin dispatcher — it picks one of three implementations based on how the definition was built:
+
+| Definition uses... | Matcher | Strategy |
+|---|---|---|
+| `.shapeless()` | `ShapelessMatcher` | Flood-fill from the placed block, then validate shell/interior/count constraints |
+| `.pattern(PatternProvider)` | `FunctionalMatcher` | Same search structure as `ShapedMatcher`, but reads cells from a procedural provider instead of a text grid |
+| plain `.layer(...)` | `ShapedMatcher` | Textual grid, searched across every allowed orientation |
+
+The rest of this page focuses on `ShapedMatcher`, since it's what most structures use and where rotation search is most involved. `FunctionalMatcher` reuses `ShapedMatcher.applyTransform(...)` for the tip/spin geometry and origin-per-candidate computation, but it only derives *which* rotations to try from the coarse `RotationMode` (`NONE`/`HORIZONTAL`/`ALL`) — it never reads `.allowRotation(...)`'s granular per-axis declarations. So the granular rotation API described later on this page is `ShapedMatcher`-only; procedural (`.pattern(...)`) structures can only use `RotationMode`. `ShapelessMatcher` doesn't rotate at all — a flood-filled blob has no fixed orientation to rotate, so it always reports `TransformData(0, false, "NONE")`.
 
 ## The mental model: search, don't compute
 
-MultiLib does not compute "where could this pattern be" analytically. It **searches**: for the placed block, it tries every key cell of the pattern as a hypothesis ("what if *this* placed block is the diamond block at relative position (1, 0, -1)?"), derives what the pattern's origin would have to be under that hypothesis, and then brute-force compares the whole pattern against the world at that origin, across every rotation the pattern allows.
+MultiLib does not compute "where could this pattern be" analytically. It **searches**: for the placed block, it tries every symbol cell of the pattern as a hypothesis ("what if *this* placed block is the diamond block at relative offset (1, 0, -1), in *this* orientation?"), derives what the pattern's origin would have to be under that hypothesis, and brute-force compares the whole pattern against the world at that origin.
 
-This has two practical consequences:
+Two practical consequences:
 
-1. **You don't need to place a specific "trigger" block.** Any block belonging to the pattern, placed as the structure's last missing piece, can trigger a successful match — the search isn't anchored to one designated cell.
-2. **Cost scales with pattern size and rotation flags**, not with world size. A 3×3×3 pattern with no rotation flags does at most `27 patterns of geometry × 4 rotations = 108` candidate comparisons, each `O(27)` block reads — cheap. The same pattern with `allowVerticalRotation(true)` triples the candidate origins per cell and adds two more rotation passes, multiplying the cost roughly 3×.
+1. **You don't need to place a specific "trigger" block.** Any block matching the *activation* symbol, placed as the structure's last missing piece, can trigger a successful match.
+2. **Cost scales with pattern size × orientations tried**, not with world size. `RotationMode.HORIZONTAL` (the default) tries at most 4 rotations per candidate cell; `RotationMode.ALL` tries 20 (4 upright + 4×4 tipped, see below) — noticeably more expensive, only enable it if the structure genuinely needs to be recognized on its side.
 
 ## Coordinate space recap
 
-Pattern-local relative coordinates are computed once per cell as:
+For a cell at `(col, row)` in layer index `layerIndex` (0 = first `.layer(...)` call):
 
 ```
-relX = col - centerX     centerX = layer.getFirst().length() / 2
-relY = layerIndex - (layerCount - 1)
-relZ = row - centerZ     centerZ = layer.size() / 2
+relX = col - centerX     centerX = layer.width / 2
+relY = (layersCount - 1) - layerIndex
+relZ = row - centerZ     centerZ = layer.height / 2
 ```
 
-`relY` is always `≤ 0`: the **top layer** (last `.layer(...)` call) is the `relY = 0` reference plane, and every layer below it has an increasingly negative `relY`. This is why `origin` in a `MatchResult`/`PatternAction` callback always corresponds to the **top** layer's center — not the bottom, and not wherever the player happened to stand.
+`relY` is `0` for the **first** `.layer(...)` call (the top) and increasingly negative for each subsequent call — confirming the ⚠️ top-first layer order from [Core Concepts](Core-Concepts.md#layers-and-the-coordinate-system). The `origin` in a `MatchResult`/callback context always corresponds to this top-layer center cell, in whichever orientation actually matched.
 
-## What each rotation flag actually does (today)
+## What `RotationMode` and `allowRotation(...)` actually gate
 
-| Flag | Effect on search |
-|---|---|
-| `allowHorizontalRotation` | **None.** All 4 Y-axis rotations (0°/90°/180°/270°) are always tried, for every pattern, unconditionally. |
-| `allowVerticalRotation` | Adds two extra families of candidate origins per matched cell (structure tipped around X, structure tipped around Z), each tried across all 4 horizontal rotations on top. |
-| `allowSideRotation` / `allowUpsideDown` | Stored on the `PatternManager` and validated at build time (require `allowVerticalRotation`), but **not read anywhere in `PatternMatcher`** at present — they don't currently narrow or expand the vertical search beyond what `allowVerticalRotation` alone already does. |
-
-**Practical implication:** as of this codebase, you cannot restrict a pattern to a single fixed horizontal facing using the builder flags alone — `allowHorizontalRotation(false)` will not stop the pattern from matching when rotated. If your structure needs a fixed orientation (e.g. an altar whose "front" must face a specific direction relative to some other context), you must enforce that yourself:
+`ShapedMatcher` derives two booleans from the definition before searching:
 
 ```java
-.action((level, origin, transform) -> {
-    if (transform.rotation() != 0) {
-        return; // reject any non-canonical horizontal orientation
-    }
-    // ... proceed with formation logic ...
-})
+boolean allowHorizontal = !allowedRotations.isEmpty()
+        ? true
+        : definition.getRotationMode() != RotationMode.NONE;
+boolean allowVertical = !allowedRotations.isEmpty()
+        ? allowedRotations.stream().anyMatch(ar -> ar.axis() != RotationAxis.Y)
+        : definition.getRotationMode() == RotationMode.ALL;
 ```
 
-This is a manual workaround, not a builder feature — keep it in mind when designing structures that are supposed to have directional meaning (entrances, "front faces", etc.).
+- If you called `.allowRotation(...)` at all, that **takes over entirely** from `RotationMode` — the unrotated orientation is always tried as a baseline, plus exactly the axis/angle combinations you declared (`tryGranularTransformsForCell`), nothing more.
+- Otherwise, the coarse `RotationMode` applies: `NONE` tries only rotation 0 around Y; `HORIZONTAL` tries all 4 Y-axis rotations; `ALL` additionally tries the tipped-over orientations described below.
+
+`RotationMode.NONE` genuinely restricts matching to the exact built orientation now — no manual workaround needed (unlike the old API).
 
 ## Vertical rotation: what "tipped over" means geometrically
 
-When `allowVerticalRotation` is enabled, the matcher doesn't just rotate the *search origin* — for each candidate cell, it also reinterprets which world axis plays the role of the pattern's Y axis:
+When vertical rotation is enabled (`RotationMode.ALL`, or an `.allowRotation(...)` entry on `RotationAxis.X`/`RotationAxis.Z`), the matcher doesn't just rotate the *search origin* — it reinterprets which world axis plays the role of the pattern's Y axis, via `ShapedMatcher.applyTransform`:
 
-- **Axis `X`:** the pattern's Y and Z axes are swapped before applying rotation — useful for structures that should also be recognized lying on their side along the X direction.
-- **Axis `Z`:** the pattern's Y and X axes are swapped — same idea, lying along Z.
+| `axis` | Tip step | Spin step |
+|---|---|---|
+| `"X"` | rotate 90° around Z | then rotate `rotation*90°` around X |
+| `"X_FLIP"` | rotate 270° around Z | then rotate `rotation*90°` around X |
+| `"Z"` | rotate 90° around X | then rotate `rotation*90°` around Z |
+| `"Z_FLIP"` | rotate 270° around X | then rotate `rotation*90°` around Z |
+| `"Y"` (or any other value) | no tip needed | rotate `rotation*90°` around that axis |
 
-Combined with the 4 horizontal rotations tried per axis, a pattern with `allowVerticalRotation(true)` is checked in up to **12 orientations total** (4 upright + 4 tipped-on-X + 4 tipped-on-Z) at up to 3 different candidate origins per matched cell.
+Each transform composes a fixed **tip** (rotating the layer-stacking axis onto the target axis) with a **spin** (the 0–3 `rotation` step around that now-vertical axis) — both are proper rotations via [`RotationUtils.rotate`](api-reference/RotationUtils.md), not coordinate swaps or reflections, so orientation/chirality stays correct. `X_FLIP`/`Z_FLIP` tip the opposite way, landing the layer axis on the *negative* target axis instead of the positive one — this is what lets the matcher recognize a structure tipped either of the two ways onto a given axis, not just one.
 
-`matchesTransformed` performs the actual comparison: it derives each key cell's pattern-local offset, applies the vertical swap (duplicated logic, not delegated to `RotationUtils.rotateVertical` — see [`PatternMatcher` caveats](api-reference/PatternMatcher.md#caveats)), then the horizontal rotation, then reads the resulting world position.
+With full vertical rotation enabled, a pattern is checked in up to **20 orientations** per candidate cell: 4 upright (`Y`) + 4 each for `X`, `Z`, `X_FLIP`, `Z_FLIP`.
 
-## Worked trace (conceptual)
+⚠️ A structure "tipped over" this way changes which of its declared layers ends up horizontal vs. vertical in the world — if your structure isn't actually meaningful lying on its side, leave `RotationMode` at `HORIZONTAL` (the default) rather than `ALL`.
 
-Given a 1-layer plus-shape pattern:
+## Per-transform origin (the key correctness fix)
+
+For every candidate cell and every transform being tried, the origin is computed **specifically for that transform**:
 
 ```java
-.key('D', Blocks.DIAMOND_BLOCK)
-.layer(" D ",
-       "DDD",
-       " D ")
+BlockPos origin = activationPos.offset(-applyTransform(relX, relY, relZ, axis, rotation));
 ```
 
-Placing the *center* diamond block last: the matcher, scanning this layer, reaches the cell at `row=1, col=1` (`relX=0, relZ=0`), computes a candidate origin equal to `placedPos`, and `matchesTransformed` at `rotation=0` succeeds immediately since the plus shape is rotationally symmetric — no further rotations are even attempted.
+This matters: a structure actually built in a rotated orientation only lines up against the origin computed *for that same rotation* — testing it against an origin computed under the rotation=0 assumption (as older matcher code did) could never find a match for anything but the identity orientation. Every rotation candidate now gets its own correctly-derived origin before the grid comparison runs.
 
-Placing one of the *arm* diamond blocks last instead: the matcher reaches that cell with a non-zero relative offset, computes a candidate origin offset from `placedPos` accordingly, and the comparison still succeeds — because the shape is symmetric under all 4 rotations, `rotation=0` matches regardless of which arm was placed last.
+## Reading the result: `TransformData`
 
-For an **asymmetric** pattern, which specific rotation succeeds (and thus what `TransformData.rotation()` your action receives) genuinely depends on the real-world orientation of the built structure — this is the value to inspect if your action needs to know "which way is this thing facing."
+```java
+public record TransformData(int rotation, boolean vertical, String axis) {}
+```
+
+- `axis` — `"Y"` (flat rotation), `"X"`/`"X_FLIP"`/`"Z"`/`"Z_FLIP"` (tipped), or `"NONE"` (shapeless structures, which don't rotate).
+- `rotation` — the 0–3 step (×90°) applied around `axis`.
+- `vertical` — `axis != "Y"`.
+
+`MultiblockInstance.getTransform()` exposes this for anything that needs to know the built orientation after the fact (e.g. an `onFormed` callback deciding which way to face a spawned effect).
+
+## Granular rotation: `allowRotation(...)`
+
+Use this instead of `RotationMode` when you need asymmetric per-axis control — e.g. allow a 180° flip around Y but no 90°/270°, or allow tipping on X but not Z:
+
+```java
+.allowRotation(RotationAxis.Y, 180)
+.allowRotation(RotationAxis.X, 90, 270)
+```
+
+Each `AllowedRotation(axis, angle)` is tried in addition to the always-tried identity orientation; declaring any entry switches the matcher into the granular path (`tryGranularTransformsForCell`) instead of the coarse `RotationMode` path — the two are not combined.
+
+## Free blocks and rotation
+
+`freeBlock(...)` positions are scanned *after* a candidate orientation's fixed cells all match (`scanFreeBlocks`), within that same transform's coordinate space — so free blocks rotate along with the rest of the structure; there's no separate rotation handling needed for them.
 
 ## See also
 
 - [Core Concepts](Core-Concepts.md)
-- [PatternMatcher reference](api-reference/PatternMatcher.md)
 - [RotationUtils reference](api-reference/RotationUtils.md)
+- [MultiblockBuilder § Rotation](api-reference/MultiblockBuilder.md#rotation)
 - [Pattern Design Guide](Pattern-Design-Guide.md)
+- [Advanced Features § Shapeless structures, Procedural patterns](Advanced-Features.md)

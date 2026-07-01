@@ -1,107 +1,136 @@
+[← Back to Home](Home.md)
+
 # Core Concepts
 
-This page explains the model MultiLib uses to describe and detect a multiblock structure. Read this before designing your own patterns — the coordinate system and registration rules below are not optional details, they're the contract the matcher relies on.
+This page explains the model MultiLib uses to describe and detect a multiblock structure. Read this before designing your own structures — the coordinate system and symbol rules below are not optional details, they're the contract the matcher relies on.
 
-## What is a "pattern" in MultiLib?
+## What is a "definition" in MultiLib?
 
-A **pattern** (`PatternManager`) is an immutable description of:
+A **definition** (`MultiblockDefinition`) is an immutable description of:
 
-- a set of **keys** — single characters mapped to specific `Block`s,
-- one or more **layers** — horizontal slices of the structure described with those key characters,
-- a set of **rotation flags** controlling which orientations of the structure should be recognized,
-- an optional **action** — code to run when the structure is detected in the world.
+- a `ResourceLocation` **id** — how the structure is referenced (JEI/REI/EMI, JSON, wrench diagnostics, `MultiLibAPI.getDefinition(id)`),
+- a set of **symbols** — single characters mapped to `BlockIngredient`s,
+- one or more **layers** — horizontal slices of the structure described with those symbols (or, alternatively, a procedural `PatternProvider`, or a `shapeless()` flood-fill definition — see [Advanced Features](Advanced-Features.md)),
+- a **core symbol** and/or **activation symbol** — which cell(s) matter for triggering/anchoring,
+- rotation rules (`RotationMode` and/or granular `allowRotation(...)`),
+- a **formation mode** — whether the structure forms automatically, only via wrench, or both,
+- callbacks (`onFormed`, `onBroken`, `onTick`, `onAmbient`) and an optional `validator`.
 
-You never construct a `PatternManager` directly; you assemble it with `PatternBuilder` (via `PatternManager.pattern()` or `MultiLibAPI.pattern()`) and finish with `.build()`.
+You never construct a `MultiblockDefinition` directly; you assemble it with `MultiblockBuilder` (via `MultiLibAPI.define(id)`) and finish with `.build()`.
 
-## Keys
+## Symbols and `BlockIngredient`
 
-A key is a single `char` bound to one `Block` via `.key(char, Block)`. Keys are **global to the whole pattern**, not per-layer — the same character means the same block on every layer you add. There is no per-layer key remapping.
+A symbol is a single `char` bound to a `BlockIngredient` via `.key(char, BlockIngredient)` (or the shorthand `.key(char, Block)`, which wraps it in a single-block ingredient). Symbols are **global to the whole definition**, not per-layer — the same character means the same ingredient on every layer you add.
 
-The space character (`' '`) is reserved and always means **"don't care / no constraint here"** — it is never treated as a key, even if you never call `.key(' ', ...)`. Use it for empty cells inside a layer's bounding box (air, or any block — the matcher simply skips that cell).
+`BlockIngredient` is richer than "one exact block" — see [BlockIngredient reference](api-reference/BlockIngredient.md) for the full list, but in short:
 
-Any character that appears in a layer string but was never registered with `.key(...)` is silently ignored as if it were a space (see [`PatternMatcher`](api-reference/PatternMatcher.md#caveats)) — there is currently no validation that catches typos in layer strings against your key map. Double-check your key/layer characters match exactly.
+| Factory | Matches |
+|---|---|
+| `BlockIngredient.of(Block)` | Exactly one block |
+| `BlockIngredient.ofState(Block).require(property, value)...build()` | One block with specific blockstate properties |
+| `BlockIngredient.tag(TagKey<Block>)` | Any block in a tag |
+| `BlockIngredient.anyOf(ingredient...)` | Any of several ingredients |
+| `BlockIngredient.predicate(Predicate<BlockState>)` | Arbitrary logic |
+| `BlockIngredient.any()` | Always matches (any block, including air) |
+
+The space character (`' '`) is reserved and always means **"don't care / no constraint here"** — it is never treated as a symbol. Use it for empty cells inside a layer's bounding box. Any character that appears in a layer string but was never registered with `.key(...)` is silently ignored as if it were a space — there is no validation that catches typos in layer strings against your symbol map.
+
+## Core and activation symbols
+
+Two distinct roles, often — but not always — the same symbol:
+
+- **Core** (`.core(char)`): the symbol representing the structure's "main" block, typically a block-entity-backed controller. Used as the anchor for the ghost overlay, auto-place, wrench diagnostics, and (if you use `AbstractMultiblockControllerBE`) where formed/unformed state actually lives.
+- **Activation** (`.activation(char)`): the symbol whose *placement* should trigger an automatic formation check. Calling `.core(char)` **also sets activation to that same symbol if activation wasn't set explicitly** — so in the common case where "placing the controller completes the structure," you only need `.core(...)`.
+
+You can split them: e.g. activation = the last body block placed, core = a separate controller block elsewhere in the pattern, if your structure's "last placed block" and "logical controller" aren't the same cell.
+
+`MultiblockDefinition.matchesActivationOrCore(BlockState)` is what the wrench and periodic-validation logic use to decide "does this block belong to this definition's trigger set at all."
 
 ## Layers and the coordinate system
 
-A layer is added with `.layer(String... rows)`. Each call to `.layer(...)` adds **one horizontal (Y) slice** of the structure:
+A layer is added with `.layer(String... rows)` — the single, only attribute for declaring layers. Each call to `.layer(...)` adds **one horizontal (Y) slice** of the structure:
 
-- **Row order within a layer → Z axis.** The first string you pass is the row at the lowest Z offset (`relZ` more negative), each subsequent string increases Z by 1.
+- **Row order within a layer → Z axis.** The first string you pass is the row at the lowest Z offset, each subsequent string increases Z by 1.
 - **Character order within a row → X axis.** The leftmost character is the lowest X offset, increasing left-to-right.
-- **Order of `.layer(...)` calls → Y axis, bottom to top.** The **first** `.layer(...)` call is the **bottom** of the structure. The **last** `.layer(...)` call is the **top**, and also the layer used as the Y reference (offset 0) when computing where to search for a match.
+- **Order of `.layer(...)` calls → Y axis, top to bottom.** The **first** `.layer(...)` call is the **top** of the structure. The **last** `.layer(...)` call is the **bottom**.
 
-```
-.layer(" D ",   // row 0 → lowest Z
-        "EDO",   // row 1
-        " D ")   // row 2 → highest Z
-```
-
-reading this single layer: `E` is west (-X) of the center, `O` is east (+X) of the center, the two `D`s are north/south (-Z/+Z) of the center, all on the same Y level.
-
-For a multi-layer structure:
+> ⚠️ **This is the opposite of the old `PatternBuilder` API**, where the first `.layer(...)` call was the bottom. If you're porting old code, flip your `.layer(...)` call order — see [Migrating from the old PatternBuilder API](Migrating-From-PatternBuilder.md).
 
 ```java
-PatternManager.pattern()
-        .key('B', Blocks.STONE_BRICKS)
-        .key('G', Blocks.GOLD_BLOCK)
-        .layer("BBB",   // bottom (first call)
-               "BBB",
-               "BBB")
-        .layer(" G ",   // top (last call)
-               " G ",
-               " G ")
-        .build();
+.layer("PPP",   // top (first call) — relY = 0
+       " P ",
+       " G ")
+.layer("POP",   // bottom (last call) — relY = -1
+       " P ",
+       " G ")
 ```
 
-Each layer is centered independently: the **center column** of a layer is `row.length() / 2` (integer division) and the **center row** is `layer.size() / 2`. This means:
+Each layer is centered independently: the **center column** is `row.length() / 2` (integer division) and the **center row** is `layer.size() / 2`. All rows within one `.layer(...)` call should have equal length — the matcher derives a layer's width from its first row.
 
-- All rows within one `.layer(...)` call **must have equal length** — the matcher derives the layer's width from the *first* row only (`layer.getFirst().length()`); rows of different lengths in the same layer produce undefined/incorrect matching, not an error.
-- Different layers **can** have different widths/heights — each is centered on its own geometric middle independently, so layers don't need to align unless you deliberately design the offsets to line up.
-- With odd dimensions the center cell sits exactly on a character; with even dimensions the center falls between two characters (integer division rounds down), which shifts your structure's effective center by half a block. Prefer odd width/height per layer unless you've deliberately accounted for this.
+The definition's **origin** (what `ctx.instance().getOrigin()` returns in callbacks) is the world position corresponding to the pattern's top-layer center cell, in whatever orientation actually matched.
+
+## Formation modes
+
+`FormationMode` governs how a structure is allowed to form:
+
+| Mode | Automatic (block placement) | Wrench-triggerable |
+|---|---|---|
+| `FormationMode.AUTOMATIC` | ✅ | ❌ |
+| `FormationMode.WRENCH` | ❌ | ✅ |
+| `FormationMode.AUTOMATIC_AND_WRENCH` | ✅ | ✅ |
+
+`FormationMode` is not a plain enum — it's an open, extensible registry (`FormationMode.register(id, allowsAutomatic, allowsWrench)`), so third-party mods can define their own trigger semantics (e.g. a redstone-pulse-triggered mode) as long as their own code decides when to call `BlockActivationHandler.triggerFormationAt(level, pos)`.
+
+A "wrench" is any `Item` implementing the marker interface `IMultiblockWrench` — **MultiLib itself ships no wrench item**; you implement the interface on your own tool (see `ExampleWrenchItem` in the source tree for a reference implementation) or on any existing item you own.
 
 ## Registration and lookup
 
-`.build()` does two things:
+`.build()` does three things:
 
-1. Constructs the immutable `PatternManager`.
-2. If you called `.action(...)` before `.build()`, registers the pattern + action pair into `PatternRegistry`. **If you never set an action, the pattern is built but not registered** — it will never be matched against the world, since the placement listener only looks up patterns through the registry.
+1. Validates the definition (at least one layer / a `PatternProvider` / `shapeless()`; core-symbol consistency between the builder and any block-level `.core(id)` declaration; geometry constraints like `unique()`/`surfaceOnly()`/etc. — see [Pattern Design Guide](Pattern-Design-Guide.md)).
+2. Constructs the immutable `MultiblockDefinition`.
+3. Registers it into `MultiblockRegistry`, indexed by the candidate blocks of its symbols — so a block placement only checks definitions that could plausibly involve the placed block, not every registered definition in the game.
 
-`PatternRegistry` indexes nothing more than "give me every pattern that uses block X as one of its keys" (`getPatternsFor(Block)`). This is what the placement event handler uses to avoid scanning every registered pattern on every block placement in the world — only patterns relevant to the placed block are checked.
+If validation fails (e.g. a conflicting core declaration), registration is skipped and an error is logged — `.build()` still returns a `MultiblockDefinition` object, but it will never be matched against the world. Use `.buildWithoutRegistering()` if you want the object without touching the registry at all (e.g. unit tests).
 
 ## Activation flow
 
 1. A block is placed in the world (`BlockEvent.EntityPlaceEvent`, server side only).
-2. MultiLib looks up every registered pattern that uses the placed block as a key (`PatternRegistry.getPatternsFor`).
-3. For each candidate pattern, `PatternMatcher.matches(...)` searches every position where the *placed* block could plausibly be one of the pattern's matching cells, and tries every rotation/orientation the pattern allows (see the [matching deep dive](api-reference/PatternMatcher.md) for the full algorithm).
-4. The **first** pattern that matches wins — its `PatternAction.onMatch(level, origin, transform)` is invoked once, and no further candidate patterns are checked for that placement.
-5. Nothing is consumed or removed automatically. If your action represents "the structure is consumed/transforms into something else," your `PatternAction` is responsible for removing the blocks itself — see `PatternAction.clearStructure(...)`.
+2. `BlockActivationHandler` looks up every registered definition that lists the placed block as a candidate (`MultiblockRegistry.getCandidatesFor`), keeping only those whose formation mode allows automatic triggering and whose activation symbol matches the placed block.
+3. For each candidate, `PatternMatcher.matches(...)` (which dispatches to the shaped, shapeless, or functional matcher depending on the definition) searches for a match around the placed position, in every orientation the definition allows — see the [Rotation & Matching Deep Dive](Rotation-And-Matching.md).
+4. On a match: if a `validator` is set, it runs first and can veto formation (`ValidationResult.Invalid`). Otherwise a `MultiblockFormedEvent` (cancellable, NeoForge event bus) fires; if not cancelled, a new `MultiblockInstance` is created and registered in the world's `WorldMultiblockTracker` (a `SavedData`, so it persists across restarts), every `onFormed` callback runs, the core's `AbstractMultiblockControllerBE.onStructureFormed(...)` fires if applicable, and every part block entity implementing `IMultiblockPart` gets `onJoinedStructure(...)`.
+5. Breaking any block that's part of a **tracked, formed** instance fires the mirror path: `MultiblockBrokenEvent`, every `onBroken` callback, the core's `onStructureBroken(...)`, and every part's `onLeftStructure()` — then the instance is removed from the tracker. This is a real change from the old API: **formed structures are now tracked and do react to being broken**, not just to being placed.
+6. If the definition has an `onTick` or `onAmbient` callback, `WorldMultiblockTracker.tick(...)` (driven by `LevelTickEvent.Post`) invokes it for every tracked instance every tick (`onTick`) or every N ticks (`onAmbient`, interval set via `.onAmbient(callback, intervalTicks)`).
+7. If a controller block entity has `setValidationInterval(ticks)` configured, it periodically re-validates its own structure (still present?) and can also attempt formation periodically while unformed — this is what lets a `FormationMode.WRENCH`-eligible structure be discovered without an explicit wrench click, if you wire it that way.
 
-There is **no continuous/periodic check** — patterns are only evaluated at the moment a relevant block is placed. Breaking a block that was part of an already-matched structure does not currently trigger any callback; MultiLib does not track "formed" multiblocks as persistent objects (see [Known Limitations](#known-limitations)).
+## The controller block-entity pattern
 
-## Rotation flags
+For structures with meaningful state (running/idle/error, a menu, per-tick logic), extend `AbstractMultiblockControllerBE` for your core's block entity and `AbstractMultiblockControllerBlock` for the core's `Block`. This gives you:
 
-`PatternBuilder` exposes four boolean flags:
+- `MultiblockState` tracking (`UNFORMED` / `IDLE` / `RUNNING` / `ERROR` by default, extensible via your own `MultiblockState` implementations),
+- automatic NBT persistence of state and the active instance id,
+- `onFormed(ctx)` / `onBroken(ctx)` / `onStateChanged(prev, next)` / `serverTick()` hooks to override,
+- automatic model-hiding wiring if the definition uses `.model(...)` (see [Advanced Features](Advanced-Features.md#master-dummy-model)),
+- a `useWithoutItem` hook (`openMenu(...)`) only reachable once the structure `isFormed()`.
 
-| Flag | Default | Meaning |
-|---|---|---|
-| `allowHorizontalRotation` | `true` | Intended to control whether the structure should match when rotated around the Y axis. **Currently has no effect** — see Known Limitations. |
-| `allowVerticalRotation` | `false` | Enables matching the structure tipped onto its side (rotated around the X or Z axis), in addition to its upright orientation. |
-| `allowSideRotation` | `false` | Refines vertical-rotation search to include the additional side-facing orientations. Requires `allowVerticalRotation = true`. |
-| `allowUpsideDown` | `false` | Refines vertical-rotation search to include the upside-down orientation. Requires `allowVerticalRotation = true`. |
+See [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md) for the full API, and the `ExampleControllerBE`/`ExampleControllerBlock` classes in the source tree for a minimal working reference.
 
-`PatternBuilder.build()` throws `IllegalStateException` if `allowSideRotation` or `allowUpsideDown` is `true` while `allowVerticalRotation` is `false` — set vertical rotation first.
+## What changed from the old API (summary)
 
-For exactly how rotation search is performed, see the [PatternMatcher reference](api-reference/PatternMatcher.md) and the rotation/matching deep dive *(planned)*.
+If you're familiar with the earlier `PatternBuilder`/`PatternManager`/`PatternAction` system, the load-bearing differences are:
 
-## Known limitations
+- Layer order is **reversed** (first call = top, not bottom).
+- Rotation is now **actually enforced** — `RotationMode.NONE` genuinely disables rotation matching (the old `allowHorizontalRotation` flag was a no-op bug).
+- Structures are **tracked as persistent instances** with a real broken/formed lifecycle, not one-shot reactions to block placement.
+- Ingredients are pluggable (`BlockIngredient`), not fixed to a single exact `Block`.
+- A structure can be `shapeless()`, backed by a procedural `PatternProvider`, or defined declaratively via JSON/datapack — not just a fixed shaped layer grid.
 
-These are current, real limitations of the implementation — documented here so you don't design around behavior that doesn't exist:
-
-- **`allowHorizontalRotation` is not enforced.** `PatternMatcher` always tries all four Y-axis rotations regardless of this flag's value. In practice, every pattern today matches in any horizontal orientation. If your structure has a "front" that must face a specific direction, you currently have to enforce that yourself inside your `PatternAction` by inspecting `TransformData.rotation()` and aborting/ignoring the match when it isn't the orientation you expect.
-- **No formed-state tracking.** MultiLib does not keep a registry of "currently formed" multiblocks, doesn't fire a "structure broken" callback, and doesn't validate that the structure still exists before re-triggering. Each match is a one-shot reaction to a block placement.
-- **No key-character validation against layer strings.** A typo in a layer row that doesn't correspond to any registered key is silently treated as empty space.
-- **`MultiBlockPattern` and `SummonPattern`** (under `pattern.type`) are currently empty placeholder classes — only `ExamplePattern` is a working reference example in the source tree.
+See [Migrating from the old PatternBuilder API](Migrating-From-PatternBuilder.md) for a full checklist.
 
 ## See also
 
 - [Getting Started](Getting-Started.md) — minimal working example
-- [PatternBuilder](api-reference/PatternBuilder.md), [PatternManager](api-reference/PatternManager.md), [PatternMatcher](api-reference/PatternMatcher.md), [PatternRegistry](api-reference/PatternRegistry.md), [PatternAction](api-reference/PatternAction.md)
+- [Rotation & Matching Deep Dive](Rotation-And-Matching.md)
+- [Pattern Design Guide](Pattern-Design-Guide.md)
+- [Advanced Features](Advanced-Features.md)
+- [MultiblockBuilder](api-reference/MultiblockBuilder.md), [MultiblockDefinition](api-reference/MultiblockDefinition.md), [BlockIngredient](api-reference/BlockIngredient.md), [Callbacks & Events](api-reference/Callbacks-And-Events.md)
