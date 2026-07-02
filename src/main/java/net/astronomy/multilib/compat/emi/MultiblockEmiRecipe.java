@@ -104,8 +104,11 @@ public class MultiblockEmiRecipe implements EmiRecipe {
         // which for 2 stacked 12px buttons bottoms out 2px below our declared height). So the real
         // vertical budget per recipe page is 256 - 37 - 2 = 217px; at 240 we already overflow EMI's
         // own page cap by 25px, which is exactly what pushed those buttons below the visible panel.
-        // 200 leaves a comfortable margin under that 217px ceiling.
-        return 200;
+        // 210 stays under that 217px ceiling with a small safety margin, while giving noticeably more
+        // room than the previous 200 for the model/list areas (Layout's own proportions in
+        // MultiblockPreviewPanel are ratio-based, so the extra height is redistributed automatically —
+        // no separate EMI-specific layout tweak needed).
+        return 210;
     }
 
     @Override

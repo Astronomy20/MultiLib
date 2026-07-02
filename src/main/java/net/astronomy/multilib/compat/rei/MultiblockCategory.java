@@ -133,7 +133,13 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
         }
 
         private MultiblockPreviewPanel.Layout layout() {
-            return MultiblockPreviewPanel.layout(def, WIDTH, HEIGHT);
+            // Content is pushed down by CONTENT_Y_OFFSET (see render()) but REI still allocates the
+            // full HEIGHT box for us — using the full HEIGHT here made the panel's own content bottom
+            // land CONTENT_Y_OFFSET px past the actual bottom of REI's recipe box (the required-blocks
+            // list spilling out below it). Shrinking the logical height by that same offset keeps the
+            // rendered content flush with the real box: local content bottom (HEIGHT - OFFSET) plus the
+            // OFFSET translate lands exactly at HEIGHT.
+            return MultiblockPreviewPanel.layout(def, WIDTH, HEIGHT - CONTENT_Y_OFFSET);
         }
 
         @Override

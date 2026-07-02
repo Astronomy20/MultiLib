@@ -145,9 +145,14 @@ public final class MultiblockPreviewPanel {
         private int contentH()      { return contentBottom() - contentTop(); }
 
         private int listSectionH() {
-            int maxListH = Math.round(contentH() * (1f - MODEL_AREA_RATIO));
-            int neededH = 15 + itemCount * ROW_H + 2;
-            return Math.min(neededH, maxListH);
+            // Always reserve the full ratio-based allowance for the list section rather than shrinking
+            // it down to exactly what the current item count needs — the model's own rendered size is
+            // capped by width, not by however much vertical room modelSectionH() has (see patternSize()),
+            // so a short list previously just left blank canvas below it instead of actually growing the
+            // model. Reserving the full share here means rowPitch() (below) has real room to spread a
+            // short list's rows out and fill it. Long lists that need scrolling are unaffected: they were
+            // already clamped to this same ceiling.
+            return Math.round(contentH() * (1f - MODEL_AREA_RATIO));
         }
         public int listSectionTop() { return contentBottom() - listSectionH(); }
         private int modelSectionH() { return listSectionTop() - contentTop(); }
@@ -180,6 +185,22 @@ public final class MultiblockPreviewPanel {
         public int listY() { return lblY() + 12; }
         public int listH() { return listSectionTop() + listSectionH() - listY() - 2; }
         public int maxVis() { return Math.max(1, listH() / ROW_H); }
+
+        /**
+         * Vertical spacing between successive required-blocks rows. When every item already fits
+         * without scrolling, rows are spread out to use the whole list area (up to a point) instead of
+         * packing at {@link #ROW_H} from the top and leaving a blank gap below the last row — most
+         * visible on EMI's shorter panel with short lists. Once scrolling is needed, falls back to the
+         * tight {@link #ROW_H} spacing so more rows stay visible per scroll position.
+         */
+        public float rowPitch() {
+            if (itemCount <= 0) return ROW_H;
+            int maxV = maxVis();
+            if (itemCount <= maxV) {
+                return Math.max(ROW_H, (float) listH() / itemCount);
+            }
+            return ROW_H;
+        }
     }
 
     public static Layout layout(MultiblockDefinition def, int width, int height) {
@@ -326,10 +347,11 @@ public final class MultiblockPreviewPanel {
 
         int lY = lo.listY();
         int listRight = lo.width - SB_W - 3;
+        float pitch = lo.rowPitch();
 
         for (int i = 0; i < visible; i++) {
             Map.Entry<ItemStack, Integer> e = items.get(vs.scroll + i);
-            int rowY = lY + i * ROW_H;
+            int rowY = lY + Math.round(i * pitch);
             int slotX = P_X1 + 1;
             int slotY = rowY + (ROW_H - 18) / 2;
 
@@ -574,8 +596,9 @@ public final class MultiblockPreviewPanel {
         int maxV = lo.maxVis();
         List<Map.Entry<ItemStack, Integer>> items = countItems(def);
         int visible = Math.min(maxV, items.size() - vs.scroll);
+        float pitch = lo.rowPitch();
         for (int i = 0; i < visible; i++) {
-            int rowY = lY + i * ROW_H;
+            int rowY = lY + Math.round(i * pitch);
             if (localX >= P_X1 + 1 && localX < lo.width - SB_W && localY >= rowY && localY < rowY + ROW_H) {
                 Map.Entry<ItemStack, Integer> e = items.get(vs.scroll + i);
                 return java.util.Optional.of(new TooltipTarget.ListRow(e.getKey(), e.getValue()));
