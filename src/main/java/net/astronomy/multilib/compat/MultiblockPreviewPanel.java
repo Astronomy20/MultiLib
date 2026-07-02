@@ -186,6 +186,18 @@ public final class MultiblockPreviewPanel {
         return new Layout(width, height, countItems(def).size(), def.getLayerCount());
     }
 
+    /**
+     * Creates a fresh {@link ViewState}, seeded with whatever rotation/zoom/layer was last saved to
+     * disk for this multiblock (see {@link ViewStatePersistence}). Callers (JEI/REI/EMI adapters)
+     * should use this instead of {@code new ViewState()} directly whenever they create a new
+     * per-definition state, so the preview remembers its orientation across game restarts.
+     */
+    public static ViewState newViewState(MultiblockDefinition def) {
+        ViewState vs = new ViewState();
+        ViewStatePersistence.applySaved(def.getId(), vs);
+        return vs;
+    }
+
     // ── Text labels shown in the panel — callers pass already-resolved Components so each viewer
     //    can keep using its own lang-key convention where required (category title stays per-viewer;
     //    these three are free-standing strings we control, unified under shared "multilib.preview.*"
@@ -356,9 +368,10 @@ public final class MultiblockPreviewPanel {
     // ── Input (panel-local coordinates; callers translate from their own event's coordinates) ──
 
     /** @return true if the scroll was consumed (over the model → zoom; over the list → scroll it). */
-    public static boolean onScroll(ViewState vs, Layout lo, double localX, double localY, double deltaY) {
+    public static boolean onScroll(ViewState vs, Layout lo, MultiblockDefinition def, double localX, double localY, double deltaY) {
         if (localX >= lo.pX1() && localX <= lo.pX2() && localY >= lo.pY1() && localY <= lo.pY2()) {
             vs.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, vs.zoom + (deltaY > 0 ? ZOOM_STEP : -ZOOM_STEP)));
+            ViewStatePersistence.save(def.getId(), vs);
             return true;
         }
         int lY = lo.listY(), lH = lo.listH();
@@ -437,6 +450,9 @@ public final class MultiblockPreviewPanel {
      * @return true if a pending click was present and consumed (whether or not it changed selection).
      */
     public static boolean resolveClickOnRelease(ViewState vs, Layout lo, MultiblockDefinition def) {
+        // Persist here (rather than per drag-sample in onDrag) so a rotate gesture writes to disk
+        // exactly once, on release, instead of dozens of times per second while dragging.
+        ViewStatePersistence.save(def.getId(), vs);
         vs.dragActive = false;
         if (!vs.pendingClick) return false;
         vs.pendingClick = false;
@@ -488,6 +504,12 @@ public final class MultiblockPreviewPanel {
                 boolean current = ClientConfig.JEI_PREVIEW_AUTO_ROTATE.get();
                 if (current) vs.yaw = effectiveYaw(vs); // freeze in place when turning auto-rotate off
                 ClientConfig.JEI_PREVIEW_AUTO_ROTATE.set(!current);
+                // ConfigValue#set() only updates the in-memory value ("without firing events or writing
+                // the config to disk", per its own javadoc) — without this explicit save(), the toggle
+                // silently reverted to the TOML default on every game restart, which is the actual bug
+                // being reported here (nothing to do with per-recipe rotation/zoom/layer, which already
+                // persists correctly via ViewStatePersistence).
+                ClientConfig.JEI_PREVIEW_AUTO_ROTATE.save();
             }
             return true;
         }
@@ -522,6 +544,7 @@ public final class MultiblockPreviewPanel {
                         else if (vs.layer >= lo.nLayers - 1) vs.layer = null;
                         else vs.layer = vs.layer + 1;
                     }
+                    ViewStatePersistence.save(def.getId(), vs);
                 }
                 return true;
             }

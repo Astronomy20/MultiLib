@@ -6,12 +6,16 @@ import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.WidgetHolder;
+import net.astronomy.multilib.api.definition.MultiblockDefinition;
+import net.astronomy.multilib.compat.MultiblockPreviewPanel;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +40,15 @@ public class MultiblockEmiRecipe implements EmiRecipe {
             );
         }
         return CATEGORY;
+    }
+
+    // Persistent per-definition state — shared across every rebuild of EMI's recipe widget for this
+    // multiblock (EMI recreates addWidgets()'s widgets on every screen/page rebuild), same pattern as
+    // REI's MultiblockCategory.STATES / JEI's MultiblockRecipeCategory.states.
+    private static final Map<ResourceLocation, MultiblockPreviewPanel.ViewState> STATES = new HashMap<>();
+
+    private static MultiblockPreviewPanel.ViewState state(MultiblockDefinition def) {
+        return STATES.computeIfAbsent(def.getId(), k -> MultiblockPreviewPanel.newViewState(def));
     }
 
     private final MultiblockRecipeDisplay data;
@@ -97,7 +110,8 @@ public class MultiblockEmiRecipe implements EmiRecipe {
 
     @Override
     public void addWidgets(WidgetHolder widgets) {
-        widgets.add(new MultiblockPreviewWidget(data.definition(), 0, 0, getDisplayWidth(), getDisplayHeight()));
+        MultiblockDefinition def = data.definition();
+        widgets.add(new MultiblockPreviewWidget(def, state(def), 0, 0, getDisplayWidth(), getDisplayHeight()));
 
         // EMI dev-mode logs "Recipe's slots do not include any outputs / Call SlotWidget.recipeContext(this)
         // on outputs" for any recipe that never registers a SlotWidget for its output — our panel draws

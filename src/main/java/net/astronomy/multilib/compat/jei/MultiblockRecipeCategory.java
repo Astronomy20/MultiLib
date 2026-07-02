@@ -81,7 +81,7 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
     }
 
     private MultiblockPreviewPanel.ViewState state(MultiblockDefinition def) {
-        return states.computeIfAbsent(def.getId(), k -> new MultiblockPreviewPanel.ViewState());
+        return states.computeIfAbsent(def.getId(), k -> MultiblockPreviewPanel.newViewState(def));
     }
 
     // ── IRecipeCategory boilerplate ───────────────────────────────────────────
@@ -132,7 +132,7 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
         @Override
         public boolean handleMouseScrolled(double mx, double my, double sdx, double sdy) {
             MultiblockPreviewPanel.Layout lo = MultiblockPreviewPanel.layout(def, WIDTH, HEIGHT);
-            return MultiblockPreviewPanel.onScroll(vs, lo, mx, my, sdy);
+            return MultiblockPreviewPanel.onScroll(vs, lo, def, mx, my, sdy);
         }
 
         @Override

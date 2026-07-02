@@ -65,7 +65,7 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
     private static final Map<ResourceLocation, MultiblockPreviewPanel.ViewState> STATES = new HashMap<>();
 
     static MultiblockPreviewPanel.ViewState state(MultiblockDefinition def) {
-        return STATES.computeIfAbsent(def.getId(), k -> new MultiblockPreviewPanel.ViewState());
+        return STATES.computeIfAbsent(def.getId(), k -> MultiblockPreviewPanel.newViewState(def));
     }
 
     /** Resets every definition's view state to defaults; called when the REI recipe-view screen closes. */
@@ -157,7 +157,7 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
 
         @Override
         public boolean mouseScrolled(double mx, double my, double sdx, double sdy) {
-            return MultiblockPreviewPanel.onScroll(vs, layout(), mx - bounds.x, my - bounds.y - CONTENT_Y_OFFSET, sdy);
+            return MultiblockPreviewPanel.onScroll(vs, layout(), def, mx - bounds.x, my - bounds.y - CONTENT_Y_OFFSET, sdy);
         }
 
         @Override

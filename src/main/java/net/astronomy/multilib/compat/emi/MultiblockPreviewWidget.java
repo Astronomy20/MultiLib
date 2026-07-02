@@ -53,7 +53,7 @@ public class MultiblockPreviewWidget extends Widget {
     private final int x, y, width, height;
     private final Bounds bounds;
     private final MultiblockDefinition def;
-    private final MultiblockPreviewPanel.ViewState vs = new MultiblockPreviewPanel.ViewState();
+    private final MultiblockPreviewPanel.ViewState vs;
     private final MultiblockPreviewPanel.Labels labels = new MultiblockPreviewPanel.Labels(
             Component.translatable("multilib.preview.layer_all"),
             Component.translatable("multilib.preview.required_blocks"));
@@ -62,8 +62,16 @@ public class MultiblockPreviewWidget extends Widget {
     private boolean wasMouseDown = false;
     private long lastSampleNanos = 0L;
 
-    public MultiblockPreviewWidget(MultiblockDefinition def, int x, int y, int width, int height) {
+    /**
+     * @param vs shared per-definition state (owned by {@code MultiblockEmiRecipe}'s static map, the
+     *           same pattern REI/JEI use) rather than a fresh instance per widget — EMI recreates this
+     *           widget every time its recipe screen/page is rebuilt, so a widget-local field would
+     *           reset rotation/zoom/layer far more often than the user closing and reopening the
+     *           recipe view, which was part of why rotation appeared to never "stick" in EMI.
+     */
+    public MultiblockPreviewWidget(MultiblockDefinition def, MultiblockPreviewPanel.ViewState vs, int x, int y, int width, int height) {
         this.def = def;
+        this.vs = vs;
         this.x = x;
         this.y = y;
         this.width = width;
@@ -155,7 +163,7 @@ public class MultiblockPreviewWidget extends Widget {
     // ── Input: scroll (fed externally by EmiInputBridge with widget-local coordinates) ─────────
 
     public boolean onScroll(double localX, double localY, double scrollDeltaY) {
-        return MultiblockPreviewPanel.onScroll(vs, layout(), localX, localY, scrollDeltaY);
+        return MultiblockPreviewPanel.onScroll(vs, layout(), def, localX, localY, scrollDeltaY);
     }
 
     // ── Input: mouse release (fed externally by EmiInputBridge, same mechanism as onScroll above) ──
