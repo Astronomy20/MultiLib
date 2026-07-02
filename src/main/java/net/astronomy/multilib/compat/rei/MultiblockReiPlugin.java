@@ -1,5 +1,6 @@
 package net.astronomy.multilib.compat.rei;
 
+import me.shedaniel.math.Rectangle;
 import me.shedaniel.rei.api.client.plugins.REIClientPlugin;
 import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
 import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
@@ -34,13 +35,25 @@ public class MultiblockReiPlugin implements REIClientPlugin {
         // to trigger a registered TransferHandler (e.g. "move items into a crafting grid"), which has
         // no meaning for a multiblock structure — there's nothing to auto-craft/transfer. With no
         // TransferHandler registered for this category, REI's own AutoCraftingEvaluator finds nothing
-        // applicable and renders the button as a red "!" instead of "+", which reads as a stray error
-        // icon. removePlusButton() is deprecated in favor of setPlusButtonArea(...), but its javadoc
-        // ("no longer supported... not available for removal") is about a batch API being retired, not
-        // about this shim not working: it's implemented as exactly setPlusButtonArea(bounds -> null),
-        // REI's own sanctioned way to opt a category out of the button (see ButtonArea.get, whose null
-        // return this widget checks before rendering anything for that area).
-        registry.get(MultiblockCategory.ID).removePlusButton();
+        // applicable (AutoCraftingEvaluator#evaluateAutoCrafting never sets hasApplicable) and renders
+        // the button as a red "!" instead of "+", which reads as a stray error icon.
+        //
+        // removePlusButton()/setPlusButtonArea(bounds -> null) does NOT actually remove it, despite the
+        // name — confirmed by decompiling CategoryRegistryImpl.CategoryConfigurationImpl in
+        // RoughlyEnoughItems-neoforge-16.0.799.jar: getPlusButtonArea() unconditionally returns
+        // Optional.of(...) (so DefaultDisplayViewingScreen's `plusButtonArea.isPresent()` check never
+        // skips adding the widget) and wraps the provider in
+        // Objects.requireNonNullElseGet(providerResult, () -> ButtonArea.defaultArea().get(bounds)),
+        // silently substituting the default bottom-right area whenever the provider returns null. This
+        // matches the API's own javadoc: "@deprecated No longer supported, the plus button is not
+        // available for removal."
+        //
+        // A zero-size Rectangle at the display's own origin was tried next, but the button widget
+        // apparently renders/hit-tests at a fixed intrinsic size regardless of the declared width/height
+        // (it just showed up anchored at the top-left corner instead of hidden). Since REI unconditionally
+        // adds this widget no matter what the area provider returns, the only reliable way left to hide
+        // it is to place it far outside the visible screen entirely rather than relying on its size.
+        registry.get(MultiblockCategory.ID).setPlusButtonArea(bounds -> new Rectangle(-100000, -100000, 10, 10));
     }
 
     @Override
