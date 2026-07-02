@@ -42,19 +42,19 @@ MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar
 
 Registered once during mod setup, this is enough for MultiLib to detect the structure in every allowed rotation whenever the core block is placed, track it persistently, and preview/auto-place it for players.
 
-See the [Getting Started guide](../../wiki/Getting-Started) for the full walkthrough, including the mod-entry-point wiring.
+See the [Getting Started guide](wiki/Getting-Started) for the full walkthrough, including the mod-entry-point wiring.
 
 ## Documentation
 
-The full API reference and guides live in the [wiki](../../wiki):
+The full API reference and guides live in the [wiki](wiki):
 
-- [Getting Started](../../wiki/Getting-Started) - add MultiLib as a dependency and register your first multiblock.
-- [Core Concepts](../../wiki/Core-Concepts) - definitions, symbols, ingredients, the coordinate system, formation modes.
-- [Pattern Design Guide](../../wiki/Pattern-Design-Guide) - laying out structures correctly and avoiding common mistakes.
-- [Rotation & Matching Deep Dive](../../wiki/Rotation-And-Matching) - how the matchers actually work.
-- [Advanced Features](../../wiki/Advanced-Features) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
-- [API Reference](../../wiki/Home#7-api-reference) - full method-by-method reference, including [multiblock states & progress tracking](../../wiki/api-reference/Multiblock-States-And-Progress).
-- [FAQ & Troubleshooting](../../wiki/FAQ-Troubleshooting)
+- [Getting Started](wiki/Getting-Started) - add MultiLib as a dependency and register your first multiblock.
+- [Core Concepts](wiki/Core-Concepts) - definitions, symbols, ingredients, the coordinate system, formation modes.
+- [Pattern Design Guide](wiki/Pattern-Design-Guide) - laying out structures correctly and avoiding common mistakes.
+- [Rotation & Matching Deep Dive](wiki/Rotation-And-Matching) - how the matchers actually work.
+- [Advanced Features](wiki/Advanced-Features) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
+- [API Reference](/wiki/Home#7-api-reference) - full method-by-method reference, including [multiblock states & progress tracking](../../wiki/api-reference/Multiblock-States-And-Progress).
+- [FAQ & Troubleshooting](wiki/FAQ-Troubleshooting)
 
 ## Compatibility
 
