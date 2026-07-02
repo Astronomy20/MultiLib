@@ -15,7 +15,7 @@ The immutable, built representation of a structure. You never construct this dir
 | `getLayers()` | `List<List<String>>` — top-to-bottom layer rows |
 | `getLayerCount()` | Number of layers |
 | `getRotationMode()` | The coarse `RotationMode` |
-| `getAllowedRotations()` | `Set<AllowedRotation>` — granular rotation declarations, if any (takes precedence over `RotationMode` when non-empty, but **only for `ShapedMatcher`** — `FunctionalMatcher` for `.pattern(...)`-based structures ignores this entirely and only reads `RotationMode`) |
+| `getAllowedRotations()` | `Set<AllowedRotation>` — granular rotation declarations, if any (takes precedence over `RotationMode` when non-empty). Honored by both `ShapedMatcher` and `FunctionalMatcher` (for `.pattern(...)`-based structures) — the latter mirrors the former's granular-transform search |
 | `isRequireAirInEmptyPositions()` | Whether empty pattern cells must be air |
 | `getPriority()` | Match-order priority. Ties are broken by `MultiblockRegistry` — JSON-defined definitions win over Java-defined ones, not registration order |
 

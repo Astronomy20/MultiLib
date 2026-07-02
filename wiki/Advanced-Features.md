@@ -160,7 +160,7 @@ A "wrench" is any `Item` implementing the marker interface `IMultiblockWrench` (
 
 Only structures whose `FormationMode` allows wrench-triggering (`WRENCH` or `AUTOMATIC_AND_WRENCH`) actually form this way — see [Core Concepts § Formation modes](Core-Concepts.md#formation-modes).
 
-## JEI / REI / EMI / Patchouli / GuideME compatibility
+## JEI / REI / EMI / Patchouli / GuideME / FTB Quests compatibility
 
 | Integration | Status | Package |
 |---|---|---|
@@ -169,8 +169,25 @@ Only structures whose `FormationMode` allows wrench-triggering (`WRENCH` or `AUT
 | EMI | Equivalent auto-registered plugin | `compat.emi` |
 | Patchouli | Manual: call `PatchouliMultiblockHelper.register(definition)` yourself during common setup — converts a shaped `MultiblockDefinition` into Patchouli's `IMultiblock` format (only shaped definitions are supported; shapeless/`PatternProvider`-backed definitions return `null` and are skipped) | `compat.patchouli` |
 | GuideME | Placeholder only — GuideME doesn't expose a stable programmatic registration API yet. `GuideMEHelper.logInfo(definition)` just logs availability; register your GuideME pages via GuideME's own datapack JSON format, referencing the definition's `ResourceLocation` | `compat.guideme` |
+| FTB Quests | Auto-registered (if FTB Quests is loaded) — adds a "Multiblock" quest task type. See [FTB Quests compatibility](#ftb-quests-compatibility) below | `compat.ftbquests` |
 
 For JEI/REI/EMI, `.icon(itemId)` and `.name(...)` control the recipe-browser presentation (icon item and display name) — see [MultiblockBuilder § Visuals & recipe browsers](api-reference/MultiblockBuilder.md#visuals--recipe-browsers).
+
+## FTB Quests compatibility
+
+If FTB Quests is loaded, MultiLib registers a `multiblock` quest task type (`FtbQuestsCompat`, gated behind reflection so the base mod never hard-depends on FTB Quests classes). A quest author picks a registered `MultiblockDefinition` and, optionally, a required [`MultiblockState`](api-reference/Multiblock-States-And-Progress.md) from a searchable dropdown in the task's config UI; leaving the state as "Any" completes the task on formation alone.
+
+Completion is **push-only, never polled**:
+
+- The task subscribes to `MultiblockFormedEvent` and `MultiblockStateChangedEvent` (via `MultiblockQuestEventListener`) and submits itself the instant a matching event fires for the right player, definition, and (if set) state.
+- It does **not** use [`MultiblockProgressionTracker`](api-reference/Multiblock-States-And-Progress.md#multiblockprogressiontracker)'s persistent "ever reached" record for its completion check — a permanently-standing historical record would let a quest re-complete instantly on reset, or "complete" a task for a structure that's since been broken. The live-event approach avoids both.
+- A task with a `requiredState` set can only ever be satisfied by a multiblock that has a real `AbstractMultiblockControllerBE` controller (JSON-only multiblocks with no controller never fire `MultiblockStateChangedEvent`, so pick "Any" for those).
+
+Clicking the task in the quest screen opens the recipe viewer (JEI/REI/EMI, whichever is installed) on that structure instead of manually completing it — there's no "click to complete" behavior for this task type.
+
+## Progress tracking for in-progress structures
+
+[`MultiblockProgressAPI.compute(level, corePos)`](api-reference/Multiblock-States-And-Progress.md#multiblockprogressapi) reports how complete a **not-yet-formed** shaped (`.layer(...)`) structure is — total blocks required, which positions are still missing/mismatched, and a per-block-type "shopping list" — so you can build your own progress UI without reimplementing pattern matching. It's read-only and complements, rather than replaces, the [ghost overlay](#ghost-overlay) above.
 
 ## See also
 
@@ -180,3 +197,4 @@ For JEI/REI/EMI, `.icon(itemId)` and `.name(...)` control the recipe-browser pre
 - [MultiblockBuilder reference](api-reference/MultiblockBuilder.md)
 - [BlockDefinition reference](api-reference/BlockDefinition.md)
 - [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md)
+- [Multiblock States & Progress Tracking](api-reference/Multiblock-States-And-Progress.md)

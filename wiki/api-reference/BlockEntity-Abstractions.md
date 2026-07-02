@@ -22,7 +22,7 @@ protected ServerLevel getServerLevel();
 protected void markDirtyAndSync();
 ```
 
-`MultiblockState` is an interface (`String getId()`), not a fixed enum — `StandardMultiblockState` provides `UNFORMED`/`IDLE`/`RUNNING`/`ERROR`, but you can implement your own states. `setState(...)` is a no-op if the new state equals the current one; otherwise it calls your `onStateChanged(prev, next)` hook and syncs to clients.
+`MultiblockState` is a registry-backed value object (`ResourceLocation getId()`), not a fixed enum — `StandardMultiblockState` provides `UNFORMED`/`IDLE`/`RUNNING`/`ERROR`, and you can register your own via `MultiblockStateRegistry`/`MultiLibAPI.registerMultiblockState(...)` (you can't `new` or implement one directly). `setState(...)` is a no-op if the new state equals the current one; otherwise it calls your `onStateChanged(prev, next)` hook, records progression, posts `MultiblockStateChangedEvent`, and syncs to clients — see [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full lifecycle.
 
 `getActiveModelId()` returns the `ResourceLocation` of the block currently rendered in place of the (hidden) core model — this is what [`MultiblockMasterModelRenderer`](#multiblockmastermodelrenderer) reads every frame. `getServerLevel()`/`markDirtyAndSync()` are small helpers for subclasses that need the owning `ServerLevel` or want to force an NBT save + client sync outside the normal state-change path.
 
@@ -192,4 +192,5 @@ public class MyControllerBlock extends AbstractMultiblockControllerBlock impleme
 - [Core Concepts § The controller block-entity pattern](../Core-Concepts.md#the-controller-block-entity-pattern)
 - [Callbacks & Events](Callbacks-And-Events.md)
 - [MultiblockInstance & Registry](MultiblockInstance-And-Registry.md)
+- [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md)
 - [Advanced Features § Master-Dummy model](../Advanced-Features.md#master-dummy-model)

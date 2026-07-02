@@ -21,6 +21,7 @@ MultiLib is a NeoForge 1.21.1 (Java 21) **library mod** that lets other mods def
    - [MultiblockInstance & Registry](api-reference/MultiblockInstance-And-Registry.md)
    - [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md)
    - [BlockDefinition (block-level metadata)](api-reference/BlockDefinition.md)
+   - [Multiblock States & Progress Tracking](api-reference/Multiblock-States-And-Progress.md)
    - [RotationUtils](api-reference/RotationUtils.md)
 8. [FAQ & Troubleshooting](FAQ-Troubleshooting.md)
 9. [Migrating from the old PatternBuilder API](Migrating-From-PatternBuilder.md)
@@ -36,5 +37,7 @@ MultiLib is a NeoForge 1.21.1 (Java 21) **library mod** that lets other mods def
 | Design a new structure without hitting common pitfalls | [Pattern Design Guide](Pattern-Design-Guide.md) |
 | Build a structure with a machine-like core that has its own facing | [Directional Cores Guide](Directional-Cores-Guide.md) |
 | Use shapeless structures, free blocks, JSON definitions, ghost overlay, JEI/REI/EMI | [Advanced Features](Advanced-Features.md) |
+| Track custom controller states, "ever reached" progression, or in-progress structure completion (%, shopping list) | [Multiblock States & Progress Tracking](api-reference/Multiblock-States-And-Progress.md) |
+| Wire up an FTB Quests "form/reach this state" task | [Advanced Features § FTB Quests compatibility](Advanced-Features.md#ftb-quests-compatibility) |
 | Debug why a structure won't match or form | [FAQ & Troubleshooting](FAQ-Troubleshooting.md) |
 | Port code written against the old `PatternBuilder` API | [Migrating from the old PatternBuilder API](Migrating-From-PatternBuilder.md) |

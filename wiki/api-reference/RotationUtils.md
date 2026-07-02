@@ -56,16 +56,6 @@ Rotation directions (right-handed, looking down the positive axis toward the ori
 
 `Y`-axis rotation is what the old API called "horizontal rotation"; `X`/`Z`-axis rotation is what the old API split out as "vertical rotation." Both are now the same method, just a different `axis` argument — there's no longer a separate code path or a `vertical` boolean to pass.
 
----
-
-### `rotate(Vec3 vec, String axis, int angle)`
-
-```java
-public static Vec3 rotate(Vec3 vec, String axis, int angle)
-```
-
-Convenience overload for `net.minecraft.world.phys.Vec3`. Rounds `vec`'s components to the nearest `int`, delegates to the `int` overload, and wraps the result back into a `Vec3`. Useful when working with entity/particle positions rather than block offsets.
-
 ## See also
 
 - [Rotation & Matching Deep Dive](../Rotation-And-Matching.md) — how `ShapedMatcher` composes rotation axis + angle with `RotationMode`/`AllowedRotation` to search candidate orientations

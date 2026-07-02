@@ -164,8 +164,24 @@ public class MultiblockBrokenEvent extends Event {
 
 **Not cancellable** — by the time this posts, the block is already broken and the instance already unregistered from the tracker; there's nothing left to veto.
 
+### `MultiblockStateChangedEvent`
+
+```java
+public class MultiblockStateChangedEvent extends Event {
+    public MultiblockContext getContext();
+    public MultiblockInstance getInstance();
+    public MultiblockDefinition getDefinition();
+    public ServerLevel getLevel();
+    public MultiblockState getPreviousState();
+    public MultiblockState getNewState();
+}
+```
+
+**Not cancellable.** Posted whenever a formed multiblock's `AbstractMultiblockControllerBE` transitions from one `MultiblockState` to another via `setState(...)` — including the automatic `UNFORMED`→`IDLE` transition on formation. Only fires for multiblocks with a real controller block entity and a resolvable formed instance; a JSON-only multiblock (no controller) never posts this event. See [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full state lifecycle, including how this event relates to `onStateChanged(...)` and progression tracking.
+
 ## See also
 
 - [Core Concepts § Activation flow](../Core-Concepts.md#activation-flow)
 - [MultiblockInstance & Registry](MultiblockInstance-And-Registry.md)
 - [Block Entity Abstractions](BlockEntity-Abstractions.md) — how `AbstractMultiblockControllerBE` hooks into this same lifecycle
+- [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md)

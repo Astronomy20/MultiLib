@@ -48,7 +48,7 @@ Sets the symbol whose placement triggers an automatic formation check.
 Sets the core symbol. **Also sets activation to the same symbol if activation wasn't already set.**
 
 ### `priority(int priority)`
-Higher priority definitions are tried first when multiple definitions could match the same placed block (see [Core Concepts](../Core-Concepts.md#registration-and-lookup)). Default `0`; ties are broken in favor of code-defined definitions over JSON-defined ones.
+Higher priority definitions are tried first when multiple definitions could match the same placed block (see [Core Concepts](../Core-Concepts.md#registration-and-lookup)). Default `0`; ties are broken in favor of JSON-defined definitions over code-defined ones (the same "data overrides hardcoded defaults" convention vanilla uses for recipes/loot tables/tags).
 
 ### `requireAirInEmptyPositions()`
 Requires every "empty" (space) cell in the pattern's bounding box to actually be air in the world — otherwise those cells are unconstrained by default (this only affects `PatternProvider`-backed/functional definitions in practice; plain shaped layers already only check non-space symbols).

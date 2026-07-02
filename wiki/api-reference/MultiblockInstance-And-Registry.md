@@ -18,6 +18,7 @@ public final class MultiblockInstance {
     public Set<BlockPos> getPositions();
     public Set<BlockPos> getPositionsFor(char symbol);
     public Optional<BlockPos> getCorePos();
+    public Optional<UUID> getFormedBy();
 }
 ```
 
@@ -27,6 +28,7 @@ public final class MultiblockInstance {
 - `getPositions()` — every world position this instance occupies.
 - `getPositionsFor(char symbol)` — positions matched to a specific pattern symbol (includes free-block positions, if any).
 - `getCorePos()` — resolves the core symbol's position(s) via the owning definition, if `hasCore()`.
+- `getFormedBy()` — the player who triggered formation, if any (`empty` for anonymous formation, e.g. a dispenser pushing the core into place, or periodic re-formation via `setValidationInterval(...)`). Consulted by `AbstractMultiblockControllerBE` to attribute progression records on state change — see [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md).
 
 Serialized to/from `CompoundTag` (`save()`/`load(tag)`) by `WorldMultiblockTracker`; orphaned instances (definition no longer registered, or corrupted data) are discarded with a logged warning on load rather than crashing world load.
 
@@ -91,3 +93,4 @@ You'll mostly interact with this indirectly (via `IMultiblockPart.getInstance(le
 - [Core Concepts § Activation flow](../Core-Concepts.md#activation-flow)
 - [Callbacks & Events](Callbacks-And-Events.md)
 - [Block Entity Abstractions](BlockEntity-Abstractions.md)
+- [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md)
