@@ -8,7 +8,7 @@ You describe a structure once with a fluent builder, and MultiLib handles detect
 
 ## Why MultiLib
 
-Building a multiblock structure by hand usually means reimplementing the same handful of problems for every mod: scanning neighboring blocks in the right order, handling all four horizontal rotations (and sometimes vertical ones), persisting which structures are currently formed across a world reload, and wiring up a recipe-browser page so players can see the layout. MultiLib solves all of that once, behind a small public API, so mod authors can focus on what their structure *does* rather than how it's detected.
+Building a multiblock structure by hand usually means reimplementing the same handful of problems for every mod: scanning neighboring blocks in the right order, handling rotations, persisting which structures are currently formed across a world reload and wiring up a recipe-browser page so players can see the layout. MultiLib solves all of that once, behind a small public API, so mod authors can focus on what their structure *does* rather than how it's detected.
 
 ## Features
 
@@ -16,10 +16,10 @@ Building a multiblock structure by hand usually means reimplementing the same ha
 - **Flexible matching** - shaped, shapeless, and procedural (`PatternProvider`) structures; shell/interior matching; free blocks.
 - **Rotation-aware detection** - horizontal or full 3D rotation modes, plus fixed-facing "directional core" structures.
 - **Stateful controller blocks** - optional base classes for a block-entity-backed core that tracks formed/unformed state and ticks while active.
-- **Callbacks, not polling** - `onFormed` / `onBroken` / tick callbacks fire exactly when they should.
-- **Ghost-overlay preview & auto-place** - players can preview a structure in the world before placing it, and place the remaining blocks with a single tool.
-- **JSON/datapack definitions** - structures can also be defined data-driven, without touching Java.
-- **Recipe-browser integration** - JEI, REI, EMI, and Patchouli/GuideME support out of the box.
+- **Callbacks** - `onFormed` / `onBroken` / tick callbacks fire exactly when they should.
+- **Ghost-overlay preview & auto-place** - players can preview a structure in the world before placing it and place the remaining blocks with a single tool.
+- **JSON/datapack definitions** - structures can also be defined data-driven.
+- **Recipe-browser integration** - JEI, REI, EMI, Patchouli and GuideME support out of the box.
 
 ## Quick example
 
