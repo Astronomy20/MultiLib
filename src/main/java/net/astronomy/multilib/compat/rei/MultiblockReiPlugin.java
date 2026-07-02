@@ -27,8 +27,21 @@ public class MultiblockReiPlugin implements REIClientPlugin {
     public void registerCategories(CategoryRegistry registry) {
         ReiScreenResetHandler.init();
         registry.add(new MultiblockCategory());
-        // Lets other MultiLib compat modules (e.g. compat/ftbquests) open "recipes producing this stack" without depending on REI directly.
-        RecipeViewerLink.register(stack -> ViewSearchBuilder.builder().addRecipesFor(EntryStacks.of(stack)).open());
+        // Lets other MultiLib compat modules (e.g. compat/ftbquests) open this exact multiblock's
+        // recipe page without depending on REI directly. filterCategory restricts the search to our
+        // own category — without it, addRecipesFor(stack) alone would also surface unrelated recipes
+        // that happen to output the same core/activation block (e.g. a structure whose core is an
+        // emerald block would land on the emerald block's own crafting recipe instead of the
+        // multiblock tab). See RecipeViewerLink's javadoc.
+        RecipeViewerLink.register(def -> {
+            var catalyst = MultiblockRecipeDisplay.catalystStack(def);
+            if (!catalyst.isEmpty()) {
+                ViewSearchBuilder.builder()
+                        .filterCategory(MultiblockCategory.ID)
+                        .addRecipesFor(EntryStacks.of(catalyst))
+                        .open();
+            }
+        });
         // Deliberately NOT registered as a "workstation": REI workstations open the WHOLE category
         // regardless of which item you clicked, which is why every structure used to show up no
         // matter which core/activation block was opened. MultiblockRecipeDisplay.of(...) now gives

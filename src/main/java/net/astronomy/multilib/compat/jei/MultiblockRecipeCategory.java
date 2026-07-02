@@ -14,15 +14,11 @@ import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.category.IRecipeCategory;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
-import net.astronomy.multilib.client.ClientConfig;
 import net.astronomy.multilib.compat.MultiblockPreviewPanel;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,18 +56,8 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
     /** The single live instance, so the close-screen handler can reach {@link #states}. */
     private static MultiblockRecipeCategory instance;
 
-    private static ItemStack categoryIconStack() {
-        String id = ClientConfig.CATEGORY_ICON.get();
-        ResourceLocation loc = ResourceLocation.tryParse(id);
-        if (loc != null) {
-            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(loc).orElse(null);
-            if (item != null) return new ItemStack(item);
-        }
-        return new ItemStack(Items.STRUCTURE_BLOCK);
-    }
-
     public MultiblockRecipeCategory(IGuiHelper guiHelper) {
-        this.icon = guiHelper.createDrawableItemStack(categoryIconStack());
+        this.icon = guiHelper.createDrawableItemStack(MultiblockPreviewPanel.categoryIconStack());
         instance = this;
     }
 

@@ -172,8 +172,7 @@ public class MultiblockTask extends AbstractBooleanTask {
     @Environment(EnvType.CLIENT)
     public void onButtonClicked(Button button, boolean canClick) {
         button.playClickSound();
-        MultiLibAPI.getDefinition(multiblockId).ifPresent(def ->
-                RecipeViewerLink.open(MultiblockRecipeDisplay.catalystStack(def)));
+        MultiLibAPI.getDefinition(multiblockId).ifPresent(RecipeViewerLink::open);
     }
 
     @Override

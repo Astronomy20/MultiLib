@@ -5,10 +5,13 @@ import dev.emi.emi.api.EmiEntrypoint;
 import dev.emi.emi.api.EmiPlugin;
 import dev.emi.emi.api.EmiRegistry;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
-import dev.emi.emi.api.stack.EmiStack;
 import net.astronomy.multilib.client.RecipeViewerLink;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
+import net.minecraft.resources.ResourceLocation;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * EMI plugin for MultiLib. Auto-discovered by EMI via {@link EmiEntrypoint}.
@@ -30,10 +33,21 @@ public class MultiblockEmiPlugin implements EmiPlugin {
         // matter which core/activation block was opened. MultiblockRecipeDisplay.of(...) now gives
         // each recipe a real per-definition output (see MultiblockEmiRecipe#getOutputs), so EMI's
         // standard "Recipes" lookup on an item already filters correctly without a workstation.
-        MultiblockRegistry.getAllDefinitions().forEach(def ->
-                registry.addRecipe(new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(def))));
+        Map<ResourceLocation, MultiblockEmiRecipe> byDefinitionId = new HashMap<>();
+        MultiblockRegistry.getAllDefinitions().forEach(def -> {
+            MultiblockEmiRecipe recipe = new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(def));
+            registry.addRecipe(recipe);
+            byDefinitionId.put(def.getId(), recipe);
+        });
 
-        // Lets other MultiLib compat modules (e.g. compat/ftbquests) open "recipes producing this stack" without depending on EMI directly.
-        RecipeViewerLink.register(stack -> EmiApi.displayRecipes(EmiStack.of(stack)));
+        // Lets other MultiLib compat modules (e.g. compat/ftbquests) open this exact multiblock's
+        // recipe page without depending on EMI directly. Opens the recipe instance directly
+        // (EmiApi#displayRecipe) rather than by ItemStack — a stack lookup would also surface
+        // unrelated recipes that happen to output the same core/activation block. See
+        // RecipeViewerLink's javadoc.
+        RecipeViewerLink.register(def -> {
+            MultiblockEmiRecipe recipe = byDefinitionId.get(def.getId());
+            if (recipe != null) EmiApi.displayRecipe(recipe);
+        });
     }
 }

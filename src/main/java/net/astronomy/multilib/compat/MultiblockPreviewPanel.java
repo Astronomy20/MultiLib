@@ -708,6 +708,17 @@ public final class MultiblockPreviewPanel {
         return ItemStack.EMPTY;
     }
 
+    /** The recipe-category icon shared by JEI/REI/EMI/FTB Quests — {@link ClientConfig#CATEGORY_ICON}, falling back to a structure block. */
+    public static ItemStack categoryIconStack() {
+        String id = ClientConfig.CATEGORY_ICON.get();
+        ResourceLocation loc = ResourceLocation.tryParse(id);
+        if (loc != null) {
+            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(loc).orElse(null);
+            if (item != null) return new ItemStack(item);
+        }
+        return new ItemStack(Items.STRUCTURE_BLOCK);
+    }
+
     /** The multiblock's "name", for the title row — the core/activation block's own display name. */
     public static String multiblockName(MultiblockDefinition def) {
         if (def.getNameTranslationKey().isPresent()) {
