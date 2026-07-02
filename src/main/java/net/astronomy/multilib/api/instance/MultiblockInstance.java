@@ -27,9 +27,15 @@ public final class MultiblockInstance {
     private final TransformData transform;
     private final Set<BlockPos> positions;
     private final Map<Character, Set<BlockPos>> symbolPositions;
+    private final Optional<UUID> formedBy;
 
     public MultiblockInstance(UUID id, ResourceLocation definitionId, BlockPos origin,
                               TransformData transform, MatchData matchData) {
+        this(id, definitionId, origin, transform, matchData, Optional.empty());
+    }
+
+    public MultiblockInstance(UUID id, ResourceLocation definitionId, BlockPos origin,
+                              TransformData transform, MatchData matchData, Optional<UUID> formedBy) {
         this.id = id;
         this.definitionId = definitionId;
         this.origin = origin;
@@ -40,6 +46,7 @@ public final class MultiblockInstance {
                         Map.Entry::getKey,
                         e -> Set.copyOf(e.getValue())
                 ));
+        this.formedBy = formedBy;
     }
 
     public UUID getId() { return id; }
@@ -49,6 +56,7 @@ public final class MultiblockInstance {
     public boolean contains(BlockPos pos) { return positions.contains(pos); }
     public Set<BlockPos> getPositions() { return positions; }
     public Set<BlockPos> getPositionsFor(char symbol) { return symbolPositions.getOrDefault(symbol, Set.of()); }
+    public Optional<UUID> getFormedBy() { return formedBy; }
 
     public Optional<BlockPos> getCorePos() {
         return MultiblockRegistry.get(definitionId)
@@ -76,6 +84,8 @@ public final class MultiblockInstance {
                         posSet.stream().mapToLong(BlockPos::asLong).toArray()));
         tag.put("symbolPositions", symbolTag);
 
+        formedBy.ifPresent(uuid -> tag.put("formedBy", NbtUtils.createUUID(uuid)));
+
         return tag;
     }
 
@@ -95,7 +105,11 @@ public final class MultiblockInstance {
         ResourceLocation definitionId = ResourceLocation.tryParse(defStr);
         if (definitionId == null) return Optional.empty();
 
-        if (MultiblockRegistry.get(definitionId).isEmpty()) return Optional.empty();
+        if (MultiblockRegistry.get(definitionId).isEmpty()) {
+            MultiLib.LOGGER.warn("[MultiLib] Discarding MultiblockInstance {}: definition '{}' is no longer registered",
+                    id, definitionId);
+            return Optional.empty();
+        }
 
         BlockPos origin = BlockPos.of(tag.getLong("origin"));
         int rotation = tag.getInt("rotation");
@@ -126,6 +140,15 @@ public final class MultiblockInstance {
                         .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue))
         );
 
-        return Optional.of(new MultiblockInstance(id, definitionId, origin, transform, matchData));
+        Optional<UUID> formedBy = Optional.empty();
+        if (tag.contains("formedBy", Tag.TAG_INT_ARRAY)) {
+            try {
+                formedBy = Optional.of(NbtUtils.loadUUID(tag.get("formedBy")));
+            } catch (Exception e) {
+                MultiLib.LOGGER.warn("[MultiLib] Failed to load MultiblockInstance formedBy UUID", e);
+            }
+        }
+
+        return Optional.of(new MultiblockInstance(id, definitionId, origin, transform, matchData, formedBy));
     }
 }

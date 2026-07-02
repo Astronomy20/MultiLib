@@ -1,20 +1,25 @@
 package net.astronomy.multilib.api.state;
 
-public final class StandardMultiblockState implements MultiblockState {
-    public static final StandardMultiblockState UNFORMED = new StandardMultiblockState("multilib:unformed");
-    public static final StandardMultiblockState IDLE     = new StandardMultiblockState("multilib:idle");
-    public static final StandardMultiblockState RUNNING  = new StandardMultiblockState("multilib:running");
-    public static final StandardMultiblockState ERROR    = new StandardMultiblockState("multilib:error");
+import net.minecraft.resources.ResourceLocation;
 
-    private final String id;
+public final class StandardMultiblockState {
+    public static final MultiblockState UNFORMED = MultiblockStateRegistry.register(
+        ResourceLocation.fromNamespaceAndPath("multilib", "unformed"), "multilib.state.unformed");
+    public static final MultiblockState IDLE = MultiblockStateRegistry.register(
+        ResourceLocation.fromNamespaceAndPath("multilib", "idle"), "multilib.state.idle");
+    public static final MultiblockState RUNNING = MultiblockStateRegistry.register(
+        ResourceLocation.fromNamespaceAndPath("multilib", "running"), "multilib.state.running");
+    public static final MultiblockState ERROR = MultiblockStateRegistry.register(
+        ResourceLocation.fromNamespaceAndPath("multilib", "error"), "multilib.state.error");
 
-    private StandardMultiblockState(String id) {
-        this.id = id;
-    }
+    private StandardMultiblockState() {}
 
-    @Override
-    public String getId() { return id; }
-
-    @Override
-    public String toString() { return id; }
+    /**
+     * No-op — calling this forces the class to load (and its fields above to register) without
+     * needing an unused-looking bare field reference at the call site. MultiLib calls this before
+     * {@link MultiblockStateRegistry#freeze()} for the exact reason documented on
+     * {@link MultiblockStateRegistry#register}: registration must happen before freeze, and Java only
+     * runs a class's static initializer the first time something touches it.
+     */
+    public static void touch() {}
 }

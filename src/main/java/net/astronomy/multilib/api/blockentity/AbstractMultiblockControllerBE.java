@@ -3,9 +3,15 @@ package net.astronomy.multilib.api.blockentity;
 import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.api.callback.MultiblockBrokenContext;
 import net.astronomy.multilib.api.callback.MultiblockFormedContext;
+import net.astronomy.multilib.api.definition.MultiblockDefinition;
+import net.astronomy.multilib.api.event.MultiblockStateChangedEvent;
+import net.astronomy.multilib.api.instance.MultiblockContext;
 import net.astronomy.multilib.api.instance.MultiblockInstance;
 import net.astronomy.multilib.api.state.MultiblockState;
+import net.astronomy.multilib.api.state.MultiblockStateRegistry;
 import net.astronomy.multilib.api.state.StandardMultiblockState;
+import net.astronomy.multilib.core.registry.MultiblockRegistry;
+import net.astronomy.multilib.core.tracking.MultiblockProgressionTracker;
 import net.astronomy.multilib.core.tracking.WorldMultiblockTracker;
 import net.astronomy.multilib.event.BlockActivationHandler;
 import net.astronomy.multilib.event.BlockBreakHandler;
@@ -20,6 +26,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
@@ -49,7 +56,32 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
         MultiblockState prev = this.state;
         this.state = newState;
         onStateChanged(prev, newState);
+        recordProgressionOnStateChange(prev, newState);
         markDirtyAndSync();
+    }
+
+    /**
+     * Records progression (for FTB Quests etc.) and posts {@link MultiblockStateChangedEvent} whenever
+     * this controller's state changes, provided we can resolve a formed instance with a known former.
+     * Best-effort: silently no-ops if not server-side, not tracked yet, or formed anonymously (e.g. by
+     * a dispenser) since there's no player to attribute progression to.
+     */
+    private void recordProgressionOnStateChange(MultiblockState prev, MultiblockState next) {
+        if (instanceId == null) return;
+        getServerLevel().ifPresent(serverLevel -> {
+            WorldMultiblockTracker tracker = WorldMultiblockTracker.get(serverLevel);
+            tracker.getById(instanceId).ifPresent(instance -> {
+                instance.getFormedBy().ifPresent(playerId ->
+                        MultiblockProgressionTracker.get(serverLevel.getServer().overworld())
+                                .recordStateReached(playerId, instance.getDefinitionId(), next.getId(),
+                                        serverLevel.getServer().overworld().getGameTime()));
+
+                MultiblockRegistry.get(instance.getDefinitionId()).ifPresent(definition -> {
+                    MultiblockContext ctx = new MultiblockContext(serverLevel, instance, definition);
+                    NeoForge.EVENT_BUS.post(new MultiblockStateChangedEvent(ctx, prev, next));
+                });
+            });
+        });
     }
 
     public boolean isFormed() {
@@ -189,7 +221,7 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        tag.putString("state", state.getId());
+        tag.putString("state", state.getId().toString());
         if (instanceId != null) {
             tag.put("instanceId", NbtUtils.createUUID(instanceId));
         }
@@ -213,16 +245,15 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
     }
 
     protected MultiblockState resolveState(String id) {
-        return switch (id) {
-            case "multilib:unformed" -> StandardMultiblockState.UNFORMED;
-            case "multilib:idle"     -> StandardMultiblockState.IDLE;
-            case "multilib:running"  -> StandardMultiblockState.RUNNING;
-            case "multilib:error"    -> StandardMultiblockState.ERROR;
-            default -> {
-                MultiLib.LOGGER.warn("[MultiLib] Unknown MultiblockState '{}', falling back to UNFORMED", id);
-                yield StandardMultiblockState.UNFORMED;
-            }
-        };
+        ResourceLocation rl = ResourceLocation.tryParse(id);
+        if (rl == null) {
+            MultiLib.LOGGER.warn("[MultiLib] Invalid MultiblockState id '{}', falling back to UNFORMED", id);
+            return StandardMultiblockState.UNFORMED;
+        }
+        return MultiblockStateRegistry.get(rl).orElseGet(() -> {
+            MultiLib.LOGGER.warn("[MultiLib] Unknown MultiblockState '{}', falling back to UNFORMED", id);
+            return StandardMultiblockState.UNFORMED;
+        });
     }
 
     protected void saveController(CompoundTag tag, HolderLookup.Provider registries) {}
@@ -233,7 +264,7 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        tag.putString("state", state.getId());
+        tag.putString("state", state.getId().toString());
         if (activeModelId != null) {
             tag.putString("activeModelId", activeModelId.toString());
         }

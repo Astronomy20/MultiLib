@@ -1,9 +1,12 @@
 package net.astronomy.multilib.compat.emi;
 
+import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.EmiEntrypoint;
 import dev.emi.emi.api.EmiPlugin;
 import dev.emi.emi.api.EmiRegistry;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
+import dev.emi.emi.api.stack.EmiStack;
+import net.astronomy.multilib.client.RecipeViewerLink;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
 
@@ -29,5 +32,8 @@ public class MultiblockEmiPlugin implements EmiPlugin {
         // standard "Recipes" lookup on an item already filters correctly without a workstation.
         MultiblockRegistry.getAllDefinitions().forEach(def ->
                 registry.addRecipe(new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(def))));
+
+        // Lets other MultiLib compat modules (e.g. compat/ftbquests) open "recipes producing this stack" without depending on EMI directly.
+        RecipeViewerLink.register(stack -> EmiApi.displayRecipes(EmiStack.of(stack)));
     }
 }

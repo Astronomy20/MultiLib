@@ -25,5 +25,13 @@
   "key.categories.multilib": "MultiLib",
   "key.multilib.auto_place_modifier": "Auto-Place Modifier",
   "multilib.guide.item_name": "MultiLib Guide",
-  "multilib.guide.tooltip": "Examples of MultiLib's multiblock structures"
+  "multilib.guide.tooltip": "Examples of MultiLib's multiblock structures",
+  "ftbquests.task.ftbquests.multiblock": "Multiblock",
+  "ftbquests.task.multilib.multiblock": "Multiblock",
+  "ftbquests.task.multilib.required_state": "Required State",
+  "ftbquests.task.multilib.required_state.any": "Any (formed at least once)",
+  "multilib.state.unformed": "Unformed",
+  "multilib.state.idle": "Idle",
+  "multilib.state.running": "Running",
+  "multilib.state.error": "Error"
 }

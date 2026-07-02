@@ -2,8 +2,12 @@ package net.astronomy.multilib.compat.jei;
 
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
+import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.runtime.IJeiRuntime;
+import net.astronomy.multilib.client.RecipeViewerLink;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
 import net.minecraft.resources.ResourceLocation;
@@ -37,5 +41,13 @@ public class MultiblockJeiPlugin implements IModPlugin {
                 .map(MultiblockRecipeDisplay::of)
                 .toList();
         registration.addRecipes(MultiblockRecipeCategory.RECIPE_TYPE, recipes);
+    }
+
+    /** Lets other MultiLib compat modules (e.g. compat/ftbquests) open "recipes producing this stack" without depending on JEI directly. */
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime runtime) {
+        RecipeViewerLink.register(stack -> runtime.getRecipesGui().show(
+                runtime.getJeiHelpers().getFocusFactory().createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, stack)
+        ));
     }
 }

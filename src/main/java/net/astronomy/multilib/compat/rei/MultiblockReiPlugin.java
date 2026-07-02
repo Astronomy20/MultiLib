@@ -4,7 +4,10 @@ import me.shedaniel.math.Rectangle;
 import me.shedaniel.rei.api.client.plugins.REIClientPlugin;
 import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
 import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
+import me.shedaniel.rei.api.client.view.ViewSearchBuilder;
+import me.shedaniel.rei.api.common.util.EntryStacks;
 import me.shedaniel.rei.forge.REIPluginClient;
+import net.astronomy.multilib.client.RecipeViewerLink;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
 
@@ -24,6 +27,8 @@ public class MultiblockReiPlugin implements REIClientPlugin {
     public void registerCategories(CategoryRegistry registry) {
         ReiScreenResetHandler.init();
         registry.add(new MultiblockCategory());
+        // Lets other MultiLib compat modules (e.g. compat/ftbquests) open "recipes producing this stack" without depending on REI directly.
+        RecipeViewerLink.register(stack -> ViewSearchBuilder.builder().addRecipesFor(EntryStacks.of(stack)).open());
         // Deliberately NOT registered as a "workstation": REI workstations open the WHOLE category
         // regardless of which item you clicked, which is why every structure used to show up no
         // matter which core/activation block was opened. MultiblockRecipeDisplay.of(...) now gives

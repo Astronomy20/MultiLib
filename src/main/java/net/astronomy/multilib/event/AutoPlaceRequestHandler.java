@@ -102,7 +102,7 @@ public class AutoPlaceRequestHandler {
             if (!tryPlace(player, level, target.pos(), target.state())) return;
 
             if (PatternMatcher.matches(level, corePos, definition) instanceof MatchResult.Success) {
-                BlockActivationHandler.triggerFormationAt(level, corePos);
+                BlockActivationHandler.triggerFormationAt(level, corePos, player);
             }
 
             // Jump the overlay straight to the next missing position (or clear it once the structure

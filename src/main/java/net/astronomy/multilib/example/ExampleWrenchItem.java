@@ -13,6 +13,7 @@ import net.astronomy.multilib.MultiLib;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -68,7 +69,7 @@ public class ExampleWrenchItem extends Item implements IMultiblockWrench {
                     Optional<BlockPos> corePosOpt = instance.getCorePos();
                     if (corePosOpt.isPresent()
                             && serverLevel.getBlockEntity(corePosOpt.get()) instanceof AbstractMultiblockControllerBE ctrl) {
-                        stateId = ctrl.getState().getId();
+                        stateId = ctrl.getState().getId().toString();
                     }
                 }
                 if (player != null) {
@@ -89,7 +90,7 @@ public class ExampleWrenchItem extends Item implements IMultiblockWrench {
             }
 
             int prevCount = tracker.getAllInstances().size();
-            BlockActivationHandler.triggerFormationAt(serverLevel, pos);
+            BlockActivationHandler.triggerFormationAt(serverLevel, pos, player instanceof ServerPlayer sp ? sp : null);
             int newCount = tracker.getAllInstances().size();
 
             if (player != null) {
