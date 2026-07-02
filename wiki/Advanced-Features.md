@@ -171,7 +171,7 @@ Only structures whose `FormationMode` allows wrench-triggering (`WRENCH` or `AUT
 | GuideME | Placeholder only — GuideME doesn't expose a stable programmatic registration API yet. `GuideMEHelper.logInfo(definition)` just logs availability; register your GuideME pages via GuideME's own datapack JSON format, referencing the definition's `ResourceLocation` | `compat.guideme` |
 | FTB Quests | Auto-registered (if FTB Quests is loaded) — adds a "Multiblock" quest task type. See [FTB Quests compatibility](#ftb-quests-compatibility) below | `compat.ftbquests` |
 
-For JEI/REI/EMI, `.icon(itemId)` and `.name(...)` control the recipe-browser presentation (icon item and display name) — see [MultiblockBuilder § Visuals & recipe browsers](api-reference/MultiblockBuilder.md#visuals--recipe-browsers).
+For JEI/REI/EMI, `.icon(itemId)` and `.name(...)` control the recipe-browser presentation (icon item and display name) — see [MultiblockBuilder § Visuals & recipe browsers](api-reference/MultiblockBuilder.md#visuals-recipe-browsers).
 
 ## FTB Quests compatibility
 

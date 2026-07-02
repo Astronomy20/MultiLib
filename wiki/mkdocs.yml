@@ -1,0 +1,38 @@
+site_name: MultiLib
+site_url: https://astronomy20.github.io/MultiLib/
+repo_url: https://github.com/Astronomy20/MultiLib
+docs_dir: .
+site_dir: ../site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+    - scheme: slate
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - content.code.copy
+
+nav:
+  - Home: Home.md
+  - Getting Started: Getting-Started.md
+  - Core Concepts: Core-Concepts.md
+  - Pattern Design Guide: Pattern-Design-Guide.md
+  - Rotation & Matching: Rotation-And-Matching.md
+  - Directional Cores Guide: Directional-Cores-Guide.md
+  - Advanced Features: Advanced-Features.md
+  - API Reference:
+      - MultiLibAPI: api-reference/MultiLibAPI.md
+      - MultiblockBuilder: api-reference/MultiblockBuilder.md
+      - MultiblockDefinition: api-reference/MultiblockDefinition.md
+      - BlockIngredient: api-reference/BlockIngredient.md
+      - Callbacks & Events: api-reference/Callbacks-And-Events.md
+      - MultiblockInstance & Registry: api-reference/MultiblockInstance-And-Registry.md
+      - Block Entity Abstractions: api-reference/BlockEntity-Abstractions.md
+      - BlockDefinition: api-reference/BlockDefinition.md
+      - Multiblock States & Progress: api-reference/Multiblock-States-And-Progress.md
+      - RotationUtils: api-reference/RotationUtils.md
+  - FAQ & Troubleshooting: FAQ-Troubleshooting.md
+  - Migrating from PatternBuilder: Migrating-From-PatternBuilder.md
