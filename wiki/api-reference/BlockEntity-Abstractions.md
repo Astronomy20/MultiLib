@@ -1,10 +1,10 @@
-[← Back to Home](../Home.md)
+[← Back to Home](../index.md)
 
 # Block Entity Abstractions
 
 Package: `net.astronomy.multilib.api.blockentity`
 
-Optional base classes for structures whose blocks need to react to being part of a formed instance — a controller with state/menu/tick logic, and/or part blocks that need to know their controller.
+Optional base classes for structures whose blocks need to react to being part of a formed instance - a controller with state/menu/tick logic, and/or part blocks that need to know their controller.
 
 ## `AbstractMultiblockControllerBE`
 
@@ -22,9 +22,9 @@ protected ServerLevel getServerLevel();
 protected void markDirtyAndSync();
 ```
 
-`MultiblockState` is a registry-backed value object (`ResourceLocation getId()`), not a fixed enum — `StandardMultiblockState` provides `UNFORMED`/`IDLE`/`RUNNING`/`ERROR`, and you can register your own via `MultiblockStateRegistry`/`MultiLibAPI.registerMultiblockState(...)` (you can't `new` or implement one directly). `setState(...)` is a no-op if the new state equals the current one; otherwise it calls your `onStateChanged(prev, next)` hook, records progression, posts `MultiblockStateChangedEvent`, and syncs to clients — see [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full lifecycle.
+`MultiblockState` is a registry-backed value object (`ResourceLocation getId()`), not a fixed enum - `StandardMultiblockState` provides `UNFORMED`/`IDLE`/`RUNNING`/`ERROR`, and you can register your own via `MultiblockStateRegistry`/`MultiLibAPI.registerMultiblockState(...)` (you can't `new` or implement one directly). `setState(...)` is a no-op if the new state equals the current one; otherwise it calls your `onStateChanged(prev, next)` hook, records progression, posts `MultiblockStateChangedEvent`, and syncs to clients - see [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full lifecycle.
 
-`getActiveModelId()` returns the `ResourceLocation` of the block currently rendered in place of the (hidden) core model — this is what [`MultiblockMasterModelRenderer`](#multiblockmastermodelrenderer) reads every frame. `getServerLevel()`/`markDirtyAndSync()` are small helpers for subclasses that need the owning `ServerLevel` or want to force an NBT save + client sync outside the normal state-change path.
+`getActiveModelId()` returns the `ResourceLocation` of the block currently rendered in place of the (hidden) core model - this is what [`MultiblockMasterModelRenderer`](#multiblockmastermodelrenderer) reads every frame. `getServerLevel()`/`markDirtyAndSync()` are small helpers for subclasses that need the owning `ServerLevel` or want to force an NBT save + client sync outside the normal state-change path.
 
 ### Hooks you override
 
@@ -35,17 +35,17 @@ protected void onStateChanged(MultiblockState prev, MultiblockState next) {}
 protected void serverTick() {}
 ```
 
-- `onFormed`/`onBroken` — called automatically by the framework's `onStructureFormed`/`onStructureBroken` (see below); you don't call these yourself.
-- `serverTick()` — called every tick **only while `isFormed()`**, via the ticker returned by `createServerTicker()`.
+- `onFormed`/`onBroken` - called automatically by the framework's `onStructureFormed`/`onStructureBroken` (see below); you don't call these yourself.
+- `serverTick()` - called every tick **only while `isFormed()`**, via the ticker returned by `createServerTicker()`.
 
-### Framework-invoked methods (don't call these — MultiLib calls them for you)
+### Framework-invoked methods (don't call these - MultiLib calls them for you)
 
 ```java
 public final void onStructureFormed(MultiblockFormedContext ctx);
 public final void onStructureBroken(MultiblockBrokenContext ctx);
 ```
 
-`onStructureFormed` sets state to `IDLE`, applies the Master-Dummy model-hiding if `.model(...)` is set (hides every part except the core and any `.keepVisible(...)` symbols), then calls your `onFormed(ctx)`. `onStructureBroken` reverses the model-hiding for every remaining tracked position (skipping `ctx.removedPos()`, the block that just broke — it no longer needs its model unhidden), resets to `UNFORMED`, then calls your `onBroken(ctx)`.
+`onStructureFormed` sets state to `IDLE`, applies the Master-Dummy model-hiding if `.model(...)` is set (hides every part except the core and any `.keepVisible(...)` symbols), then calls your `onFormed(ctx)`. `onStructureBroken` reverses the model-hiding for every remaining tracked position (skipping `ctx.removedPos()`, the block that just broke - it no longer needs its model unhidden), resets to `UNFORMED`, then calls your `onBroken(ctx)`.
 
 ### Periodic (re-)validation
 
@@ -54,7 +54,7 @@ public void setValidationInterval(int ticks);
 ```
 
 Opt-in: when set (`> 0`), the controller periodically checks its own structure:
-- **While unformed**: attempts formation via `BlockActivationHandler.triggerFormationAt(...)` — lets a structure be discovered without a fresh block placement or wrench click (e.g. after a `/reload`, or a structure built entirely before the core existed).
+- **While unformed**: attempts formation via `BlockActivationHandler.triggerFormationAt(...)` - lets a structure be discovered without a fresh block placement or wrench click (e.g. after a `/reload`, or a structure built entirely before the core existed).
 - **While formed**: re-validates that every tracked position is still non-air; if any position is found empty, treats it as a break (`BreakReason.UNKNOWN`) and runs the normal broken-lifecycle.
 
 `ExampleControllerBE` sets this to `100` (5 seconds at 20 TPS) as a reference value.
@@ -74,7 +74,7 @@ protected void saveController(CompoundTag tag, HolderLookup.Provider registries)
 protected void loadController(CompoundTag tag, HolderLookup.Provider registries) {}
 ```
 
-Override to persist your own controller-specific data — the base class already handles `state`, `instanceId`, and `activeModelId`.
+Override to persist your own controller-specific data - the base class already handles `state`, `instanceId`, and `activeModelId`.
 
 ## `AbstractMultiblockControllerBlock`
 
@@ -84,7 +84,7 @@ Base class for the core's `Block`, extends `AbstractMultiblockPartBlock`.
 protected abstract InteractionResult openMenu(Player player, Level level, BlockPos pos, BlockState state);
 ```
 
-`useWithoutItem(...)` is implemented for you: it checks `isFormed()` on the block entity and only calls your `openMenu(...)` when the structure is actually formed — right-clicking an unformed core does nothing (returns `PASS`), so you don't need to guard against opening a menu for a structure that doesn't exist yet.
+`useWithoutItem(...)` is implemented for you: it checks `isFormed()` on the block entity and only calls your `openMenu(...)` when the structure is actually formed - right-clicking an unformed core does nothing (returns `PASS`), so you don't need to guard against opening a menu for a structure that doesn't exist yet.
 
 ## `AbstractMultiblockPartBE`
 
@@ -123,11 +123,11 @@ public interface IMultiblockPart {
 }
 ```
 
-`getController(level)` is the common pattern for a non-core part (e.g. an IO port) to reach its structure's controller for data/energy routing — resolves the instance, then the core position, then the block entity there, only succeeding if it's an `AbstractMultiblockControllerBE`.
+`getController(level)` is the common pattern for a non-core part (e.g. an IO port) to reach its structure's controller for data/energy routing - resolves the instance, then the core position, then the block entity there, only succeeding if it's an `AbstractMultiblockControllerBE`.
 
 ## `MultiblockPartComponent`
 
-The composable implementation backing `IMultiblockPart` — a small class you can embed in a block entity that can't extend `AbstractMultiblockPartBE` directly (e.g. because it already extends something else). Handles instance-id tracking, model-hiding side effects, and NBT persistence (`saveToTag`/`loadFromTag`) identically to what `AbstractMultiblockPartBE` gives you for free.
+The composable implementation backing `IMultiblockPart` - a small class you can embed in a block entity that can't extend `AbstractMultiblockPartBE` directly (e.g. because it already extends something else). Handles instance-id tracking, model-hiding side effects, and NBT persistence (`saveToTag`/`loadFromTag`) identically to what `AbstractMultiblockPartBE` gives you for free.
 
 ## `MultiblockMasterModelRenderer`
 
@@ -173,7 +173,7 @@ public class MyControllerBE extends AbstractMultiblockControllerBE {
 ```java
 public class MyControllerBlock extends AbstractMultiblockControllerBlock implements EntityBlock {
     @Override protected InteractionResult openMenu(Player player, Level level, BlockPos pos, BlockState state) {
-        // open your menu here — only reached while formed
+        // open your menu here - only reached while formed
         return InteractionResult.SUCCESS;
     }
 

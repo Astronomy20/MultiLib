@@ -1,4 +1,4 @@
-[← Back to Home](../Home.md)
+[← Back to Home](../index.md)
 
 # `RotationUtils`
 
@@ -20,8 +20,8 @@ public static int[] rotate(int x, int y, int z, String axis, int angle)
 
 Rotates the full `(x, y, z)` offset around a single axis by `angle` degrees.
 
-- `axis` — `"X"`, `"Y"`, or `"Z"` (case-insensitive). Any other value returns the input unchanged.
-- `angle` — degrees; normalized internally via `((angle % 360) + 360) % 360` then divided into 90° steps, so any multiple of 90 (including negative values) works. Non-multiples of 90 are truncated toward the next lower step (integer division), not rejected.
+- `axis` - `"X"`, `"Y"`, or `"Z"` (case-insensitive). Any other value returns the input unchanged.
+- `angle` - degrees; normalized internally via `((angle % 360) + 360) % 360` then divided into 90° steps, so any multiple of 90 (including negative values) works. Non-multiples of 90 are truncated toward the next lower step (integer division), not rejected.
 
 **Returns:** `{newX, newY, newZ}`.
 
@@ -54,10 +54,10 @@ Rotation directions (right-handed, looking down the positive axis toward the ori
 | 2 (180°) | `x' = -x`, `y' = -y` |
 | 3 (270°) | `x' = -y`, `y' = x` |
 
-`Y`-axis rotation is what the old API called "horizontal rotation"; `X`/`Z`-axis rotation is what the old API split out as "vertical rotation." Both are now the same method, just a different `axis` argument — there's no longer a separate code path or a `vertical` boolean to pass.
+`Y`-axis rotation is what the old API called "horizontal rotation"; `X`/`Z`-axis rotation is what the old API split out as "vertical rotation." Both are now the same method, just a different `axis` argument - there's no longer a separate code path or a `vertical` boolean to pass.
 
 ## See also
 
-- [Rotation & Matching Deep Dive](../Rotation-And-Matching.md) — how `ShapedMatcher` composes rotation axis + angle with `RotationMode`/`AllowedRotation` to search candidate orientations
+- [Rotation & Matching Deep Dive](../Rotation-And-Matching.md) - how `ShapedMatcher` composes rotation axis + angle with `RotationMode`/`AllowedRotation` to search candidate orientations
 - [MultiblockBuilder § Rotation](MultiblockBuilder.md#rotation)
 - [Migrating from the old PatternBuilder API](../Migrating-From-PatternBuilder.md)

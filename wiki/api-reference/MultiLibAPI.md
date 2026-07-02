@@ -1,10 +1,10 @@
-[← Back to Home](../Home.md)
+[← Back to Home](../index.md)
 
 # `MultiLibAPI`
 
 Package: `net.astronomy.multilib.api`
 
-The public entry point for mods wanting to declare multiblock structures and block-level metadata. Prefer this class over touching `MultiblockRegistry`/`BlockDefinitionRegistry` directly — it's the intended integration surface.
+The public entry point for mods wanting to declare multiblock structures and block-level metadata. Prefer this class over touching `MultiblockRegistry`/`BlockDefinitionRegistry` directly - it's the intended integration surface.
 
 ## Methods
 
@@ -33,7 +33,7 @@ MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar
 public static BlockDefinitionBuilder block(Block block)
 ```
 
-Entry point for declaring **block-level** multiblock metadata — properties of the `Block` itself, independent of any single structure: `.core(ids...)`, `.ioPort()`, `.dropOriginalOnBreak()`, `.mainFace()`, `.wallSharing(enabled)`. See [BlockDefinition reference](BlockDefinition.md).
+Entry point for declaring **block-level** multiblock metadata - properties of the `Block` itself, independent of any single structure: `.core(ids...)`, `.ioPort()`, `.dropOriginalOnBreak()`, `.mainFace()`, `.wallSharing(enabled)`. See [BlockDefinition reference](BlockDefinition.md).
 
 ```java
 MultiLibAPI.block(MyBlocks.CONTROLLER_BLOCK).mainFace().build();
@@ -68,11 +68,11 @@ public static void setWallSharingMode(Block block, WallSharingMode mode)
 public static Optional<WallSharingMode> getRegisteredWallSharingMode(Block block)
 ```
 
-Registers (or looks up) a default wall-sharing mode for a block across *all* structures that use it as a non-core/non-activation symbol, without needing `IWallSharable` or a per-structure `.key(symbol, ingredient, mode)` override. Consulted by `MultiblockDefinition.getWallSharingMode(char)` as one step in the override priority chain — see [Advanced Features § Wall sharing](../Advanced-Features.md#wall-sharing).
+Registers (or looks up) a default wall-sharing mode for a block across *all* structures that use it as a non-core/non-activation symbol, without needing `IWallSharable` or a per-structure `.key(symbol, ingredient, mode)` override. Consulted by `MultiblockDefinition.getWallSharingMode(char)` as one step in the override priority chain - see [Advanced Features § Wall sharing](../Advanced-Features.md#wall-sharing).
 
 ## Progression & custom states
 
-See [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full picture — these four methods are thin passthroughs to `MultiblockProgressionTracker` / `MultiblockStateRegistry`.
+See [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full picture - these four methods are thin passthroughs to `MultiblockProgressionTracker` / `MultiblockStateRegistry`.
 
 ### `hasReachedMultiblockState(...)`
 
@@ -89,7 +89,7 @@ True if `player` has ever driven an instance of `definitionId` to `stateId`. If 
 public static void recordMultiblockStateReached(ServerPlayer player, ResourceLocation definitionId, ResourceLocation stateId)
 ```
 
-Manually records that `player` has driven `definitionId` to `stateId`. Normal use is automatic — MultiLib calls this internally on formation and on every `AbstractMultiblockControllerBE.setState(...)`. Call it by hand only for a condition not representable by a simple `MultiblockState` (e.g. "reactor stable for 5 minutes") from your own controller block entity.
+Manually records that `player` has driven `definitionId` to `stateId`. Normal use is automatic - MultiLib calls this internally on formation and on every `AbstractMultiblockControllerBE.setState(...)`. Call it by hand only for a condition not representable by a simple `MultiblockState` (e.g. "reactor stable for 5 minutes") from your own controller block entity.
 
 ### `registerMultiblockState(ResourceLocation id[, String nameTranslationKey])`
 
@@ -98,7 +98,7 @@ public static MultiblockState registerMultiblockState(ResourceLocation id)
 public static MultiblockState registerMultiblockState(ResourceLocation id, String nameTranslationKey)
 ```
 
-Passthrough to [`MultiblockStateRegistry`](Multiblock-States-And-Progress.md#multiblockstateregistry) — the single point from which mod developers register custom states beyond the four built into [`StandardMultiblockState`](Multiblock-States-And-Progress.md#standardmultiblockstate). Must be called before MultiLib freezes the registry (`FMLLoadCompleteEvent`) — register during your mod's constructor or `FMLCommonSetupEvent`.
+Passthrough to [`MultiblockStateRegistry`](Multiblock-States-And-Progress.md#multiblockstateregistry) - the single point from which mod developers register custom states beyond the four built into [`StandardMultiblockState`](Multiblock-States-And-Progress.md#standardmultiblockstate). Must be called before MultiLib freezes the registry (`FMLLoadCompleteEvent`) - register during your mod's constructor or `FMLCommonSetupEvent`.
 
 ## See also
 

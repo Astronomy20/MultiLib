@@ -7,16 +7,20 @@ site_dir: ../site
 theme:
   name: material
   palette:
-    - scheme: default
     - scheme: slate
+      primary: indigo
+      accent: indigo
   features:
     - navigation.sections
     - navigation.top
     - search.suggest
     - content.code.copy
 
+extra:
+  generator: false
+
 nav:
-  - Home: Home.md
+  - Home: index.md
   - Getting Started: Getting-Started.md
   - Core Concepts: Core-Concepts.md
   - Pattern Design Guide: Pattern-Design-Guide.md

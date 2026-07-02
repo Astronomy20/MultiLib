@@ -46,19 +46,19 @@ See the [Getting Started guide](wiki/Getting-Started) for the full walkthrough, 
 
 ## Documentation
 
-The full API reference and guides live in the [wiki](wiki/Home.md):
+The full API reference and guides live in the [wiki](wiki/index.md):
 
 - [Getting Started](wiki/Getting-Started) - add MultiLib as a dependency and register your first multiblock.
 - [Core Concepts](wiki/Core-Concepts) - definitions, symbols, ingredients, the coordinate system, formation modes.
 - [Pattern Design Guide](wiki/Pattern-Design-Guide) - laying out structures correctly and avoiding common mistakes.
 - [Rotation & Matching Deep Dive](wiki/Rotation-And-Matching) - how the matchers actually work.
 - [Advanced Features](wiki/Advanced-Features) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
-- [API Reference](/wiki/Home#7-api-reference) - full method-by-method reference, including [multiblock states & progress tracking](../../wiki/api-reference/Multiblock-States-And-Progress).
+- [API Reference](/wiki/index#7-api-reference) - full method-by-method reference, including [multiblock states & progress tracking](../../wiki/api-reference/Multiblock-States-And-Progress).
 - [FAQ & Troubleshooting](wiki/FAQ-Troubleshooting)
 
 ## Compatibility
 
-Are available integrations for JEI, REI, EMI, Patchouli, GuideME and FTB Quests - see [Advanced Features](../../wiki/Advanced-Features#jei--rei--emi--patchouli--guideme--ftb-quests-compatibility).
+Are available integrations for JEI, REI, EMI, Patchouli, GuideME and FTB Quests - see [Advanced Features](../../wiki/Advanced-Features#jei-rei-emi-patchouli-guideme-ftb-quests-compatibility).
 
 ## Contributing
 

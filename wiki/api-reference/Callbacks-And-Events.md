@@ -1,4 +1,4 @@
-[← Back to Home](../Home.md)
+[← Back to Home](../index.md)
 
 # Callbacks & Events
 
@@ -40,7 +40,7 @@ public interface MultiblockFormedCallback {
 }
 ```
 
-Set via `MultiblockBuilder.onFormed(cb)` (can be added multiple times — all run, in registration order). Runs **after** the instance is created and tracked, and after `MultiblockFormedEvent` has already passed (not cancelled).
+Set via `MultiblockBuilder.onFormed(cb)` (can be added multiple times - all run, in registration order). Runs **after** the instance is created and tracked, and after `MultiblockFormedEvent` has already passed (not cancelled).
 
 ### `MultiblockFormedContext`
 
@@ -61,7 +61,7 @@ public interface MultiblockBrokenCallback {
 }
 ```
 
-Set via `MultiblockBuilder.onBroken(cb)`. Fires when **any** block belonging to a tracked, formed instance is broken — the instance is unregistered from the tracker first, then this callback runs.
+Set via `MultiblockBuilder.onBroken(cb)`. Fires when **any** block belonging to a tracked, formed instance is broken - the instance is unregistered from the tracker first, then this callback runs.
 
 ### `MultiblockBrokenContext`
 
@@ -74,7 +74,7 @@ public record MultiblockBrokenContext(MultiblockContext base, BlockPos removedPo
 }
 ```
 
-`removedPos` is the specific block that triggered the break; `reason` distinguishes a normal player break from other paths (periodic-validation-detected removal reports `UNKNOWN`; explosions/replacement are not currently distinguished by any built-in caller beyond the enum's existence — check your NeoForge event source if you need to set these yourself).
+`removedPos` is the specific block that triggered the break; `reason` distinguishes a normal player break from other paths (periodic-validation-detected removal reports `UNKNOWN`; explosions/replacement are not currently distinguished by any built-in caller beyond the enum's existence - check your NeoForge event source if you need to set these yourself).
 
 ## `MultiblockTickCallback`
 
@@ -85,7 +85,7 @@ public interface MultiblockTickCallback {
 }
 ```
 
-Set via `MultiblockBuilder.onTick(cb)` — only one per definition (later calls replace earlier ones). Invoked once per server tick, for **every** tracked, formed instance of this definition, via `WorldMultiblockTracker.tick(...)` (`LevelTickEvent.Post`). Keep this cheap — it runs unconditionally every tick per instance, unlike `onAmbient`.
+Set via `MultiblockBuilder.onTick(cb)` - only one per definition (later calls replace earlier ones). Invoked once per server tick, for **every** tracked, formed instance of this definition, via `WorldMultiblockTracker.tick(...)` (`LevelTickEvent.Post`). Keep this cheap - it runs unconditionally every tick per instance, unlike `onAmbient`.
 
 ## `MultiblockAmbientCallback`
 
@@ -96,7 +96,7 @@ public interface MultiblockAmbientCallback {
 }
 ```
 
-Set via `MultiblockBuilder.onAmbient(cb, intervalTicks)`. Invoked at most every `intervalTicks` ticks per instance (checked lazily against a per-instance last-fired tick counter, not scheduled precisely) — appropriate for particle effects, ambient sounds, or anything that doesn't need per-tick precision.
+Set via `MultiblockBuilder.onAmbient(cb, intervalTicks)`. Invoked at most every `intervalTicks` ticks per instance (checked lazily against a per-instance last-fired tick counter, not scheduled precisely) - appropriate for particle effects, ambient sounds, or anything that doesn't need per-tick precision.
 
 ## `MultiblockValidator`
 
@@ -107,7 +107,7 @@ public interface MultiblockValidator {
 }
 ```
 
-Set via `MultiblockBuilder.validator(...)`. Runs **before** the `MultiblockInstance` is created, right after a successful pattern match — can veto formation entirely by returning `ValidationResult.invalid(message)`. The `ctx.instance()` seen by the validator uses a temporary random UUID (not the final instance id) since formation hasn't been committed yet.
+Set via `MultiblockBuilder.validator(...)`. Runs **before** the `MultiblockInstance` is created, right after a successful pattern match - can veto formation entirely by returning `ValidationResult.invalid(message)`. The `ctx.instance()` seen by the validator uses a temporary random UUID (not the final instance id) since formation hasn't been committed yet.
 
 ### `ValidationResult`
 
@@ -135,7 +135,7 @@ The common base every specific `*Context` record wraps (`base()`), giving each s
 
 ## NeoForge events
 
-Both are posted to `NeoForge.EVENT_BUS`, so any mod (not just the one that defined the structure) can subscribe — useful for cross-mod integration without depending on a specific callback being registered.
+Both are posted to `NeoForge.EVENT_BUS`, so any mod (not just the one that defined the structure) can subscribe - useful for cross-mod integration without depending on a specific callback being registered.
 
 ### `MultiblockFormedEvent`
 
@@ -148,7 +148,7 @@ public class MultiblockFormedEvent extends Event implements ICancellableEvent {
 }
 ```
 
-**Cancellable.** Posted *before* the instance is tracked and before `onFormed` callbacks run — cancelling it prevents formation entirely (the structure stays "just a pile of blocks" until re-triggered).
+**Cancellable.** Posted *before* the instance is tracked and before `onFormed` callbacks run - cancelling it prevents formation entirely (the structure stays "just a pile of blocks" until re-triggered).
 
 ### `MultiblockBrokenEvent`
 
@@ -162,7 +162,7 @@ public class MultiblockBrokenEvent extends Event {
 }
 ```
 
-**Not cancellable** — by the time this posts, the block is already broken and the instance already unregistered from the tracker; there's nothing left to veto.
+**Not cancellable** - by the time this posts, the block is already broken and the instance already unregistered from the tracker; there's nothing left to veto.
 
 ### `MultiblockStateChangedEvent`
 
@@ -177,11 +177,11 @@ public class MultiblockStateChangedEvent extends Event {
 }
 ```
 
-**Not cancellable.** Posted whenever a formed multiblock's `AbstractMultiblockControllerBE` transitions from one `MultiblockState` to another via `setState(...)` — including the automatic `UNFORMED`→`IDLE` transition on formation. Only fires for multiblocks with a real controller block entity and a resolvable formed instance; a JSON-only multiblock (no controller) never posts this event. See [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full state lifecycle, including how this event relates to `onStateChanged(...)` and progression tracking.
+**Not cancellable.** Posted whenever a formed multiblock's `AbstractMultiblockControllerBE` transitions from one `MultiblockState` to another via `setState(...)` - including the automatic `UNFORMED`→`IDLE` transition on formation. Only fires for multiblocks with a real controller block entity and a resolvable formed instance; a JSON-only multiblock (no controller) never posts this event. See [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full state lifecycle, including how this event relates to `onStateChanged(...)` and progression tracking.
 
 ## See also
 
 - [Core Concepts § Activation flow](../Core-Concepts.md#activation-flow)
 - [MultiblockInstance & Registry](MultiblockInstance-And-Registry.md)
-- [Block Entity Abstractions](BlockEntity-Abstractions.md) — how `AbstractMultiblockControllerBE` hooks into this same lifecycle
+- [Block Entity Abstractions](BlockEntity-Abstractions.md) - how `AbstractMultiblockControllerBE` hooks into this same lifecycle
 - [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md)

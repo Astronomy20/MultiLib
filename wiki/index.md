@@ -1,43 +1,69 @@
-# MultiLib Wiki
+# MultiLib
 
-MultiLib is a NeoForge 1.21.1 (Java 21) **library mod** that lets other mods define and detect multiblock structures (a fixed 3D arrangement of blocks) without writing their own block-by-block matching, state tracking, or UI integration. You describe a structure with a fluent builder (`MultiLibAPI.define(...)`), attach callbacks for formation/breaking/ticking, and MultiLib handles detection, instance tracking, persistence, a ghost-overlay preview, and recipe-browser (JEI/REI/EMI) integration.
+**MultiLib** is a library mod that lets other mods define and detect multiblock structures - a fixed 3D arrangement of blocks - without writing their own block-by-block matching, state tracking, or recipe-browser integration.
 
-> **Status note:** this wiki documents the API as it exists today in the codebase (`MultiblockDefinition` / `MultiblockBuilder` / `BlockIngredient` / callbacks / block-entity abstractions). MultiLib went through a full rewrite — if you used an older version built around `PatternBuilder`/`PatternManager`/`PatternAction`, that API no longer exists; see [Migrating from the old PatternBuilder API](Migrating-From-PatternBuilder.md) for what changed.
+You describe a structure once with a fluent builder, and MultiLib handles detection (in every orientation it allows), persistent instance tracking, a ghost-overlay preview, an auto-place tool, and JEI/REI/EMI/Patchouli integration.
 
-## Table of contents
+> **Status:** MultiLib is under active development (`v0.0.1`). It's usable today but expect bugs.
 
-1. [Getting Started](Getting-Started.md) — adding MultiLib as a dependency and registering your first multiblock
-2. [Core Concepts](Core-Concepts.md) — definitions, symbols, ingredients, the coordinate system, formation modes, the activation/tracking flow
-3. [Pattern Design Guide](Pattern-Design-Guide.md) — laying out layers/symbols correctly, geometry constraints, common mistakes
-4. [Rotation & Matching Deep Dive](Rotation-And-Matching.md) — `RotationMode` vs. granular `allowRotation(...)`, how the shaped/shapeless/functional matchers work
-5. [Directional Cores Guide](Directional-Cores-Guide.md) — building a structure with a fixed-facing core (`mainFace()`), a rotatable structure whose preview still respects the core's own orientation
-6. [Advanced Features](Advanced-Features.md) — shapeless structures, free blocks, shell/interior matching, procedural `PatternProvider`s, JSON/datapack definitions, ghost overlay, auto-place, wrench tool, JEI/REI/EMI/Patchouli/GuideME integration
-7. <a id="7-api-reference"></a>API Reference
-   - [MultiLibAPI](api-reference/MultiLibAPI.md)
-   - [MultiblockBuilder](api-reference/MultiblockBuilder.md)
-   - [MultiblockDefinition](api-reference/MultiblockDefinition.md)
-   - [BlockIngredient](api-reference/BlockIngredient.md)
-   - [Callbacks & Events](api-reference/Callbacks-And-Events.md)
-   - [MultiblockInstance & Registry](api-reference/MultiblockInstance-And-Registry.md)
-   - [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md)
-   - [BlockDefinition (block-level metadata)](api-reference/BlockDefinition.md)
-   - [Multiblock States & Progress Tracking](api-reference/Multiblock-States-And-Progress.md)
-   - [RotationUtils](api-reference/RotationUtils.md)
-8. [FAQ & Troubleshooting](FAQ-Troubleshooting.md)
-9. [Migrating from the old PatternBuilder API](Migrating-From-PatternBuilder.md)
+## Why MultiLib
 
-## Quick orientation
+Building a multiblock structure by hand usually means reimplementing the same handful of problems for every mod: scanning neighboring blocks in the right order, handling rotations, persisting which structures are currently formed across a world reload and wiring up a recipe-browser page so players can see the layout. MultiLib solves all of that once, behind a small public API, so mod authors can focus on what their structure *does* rather than how it's detected.
 
-| If you want to... | Read |
-|---|---|
-| Add MultiLib to your mod and register a multiblock in 5 minutes | [Getting Started](Getting-Started.md) |
-| Understand what a "definition", "symbol", "core" and "activation" mean in MultiLib | [Core Concepts](Core-Concepts.md) |
-| Look up a specific method/class signature | [API Reference](#7-api-reference) |
-| Understand exactly how matching/rotation works under the hood | [Rotation & Matching Deep Dive](Rotation-And-Matching.md) |
-| Design a new structure without hitting common pitfalls | [Pattern Design Guide](Pattern-Design-Guide.md) |
-| Build a structure with a machine-like core that has its own facing | [Directional Cores Guide](Directional-Cores-Guide.md) |
-| Use shapeless structures, free blocks, JSON definitions, ghost overlay, JEI/REI/EMI | [Advanced Features](Advanced-Features.md) |
-| Track custom controller states, "ever reached" progression, or in-progress structure completion (%, shopping list) | [Multiblock States & Progress Tracking](api-reference/Multiblock-States-And-Progress.md) |
-| Wire up an FTB Quests "form/reach this state" task | [Advanced Features § FTB Quests compatibility](Advanced-Features.md#ftb-quests-compatibility) |
-| Debug why a structure won't match or form | [FAQ & Troubleshooting](FAQ-Troubleshooting.md) |
-| Port code written against the old `PatternBuilder` API | [Migrating from the old PatternBuilder API](Migrating-From-PatternBuilder.md) |
+## Features
+
+- **Fluent builder API** - describe a structure as a stack of text-based layers with symbol keys, no manual coordinate math.
+- **Flexible matching** - shaped, shapeless, and procedural (`PatternProvider`) structures; shell/interior matching; free blocks.
+- **Rotation-aware detection** - horizontal or full 3D rotation modes, plus fixed-facing "directional core" structures.
+- **Stateful controller blocks** - optional base classes for a block-entity-backed core that tracks formed/unformed state and ticks while active.
+- **Callbacks** - `onFormed` / `onBroken` / tick callbacks fire exactly when they should.
+- **Ghost-overlay preview & auto-place** - players can preview a structure in the world before placing it and place the remaining blocks with a single tool.
+- **JSON/datapack definitions** - structures can also be defined data-driven.
+- **Recipe-browser integration** - JEI, REI, EMI, Patchouli and GuideME support out of the box.
+
+## Quick example
+
+```java
+MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
+        .name("my_altar")
+        .layer("PPP", " P ", " G ")
+        .layer("POP", " P ", " G ")
+        .key('P', BlockIngredient.of(Blocks.STONE_BRICKS))
+        .key('O', BlockIngredient.of(MyBlocks.CONTROLLER_BLOCK))
+        .key('G', BlockIngredient.of(Blocks.GOLD_BLOCK))
+        .core('O')
+        .formationMode(FormationMode.AUTOMATIC_AND_WRENCH)
+        .rotations(RotationMode.HORIZONTAL)
+        .onFormed(ctx -> {
+            // runs once the structure is detected in the world
+        })
+        .build();
+```
+
+Registered once during mod setup, this is enough for MultiLib to detect the structure in every allowed rotation whenever the core block is placed, track it persistently, and preview/auto-place it for players.
+
+See the [Getting Started guide](Getting-Started.md) for the full walkthrough, including the mod-entry-point wiring.
+
+## Documentation
+
+The full API reference and guides live in the [wiki](index.md):
+
+- [Getting Started](Getting-Started.md) - add MultiLib as a dependency and register your first multiblock.
+- [Core Concepts](Core-Concepts.md) - definitions, symbols, ingredients, the coordinate system, formation modes.
+- [Pattern Design Guide](Pattern-Design-Guide.md) - laying out structures correctly and avoiding common mistakes.
+- [Rotation & Matching Deep Dive](Rotation-And-Matching.md) - how the matchers actually work.
+- [Advanced Features](Advanced-Features.md) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
+- [API Reference](api-reference/MultiLibAPI.md) - full method-by-method reference, including [multiblock states & progress tracking](api-reference/Multiblock-States-And-Progress.md).
+- [FAQ & Troubleshooting](FAQ-Troubleshooting.md)
+
+## Compatibility
+
+Are available integrations for JEI, REI, EMI, Patchouli, GuideME and FTB Quests - see [Advanced Features](Advanced-Features.md#jei-rei-emi-patchouli-guideme-ftb-quests-compatibility).
+
+## Contributing
+
+Issues and pull requests are welcome. If you're proposing a new API shape or any other feature, please open an issue to discuss it.
+
+## License
+
+MIT - see the license file for details.

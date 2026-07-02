@@ -1,10 +1,10 @@
-[← Back to Home](../Home.md)
+[← Back to Home](../index.md)
 
 # BlockDefinition & BlockDefinitionBuilder
 
 Package: `net.astronomy.multilib.api.block`
 
-Block-level multiblock metadata — properties of a `Block` itself, independent of any single `MultiblockDefinition`. Accessed via `MultiLibAPI.block(block)`.
+Block-level multiblock metadata - properties of a `Block` itself, independent of any single `MultiblockDefinition`. Accessed via `MultiLibAPI.block(block)`.
 
 ## Why this exists separately from `MultiblockDefinition`
 
@@ -27,7 +27,7 @@ public final class BlockDefinitionBuilder {
 Declares this block as the core of one or more multiblocks, by id. When that multiblock's own `MultiblockBuilder` doesn't call `.core(char)`, the symbol mapped to this block is **auto-assigned** as the core symbol at build time. If the multiblock's builder explicitly declares a *different* block as core, registration of that multiblock fails with a logged error (game load continues; only that one structure ends up unregistered).
 
 ### `wallSharing(boolean enabled)`
-Overrides wall sharing for this block **specifically when used as a core/activation symbol** (disabled by default for those roles). Has no effect on non-core usages of the block — those already go through the existing priority chain (symbol override → block declaration → definition flag → default). See [Advanced Features § Wall sharing](../Advanced-Features.md#wall-sharing).
+Overrides wall sharing for this block **specifically when used as a core/activation symbol** (disabled by default for those roles). Has no effect on non-core usages of the block - those already go through the existing priority chain (symbol override → block declaration → definition flag → default). See [Advanced Features § Wall sharing](../Advanced-Features.md#wall-sharing).
 
 ### `ioPort()`
 Marks this block as an IO port: item/fluid/energy capability requests on it are automatically forwarded to the controller block entity of whatever multiblock instance it's currently part of (via `IOPortCapabilityHandler`).
@@ -68,7 +68,7 @@ MultiLibAPI.block(MyBlocks.REACTOR_CORE)
         .build();
 ```
 
-With this declared, the `examplemod:reactor` `MultiblockBuilder` doesn't need to call `.core(...)` at all (as long as only one symbol maps to `REACTOR_CORE`) — and the ghost overlay for that structure will always preview in the direction the core block is actually facing, not the direction the player is looking.
+With this declared, the `examplemod:reactor` `MultiblockBuilder` doesn't need to call `.core(...)` at all (as long as only one symbol maps to `REACTOR_CORE`) - and the ghost overlay for that structure will always preview in the direction the core block is actually facing, not the direction the player is looking.
 
 ## See also
 
