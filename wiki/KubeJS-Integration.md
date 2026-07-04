@@ -35,11 +35,10 @@ MultiblockEvents.create(event => {
         .onFormed(ctx => {
             MultiblockUtils.playSound(ctx, 'minecraft:block.beacon.activate')
         })
-        .build()
 })
 ```
 
-`event.multiblock(id)` returns a normal `MultiblockBuilder` - the same fluent API documented in the [MultiblockBuilder reference](api-reference/MultiblockBuilder.md) is available from JS, so anything expressible in Java (shaped/shapeless/procedural patterns, callbacks, wall sharing, `.model(...)`, etc.) is expressible here too. Don't call `.build()` expecting registration semantics identical to Java - `KubeJSMultiblockSetup` collects every builder and registers it for you (via `replace(...)`, not the builder's own registering path) so re-running the script on `/reload` doesn't throw.
+`event.multiblock(id)` returns a normal `MultiblockBuilder` - the same fluent API documented in the [MultiblockBuilder reference](api-reference/MultiblockBuilder.md) is available from JS, so anything expressible in Java (shaped/shapeless/procedural patterns, callbacks, wall sharing, `.model(...)`, etc.) is expressible here too. **Don't call `.build()` yourself** - `KubeJSMultiblockSetup` collects every builder returned from `event.multiblock(...)` and registers each one for you (via `buildWithoutRegistering()` + `MultiblockRegistry.replace(...)`, not the builder's own `build()`/register path) once every `create` listener has run, so re-running the script on `/reload` doesn't throw "already registered".
 
 The method is named `multiblock(...)` rather than `create(...)` deliberately: the same script file typically also has a `StartupEvents.registry('block', event => event.create(id))` block, where `create` on that event object means something unrelated - reusing the name across two different event objects would be confusing to read later.
 
