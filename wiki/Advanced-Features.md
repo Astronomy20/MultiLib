@@ -189,11 +189,16 @@ Clicking the task in the quest screen opens the recipe viewer (JEI/REI/EMI, whic
 
 [`MultiblockProgressAPI.compute(level, corePos)`](api-reference/Multiblock-States-And-Progress.md#multiblockprogressapi) reports how complete a **not-yet-formed** shaped (`.layer(...)`) structure is - total blocks required, which positions are still missing/mismatched, and a per-block-type "shopping list" - so you can build your own progress UI without reimplementing pattern matching. It's read-only and complements, rather than replaces, the [ghost overlay](#ghost-overlay) above.
 
+## KubeJS scripting
+
+Structures can also be created and modified entirely from KubeJS scripts - a `MultiblockEvents.create`/`modify` event group, plus wrench-interaction events and a couple of script-friendly helpers. See the dedicated [KubeJS Integration](KubeJS-Integration.md) page for the full event lifecycle and examples.
+
 ## See also
 
 - [Core Concepts](Core-Concepts.md)
 - [Pattern Design Guide](Pattern-Design-Guide.md)
 - [Directional Cores Guide](Directional-Cores-Guide.md)
+- [KubeJS Integration](KubeJS-Integration.md)
 - [MultiblockBuilder reference](api-reference/MultiblockBuilder.md)
 - [BlockDefinition reference](api-reference/BlockDefinition.md)
 - [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md)
