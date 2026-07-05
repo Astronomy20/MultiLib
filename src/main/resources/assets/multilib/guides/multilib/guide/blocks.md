@@ -7,13 +7,13 @@ item_ids:
   - multilib:example_part
   - multilib:example_controller
   - multilib:example_directional_controller
-  - multilib:wrench
+  - multilib:example_wrench
 ---
 
 # Example Blocks
 
 MultiLib ships a handful of placeholder blocks and one item purely to demonstrate and test the
-library's multiblock features. None of them are meant to be used in a real mod — copy the pattern,
+library's multiblock features. None of them are meant to be used in a real mod - copy the pattern,
 not the blocks.
 
 ## Example Multiblock Part
@@ -23,7 +23,7 @@ not the blocks.
 </Row>
 
 <ItemLink id="multilib:example_part" /> is a plain filler block used as the body of the
-[Example Multiblock](example_multiblock.md) pattern. It carries no special behavior on its own —
+[Example Multiblock](example_multiblock.md) pattern. It carries no special behavior on its own -
 the multiblock definition is what gives the assembled structure meaning.
 
 ## Example Controller
@@ -33,7 +33,7 @@ the multiblock definition is what gives the assembled structure meaning.
 </Row>
 
 <ItemLink id="multilib:example_controller" /> is the **core** block of the example multiblock.
-Placing it (or right-clicking it with the <ItemLink id="multilib:wrench" />, see below) while the
+Placing it (or right-clicking it with the <ItemLink id="multilib:example_wrench" />, see below) while the
 rest of the pattern is already assembled triggers formation.
 
 ## Example Directional Controller
@@ -51,9 +51,9 @@ orientation is unambiguous.
 ## Multiblock Wrench
 
 <Row>
-  <ItemImage id="multilib:wrench" />
+  <ItemImage id="multilib:example_wrench" />
 </Row>
 
-<ItemLink id="multilib:wrench" /> is a reference tool implementation for triggering multiblock
+<ItemLink id="multilib:example_wrench" /> is a reference tool implementation for triggering multiblock
 formation by right-clicking a placed core block. MultiLib itself does not require this specific
-item — any item implementing `IMultiblockWrench` can be used the same way.
+item - any item implementing `IMultiblockWrench` can be used the same way.

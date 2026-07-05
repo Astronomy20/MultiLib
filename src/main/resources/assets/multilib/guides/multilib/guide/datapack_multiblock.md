@@ -8,7 +8,7 @@ navigation:
 # Datapack Multiblock
 
 `multilib:example_simple` is defined entirely through a datapack JSON file at
-`data/multilib/multiblocks/example_simple.json` — no Java code is involved. This shows that
+`data/multilib/multiblocks/example_simple.json` - no Java code is involved. This shows that
 mod packs and datapacks can add their own multiblocks to MultiLib without compiling a mod.
 
 ## Layout
@@ -70,7 +70,7 @@ ghost overlay (`auto_place` / `auto_place_overlay`). On formation, it plays the
   <Block id="minecraft:slime_block" x="2" y="1" z="2" />
 
   <BlockAnnotation x="1" y="0" z="1" color="#33cc66">
-    Bottom-most layer shown here — `minecraft:iron_block`/`minecraft:diamond_block`/`minecraft:oak_log`.
+    Bottom-most layer shown here - `minecraft:iron_block`/`minecraft:diamond_block`/`minecraft:oak_log`.
     The actual core (`minecraft:emerald_block`) is two levels higher and not shown in this
     partial preview; see the table above for the full 5-layer pattern.
   </BlockAnnotation>

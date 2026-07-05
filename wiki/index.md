@@ -6,6 +6,8 @@ You describe a structure once with a fluent builder, and MultiLib handles detect
 
 > **Status:** MultiLib is under active development (`v0.0.1`). It's usable today but expect bugs.
 
+> This wiki is also published as a browsable site at **[astronomy20.github.io/MultiLib](https://astronomy20.github.io/MultiLib/)**.
+
 ## Why MultiLib
 
 Building a multiblock structure by hand usually means reimplementing the same handful of problems for every mod: scanning neighboring blocks in the right order, handling rotations, persisting which structures are currently formed across a world reload and wiring up a recipe-browser page so players can see the layout. MultiLib solves all of that once, behind a small public API, so mod authors can focus on what their structure *does* rather than how it's detected.

@@ -46,7 +46,7 @@ See the [Getting Started guide](wiki/Getting-Started) for the full walkthrough, 
 
 ## Documentation
 
-The full API reference and guides live in the [wiki](wiki/index.md):
+The full API reference and guides live in the [wiki](wiki/index.md), also published at **[astronomy20.github.io/MultiLib](https://astronomy20.github.io/MultiLib/)**:
 
 - [Getting Started](wiki/Getting-Started) - add MultiLib as a dependency and register your first multiblock.
 - [Core Concepts](wiki/Core-Concepts) - definitions, symbols, ingredients, the coordinate system, formation modes.
@@ -67,3 +67,8 @@ Issues and pull requests are welcome. If you're proposing a new API shape or any
 ## License
 
 MIT - see the license file for details.
+
+## Links
+
+- [Documentation site](https://astronomy20.github.io/MultiLib/)
+- [Wiki source](wiki/index.md)

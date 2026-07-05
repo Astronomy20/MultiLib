@@ -29,20 +29,20 @@ _ G _                      _ G _
 ```
 
 Within a layer, each row string maps directly to Z (row 0 = north-most) and each character position
-in the row maps directly to X (column 0 = west-most) — confirmed against `ShapedMatcher`'s
+in the row maps directly to X (column 0 = west-most) - confirmed against `ShapedMatcher`'s
 `relZ = row - centerZ` / `relX = col - centerX` matching logic, with no flips.
 
 | Symbol | Block                                | Role                                    |
 |--------|---------------------------------------|------------------------------------------|
 | `P`    | `multilib:example_part`               | Filler / body block                      |
-| `O`    | `multilib:example_controller`         | Core — placing this triggers formation   |
+| `O`    | `multilib:example_controller`         | Core - placing this triggers formation   |
 | `G`    | `minecraft:gold_block`                | Body block, kept visible after formation |
 | `_`    | *(air, no block required)*            | Empty slot in the pattern                |
 
 The core (`O`) sits in the center of the **bottom** layer. Formation mode is
 `AUTOMATIC_AND_WRENCH`: the structure forms as soon as the core is placed with the rest of the
 pattern already in place, or when right-clicked afterwards with a
-<ItemLink id="multilib:wrench" /> (see [Example Blocks](blocks.md)). The structure also accepts
+<ItemLink id="multilib:example_wrench" /> (see [Example Blocks](blocks.md)). The structure also accepts
 horizontal rotation (0/90/180/270 degrees) when matching.
 
 ## 3D Preview
@@ -61,7 +61,7 @@ horizontal rotation (0/90/180/270 degrees) when matching.
   <Block id="minecraft:gold_block" x="1" y="1" z="2" />
 
   <BlockAnnotation x="1" y="0" z="0" color="#ffcc00">
-    Core block — <ItemLink id="multilib:example_controller" />. Placing it (or using the wrench
+    Core block - <ItemLink id="multilib:example_controller" />. Placing it (or using the wrench
     on it) triggers formation once the rest of the pattern is in place.
   </BlockAnnotation>
 </GameScene>
