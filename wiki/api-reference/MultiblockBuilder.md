@@ -136,6 +136,16 @@ Default wall-sharing behavior for this definition's non-core/non-activation symb
 ### `noWallSharing(char... symbols)`
 Shorthand for setting `WallSharingMode.DISABLED` per symbol.
 
+## Tiers
+
+### `tier(char symbol, String name, Block... blocks)`
+Declares one named tier level for `symbol`, backed by an explicit set of blocks. Call repeatedly for the same symbol from lowest to highest tier - each call's position in that order becomes its ordinal (0 = first/lowest), which is what a caller compares tiers by, not the name itself.
+
+### `tier(char symbol, String name, TagKey<Block> tag)`
+Same, but backed by a `TagKey` instead of a fixed block list - so a third-party addon can contribute its own blocks to this tier via datapack (adding to the tag) without this definition needing to know about them ahead of time.
+
+See [MultiblockTier](MultiblockTier.md) for resolving which tier is actually present in a formed instance.
+
 ## Visuals & recipe browsers
 
 ### `model(ResourceLocation modelId)`
@@ -189,4 +199,5 @@ MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "furnace_
 - [Core Concepts](../Core-Concepts.md)
 - [MultiblockDefinition](MultiblockDefinition.md)
 - [BlockIngredient](BlockIngredient.md)
+- [MultiblockTier](MultiblockTier.md)
 - [Advanced Features](../Advanced-Features.md)

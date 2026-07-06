@@ -56,7 +56,7 @@ The full API reference and guides live in the [wiki](index.md):
 - [Rotation & Matching Deep Dive](Rotation-And-Matching.md) - how the matchers actually work.
 - [Advanced Features](Advanced-Features.md) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
 - [KubeJS Integration](KubeJS-Integration.md) - creating and modifying multiblocks from KubeJS scripts, wrench events, `MultiblockUtils`.
-- [API Reference](api-reference/MultiLibAPI.md) - full method-by-method reference, including [multiblock states & progress tracking](api-reference/Multiblock-States-And-Progress.md).
+- [API Reference](api-reference/MultiLibAPI.md) - full method-by-method reference, including [multiblock states & progress tracking](api-reference/Multiblock-States-And-Progress.md), [structure composition](api-reference/MultiblockComposition.md), [part abilities](api-reference/MultiblockAbility.md), and [tiers](api-reference/MultiblockTier.md).
 - [FAQ & Troubleshooting](FAQ-Troubleshooting.md)
 
 ## Compatibility

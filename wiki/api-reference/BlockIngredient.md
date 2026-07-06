@@ -46,6 +46,9 @@ Arbitrary logic. `getCandidateBlocks()` returns an empty set - same indexing cav
 ### `BlockIngredient.any()`
 Matches every `BlockState` unconditionally (including air). `getCandidateBlocks()` is empty.
 
+### `BlockIngredient.ability(BlockCapability<?, Direction> capability, Block previewBlock)`
+Matches any block whose block entity currently exposes `capability` on at least one side, checked at match-time (not registration-time) via `level.getCapability(...)` - e.g. "any block that exposes an energy storage capability", regardless of which mod added it. Unlike `tag(...)`, this needs no shared tag convention between MultiLib and every addon that might supply a compatible block: a third-party block nobody tagged still matches as long as it genuinely exposes the capability when queried. `previewBlock` is only used for previews (JEI/REI/EMI, ghost overlay) since there's no single "the" block for a capability - pick whichever concrete block is the canonical example. Because matching needs a `Level`/`BlockPos` in scope, this is the one ingredient type that overrides the context-aware `matches(ServerLevel, BlockPos, BlockState)` overload instead of the plain one.
+
 ## Choosing an ingredient type
 
 | Need | Use |
@@ -56,6 +59,7 @@ Matches every `BlockState` unconditionally (including air). `getCandidateBlocks(
 | "Any of these 3 specific blocks" | `anyOf(of(a), of(b), of(c))` |
 | Logic that can't be expressed declaratively | `predicate(state -> ...)` |
 | A cell that accepts anything (including air) | `any()` |
+| Any block exposing a NeoForge capability at runtime | `ability(capability, previewBlock)` |
 
 ## `IWallSharable`
 
@@ -76,3 +80,4 @@ Definitions whose **activation or core symbol** ingredient returns an empty `get
 - [MultiblockBuilder § Symbols](MultiblockBuilder.md#symbols-core-activation-priority)
 - [Core Concepts](../Core-Concepts.md#symbols-and-blockingredient)
 - [Advanced Features § JSON/datapack definitions](../Advanced-Features.md#jsondatapack-definitions) - the JSON schema for each ingredient type
+- [Multiblock States & Progress Tracking § computeDetailed](Multiblock-States-And-Progress.md#computedetailed-structuremismatch-structurevalidationreport) - `WRONG`/`WRONG_STATE` classification uses `matchesBlockType(...)`

@@ -59,6 +59,12 @@ Opt-in: when set (`> 0`), the controller periodically checks its own structure:
 
 `ExampleControllerBE` sets this to `100` (5 seconds at 20 TPS) as a reference value.
 
+```java
+public void invalidateStructure();
+```
+
+Marks the structure for (re)validation/formation on the very next server tick, instead of waiting out the rest of `setValidationInterval(...)`'s countdown. For a dev whose own code knows a relevant block changed (e.g. reacting to a neighbor update) and wants the controller to notice immediately rather than up to `validationInterval` ticks later. Safe to call from anywhere, any number of times - it only ever brings the next check closer, never delays it. `setValidationInterval` remains a periodic fallback in case some change bypasses whatever calls `invalidateStructure()`.
+
 ### Server ticker
 
 ```java
@@ -85,6 +91,19 @@ protected abstract InteractionResult openMenu(Player player, Level level, BlockP
 ```
 
 `useWithoutItem(...)` is implemented for you: it checks `isFormed()` on the block entity and only calls your `openMenu(...)` when the structure is actually formed - right-clicking an unformed core does nothing (returns `PASS`), so you don't need to guard against opening a menu for a structure that doesn't exist yet.
+
+## `MultiblockPartMenus`
+
+```java
+public final class MultiblockPartMenus {
+    public static boolean openPartMenu(ServerPlayer player, ServerLevel level, BlockPos partPos);
+    public static boolean openPartMenu(ServerPlayer player, ServerLevel level, MultiblockInstance instance, BlockPos partPos);
+}
+```
+
+Lets a controller's own menu (opened via `openMenu(...)` above) redirect a player straight to a part block's menu - e.g. a button in the core's GUI for "configure this IO port" instead of making the player walk to it and right-click it themselves. Deliberately just a thin wrapper around vanilla's own `ServerPlayer#openMenu(MenuProvider)`: MultiLib doesn't dictate a GUI/menu framework, so this is a mechanism a dev's own screen/packet handler can call, not a UI of its own.
+
+The plain overload returns `false` (no-op) if there's no loaded block entity at `partPos`, or it doesn't implement `MenuProvider` - e.g. a plain structural block with no GUI of its own. The `MultiblockInstance` overload additionally checks that `partPos` actually belongs to `instance` first - a safety net against a caller passing a stale/unrelated position (e.g. from a client-sent packet) instead of one read fresh off the instance itself - and also returns `false` if that check fails.
 
 ## `AbstractMultiblockPartBE`
 
@@ -114,6 +133,9 @@ Interface implemented by both `AbstractMultiblockPartBE` and (indirectly, for it
 ```java
 public interface IMultiblockPart {
     MultiblockPartComponent getMultiblockComponent();
+    default Set<MultiblockAbility<?>> getAbilities() {
+        return Set.of();
+    }
     default boolean isPartOfStructure();
     default UUID getInstanceId();
     default Optional<MultiblockInstance> getInstance(ServerLevel level);
@@ -124,6 +146,8 @@ public interface IMultiblockPart {
 ```
 
 `getController(level)` is the common pattern for a non-core part (e.g. an IO port) to reach its structure's controller for data/energy routing - resolves the instance, then the core position, then the block entity there, only succeeding if it's an `AbstractMultiblockControllerBE`.
+
+`getAbilities()` declares the role(s) this part fulfills within the structure once formed (e.g. an item/energy port), looked up via [`MultiblockAbilities`](MultiblockAbility.md) by whatever code drives the controller's logic. Unlike a fixed 1:1 "this symbol is the IO port", a structure can declare any number of positions with the same ability - the controller just asks for all parts that provide it. Empty by default: most parts (plain structural blocks) provide no ability. See [MultiblockAbility](MultiblockAbility.md) for the full picture.
 
 ## `MultiblockPartComponent`
 
@@ -193,4 +217,5 @@ public class MyControllerBlock extends AbstractMultiblockControllerBlock impleme
 - [Callbacks & Events](Callbacks-And-Events.md)
 - [MultiblockInstance & Registry](MultiblockInstance-And-Registry.md)
 - [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md)
+- [MultiblockAbility](MultiblockAbility.md) - roles a part declares via `IMultiblockPart#getAbilities()`
 - [Advanced Features § Master-Dummy model](../Advanced-Features.md#master-dummy-model)

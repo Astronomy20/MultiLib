@@ -2,7 +2,7 @@
 
 # Multiblock States & Progress Tracking
 
-Packages: `net.astronomy.multilib.api.state` (`MultiblockState`, `MultiblockStateRegistry`, `StandardMultiblockState`), `net.astronomy.multilib.api.event` (`MultiblockStateChangedEvent`), `net.astronomy.multilib.api.progress` (`MultiblockProgressAPI`, `StructureProgress`, `MissingBlock`), `net.astronomy.multilib.core.tracking` (`MultiblockProgressionTracker`)
+Packages: `net.astronomy.multilib.api.state` (`MultiblockState`, `MultiblockStateRegistry`, `StandardMultiblockState`), `net.astronomy.multilib.api.event` (`MultiblockStateChangedEvent`), `net.astronomy.multilib.api.progress` (`MultiblockProgressAPI`, `StructureProgress`, `MissingBlock`, `StructureMismatch`, `StructureValidationReport`), `net.astronomy.multilib.core.tracking` (`MultiblockProgressionTracker`), `net.astronomy.multilib.network` (`GhostBlockData`)
 
 Two related but distinct concerns live here:
 
@@ -133,9 +133,37 @@ public record MissingBlock(BlockPos pos, BlockState expectedState) {}
 
 One pattern position that isn't correctly filled yet - either still air, or occupied by a block that doesn't match what the pattern expects there.
 
+### `computeDetailed`, `StructureMismatch`, `StructureValidationReport`
+
+```java
+public static Optional<StructureValidationReport> computeDetailed(ServerLevel level, BlockPos corePos);
+```
+
+Like `compute(...)`, but also reports placed-but-wrong positions (not just missing ones) - the same per-position MISSING/WRONG/WRONG_STATE classification the ghost overlay already computes, exposed here as a public, reusable report instead of being stuck inside that event handler. Same scope limitation as `compute(...)`: only `.layer(...)`-declared (shaped) structures are supported, and orientation for an incomplete structure falls back the same way when nothing's placed yet.
+
+```java
+public record StructureValidationReport(boolean formed, List<MissingBlock> missing, List<StructureMismatch> mismatches) {
+    public int missingCount();
+    public int mismatchCount();
+}
+```
+
+Superset of `StructureProgress`: not just what's missing, but also what's placed but wrong. `formed` is a convenience for "no missing and no mismatched positions", equivalent to what the pattern matcher would report as a success.
+
+```java
+public record StructureMismatch(BlockPos pos, char symbol, BlockIngredient expected, BlockState actual, boolean wrongState) {}
+```
+
+A placed block that doesn't satisfy the pattern at its position - as opposed to a `MissingBlock` (nothing placed there at all). `wrongState` tells apart "right block, wrong blockstate property" (e.g. facing) from "an entirely different block", determined via [`BlockIngredient#matchesBlockType`](BlockIngredient.md): if the ingredient's candidate blocks contain the placed block's type, it's a `WRONG_STATE` case (right block, wrong orientation/property); otherwise it's a plain `WRONG` (an entirely different block).
+
+This mirrors the `GhostBlockData.Status` enum (`net.astronomy.multilib.network`) used by the client-side ghost overlay, which gained the same `WRONG_STATE` value alongside the pre-existing `MISSING`/`WRONG`/`CORE`/`PLACEABLE` - so a position with the right block but the wrong facing renders distinctly from one with a completely wrong block, instead of both being lumped into a generic "wrong" highlight.
+
 ## See also
 
 - [Block Entity Abstractions § State](BlockEntity-Abstractions.md#state)
+- [Block Entity Abstractions § Periodic (re-)validation](BlockEntity-Abstractions.md#periodic-re-validation) - `invalidateStructure()`
+- [BlockIngredient § matchesBlockType](BlockIngredient.md) - the `WRONG` vs `WRONG_STATE` distinction `computeDetailed` relies on
+- [MultiblockComposition](MultiblockComposition.md) - the equivalent read-only report for an already-**formed** structure
 - [Callbacks & Events](Callbacks-And-Events.md)
 - [MultiLibAPI](MultiLibAPI.md)
 - [Advanced Features § FTB Quests compatibility](../Advanced-Features.md#ftb-quests-compatibility)

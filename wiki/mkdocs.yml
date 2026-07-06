@@ -37,6 +37,9 @@ nav:
       - Block Entity Abstractions: api-reference/BlockEntity-Abstractions.md
       - BlockDefinition: api-reference/BlockDefinition.md
       - Multiblock States & Progress: api-reference/Multiblock-States-And-Progress.md
+      - Multiblock Composition: api-reference/MultiblockComposition.md
+      - Multiblock Ability: api-reference/MultiblockAbility.md
+      - Multiblock Tier: api-reference/MultiblockTier.md
       - RotationUtils: api-reference/RotationUtils.md
   - FAQ & Troubleshooting: FAQ-Troubleshooting.md
   - Migrating from PatternBuilder: Migrating-From-PatternBuilder.md
