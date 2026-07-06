@@ -46,19 +46,19 @@ See the [Getting Started guide](wiki/Getting-Started) for the full walkthrough, 
 
 ## Documentation
 
-The full API reference and guides live in the [wiki](https://astronomy20.github.io/MultiLib/):
+The documentation and the API references are in the [wiki](https://astronomy20.github.io/MultiLib/):
 
 - [Getting Started](wiki/Getting-Started) - add MultiLib as a dependency and register your first multiblock.
-- [Core Concepts](wiki/Core-Concepts) - definitions, symbols, ingredients, the coordinate system, formation modes.
-- [Pattern Design Guide](wiki/Pattern-Design-Guide) - laying out structures correctly and avoiding common mistakes.
-- [Rotation & Matching Deep Dive](wiki/Rotation-And-Matching) - how the matchers actually work.
-- [Advanced Features](wiki/Advanced-Features) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
-- [API Reference](/wiki/index#7-api-reference) - full method-by-method reference, including [multiblock states & progress tracking](../../wiki/api-reference/Multiblock-States-And-Progress).
-- [FAQ & Troubleshooting](wiki/FAQ-Troubleshooting)
+- [Core Concepts](https://astronomy20.github.io/MultiLib/Core-Concepts) - definitions, symbols, ingredients, the coordinate system, formation modes.
+- [Pattern Design Guide](https://astronomy20.github.io/MultiLib/Pattern-Design-Guide) - laying out structures correctly and avoiding common mistakes.
+- [Rotation & Matching Deep Dive](https://astronomy20.github.io/MultiLib/Rotation-And-Matching) - how the matchers actually work.
+- [Advanced Features](https://astronomy20.github.io/MultiLib/Advanced-Features) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
+- [API Reference](https://astronomy20.github.io/MultiLib/index#7-api-reference) - full method-by-method reference, including [multiblock states & progress tracking](https://astronomy20.github.io/MultiLib//api-reference/Multiblock-States-And-Progress).
+- [FAQ & Troubleshooting](https://astronomy20.github.io/MultiLib/FAQ-Troubleshooting)
 
 ## Compatibility
 
-Are available integrations for JEI, REI, EMI, Patchouli, GuideME and FTB Quests - see [Advanced Features](../../wiki/Advanced-Features#jei-rei-emi-patchouli-guideme-ftb-quests-compatibility).
+Are available integrations for JEI, REI, EMI, Patchouli, GuideME, KubeJS and FTB Quests - see [Advanced Features](https://astronomy20.github.io/MultiLib/Advanced-Features#jei-rei-emi-patchouli-guideme-ftb-quests-compatibility).
 
 ## Contributing
 
@@ -70,5 +70,5 @@ MIT - see the license file for details.
 
 ## Links
 
-- [Documentation site](https://astronomy20.github.io/MultiLib/)
+- [Documentation](https://astronomy20.github.io/MultiLib/)
 - [Wiki source](wiki/index.md)
