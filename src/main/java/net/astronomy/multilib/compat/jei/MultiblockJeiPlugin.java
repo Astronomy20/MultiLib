@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * JEI plugin for MultiLib. Auto-discovered by JEI via {@link JeiPlugin}.
- * Do NOT register this class manually — JEI scans for the annotation at runtime.
+ * Do NOT register this class manually - JEI scans for the annotation at runtime.
  */
 @JeiPlugin
 @SuppressWarnings("unused")
@@ -50,7 +50,7 @@ public class MultiblockJeiPlugin implements IModPlugin {
     /**
      * Lets other MultiLib compat modules (e.g. compat/ftbquests) open this exact multiblock's recipe
      * page without depending on JEI directly. Opens the display directly via
-     * {@link mezz.jei.api.runtime.IRecipesGui#showRecipes} rather than focusing by ItemStack — a
+     * {@link mezz.jei.api.runtime.IRecipesGui#showRecipes} rather than focusing by ItemStack - a
      * stack focus would also surface unrelated recipes that happen to output the same core/activation
      * block (e.g. a structure whose core is an emerald block would land on the emerald block's own
      * crafting recipe instead of the multiblock tab). See RecipeViewerLink's javadoc.

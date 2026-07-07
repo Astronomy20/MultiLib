@@ -1,5 +1,6 @@
 package net.astronomy.multilib.compat;
 
+import net.astronomy.multilib.CommonConfig;
 import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.api.block.BlockDefinition;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
@@ -7,6 +8,7 @@ import net.astronomy.multilib.api.ingredient.BlockIngredient;
 import net.astronomy.multilib.client.ClientConfig;
 import net.astronomy.multilib.client.render.MultiblockStructurePreviewRenderer;
 import net.astronomy.multilib.core.registry.BlockDefinitionRegistry;
+import net.astronomy.multilib.core.registry.MultiblockRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Viewer-agnostic 3D multiblock preview: layout, per-definition view state, rendering, and input
@@ -29,7 +32,7 @@ import java.util.Map;
  * <p>
  * Each viewer's compat package owns only the thin adapter needed to plug into that library's widget
  * API (how input events reach {@link #onScroll}/{@link #onDrag}/{@link #onClick}, and how tooltips
- * get surfaced) — everything about layout, rendering, and view state lives here exactly once.
+ * get surfaced) - everything about layout, rendering, and view state lives here exactly once.
  * <p>
  * All coordinates taken by / returned from this class are <b>panel-local</b>: (0,0) is the preview's
  * own top-left corner. Callers are responsible for translating their own GuiGraphics pose stack (and
@@ -41,6 +44,8 @@ public final class MultiblockPreviewPanel {
 
     // ── Layout constants (identical proportions across all three viewers) ──────────────────────
     private static final int TITLE_H = 12;
+    /** Extra band reserved between the title and the 3D model for the definition-id label - only when {@link CommonConfig#DEV_MODE} is on, see {@link Layout#contentTop()}. */
+    private static final int DEV_ID_LABEL_H = 9;
     private static final float MODEL_AREA_RATIO = 2f / 3f;
     private static final int LR_H = 14;
     private static final int ARR_W = 20;
@@ -51,6 +56,11 @@ public final class MultiblockPreviewPanel {
     private static final int BADGE_PAD = 2;
     private static final int BADGE_ICON_SZ = 11;
     private static final int MODEL_AREA_MARGIN = 2;
+    // Overhead of the list section that isn't row space: the "Required blocks:" label + the gap
+    // before the first row (see lblY()/listY(): +3, +12) plus the bottom margin in listH() (-2).
+    // 3 + 12 + 2 = 17. Used to size the list section down to exactly what the current item count
+    // needs (see Layout#listSectionH()) instead of always reserving the full MODEL_AREA_RATIO share.
+    private static final int LIST_CHROME_H = 17;
 
     // ── Rotation / animation constants ──────────────────────────────────────────────────────────
     private static final float DEFAULT_PITCH    = 22f;
@@ -66,7 +76,7 @@ public final class MultiblockPreviewPanel {
     private static final ResourceLocation ROTATE_ICON_OFF_TEXTURE =
             ResourceLocation.fromNamespaceAndPath(MultiLib.MODID, "textures/gui/rotate_icon_off.png");
 
-    // ── Per-definition view state — one instance lives as long as each viewer's own lifecycle
+    // ── Per-definition view state - one instance lives as long as each viewer's own lifecycle
     //    dictates (JEI/REI: keyed map cleared when their recipes screen closes; EMI: one instance
     //    per recipe widget, which EMI itself recreates on screen/page rebuild). ─────────────────
     public static final class ViewState {
@@ -79,8 +89,9 @@ public final class MultiblockPreviewPanel {
         public MultiblockStructurePreviewRenderer.BlockHit selectedHit = null;
         public final Ticker titleTicker = new Ticker();
         public final Ticker labelTicker = new Ticker();
+        public final Ticker devIdTicker = new Ticker();
 
-        // A press on the model doesn't pick a block immediately — it's only resolved into an actual
+        // A press on the model doesn't pick a block immediately - it's only resolved into an actual
         // block-pick once the mouse is actually released (see resolveClickOnRelease), and only if no
         // rotate-drag cancelled it first (see onDrag's pendingClick=false). This is release-driven
         // rather than a fixed timer so a slow drag that hasn't been detected yet can't have its click
@@ -94,7 +105,7 @@ public final class MultiblockPreviewPanel {
         // flag instead answers "is a drag gesture currently in progress", so the yaw catch-up-snap in
         // onDrag only ever fires once per gesture (right when manual control actually starts), not
         // every time the user briefly stops moving the mouse for >DRAG_PAUSE_MS while still holding
-        // the button — which is what caused the model to visibly "jump" mid-rotation.
+        // the button - which is what caused the model to visibly "jump" mid-rotation.
         boolean dragActive = false;
 
         // Snapshot of the exact (yaw, pitch, layer, centerX, centerY, viewSize) that the LAST render()
@@ -103,7 +114,7 @@ public final class MultiblockPreviewPanel {
         // callbacks that fire at their own instants, potentially tens of milliseconds after the frame
         // the user actually saw and clicked on. With auto-rotate on (the default), yaw is a function of
         // System.currentTimeMillis(), so recomputing it at click/release time silently picks against a
-        // slightly-rotated-further model than what was rendered — exactly the "ignores the block I
+        // slightly-rotated-further model than what was rendered - exactly the "ignores the block I
         // actually clicked" symptom reported, most reproducible while the model is spinning. Freezing
         // the pick to what render() last drew removes that drift entirely.
         boolean hasLastRender = false;
@@ -128,31 +139,51 @@ public final class MultiblockPreviewPanel {
                 : vs.yaw;
     }
 
-    // ── Layout — derived once per render/input call from (width, height, itemCount) ─────────────
+    // ── Layout - derived once per render/input call from (width, height, itemCount) ─────────────
 
     public static final class Layout {
         public final int width, height, itemCount, nLayers;
 
-        Layout(int width, int height, int itemCount, int nLayers) {
+        /**
+         * {@code ""} whenever there's nothing to show - dev mode off, or dev mode on but this
+         * definition has no known {@link MultiblockRegistry.Source} (shouldn't normally happen for a
+         * definition JEI/REI/EMI can even see, but defensive) - so {@link #contentTop()} only reserves
+         * {@link #DEV_ID_LABEL_H} of room when a label will actually be drawn there, and the model
+         * expands to fill that space exactly as it would with dev mode off entirely otherwise. Computed
+         * once here (cheap - {@link MultiblockRegistry#getSource} is a plain map lookup, not file I/O)
+         * rather than cached per-{@code ViewState}, so it can also double as {@link #contentTop()}'s own
+         * "is there room to reserve" check without a second source of truth to keep in sync.
+         */
+        public final String devSourceLabel;
+
+        Layout(int width, int height, int itemCount, int nLayers, String devSourceLabel) {
             this.width = width;
             this.height = height;
             this.itemCount = itemCount;
             this.nLayers = nLayers;
+            this.devSourceLabel = devSourceLabel;
         }
 
-        private int contentTop()    { return TITLE_H + 2; }
+        // The dev-id label between title and model only takes up room when there's actually one to
+        // draw - dev mode off, or on but nothing known about this definition's source, both collapse
+        // back to the same layout as if dev mode didn't exist, instead of leaving a permanent blank gap.
+        private int contentTop()    { return TITLE_H + (devSourceLabel.isEmpty() ? 0 : DEV_ID_LABEL_H) + 2; }
         private int contentBottom() { return height - 2; }
         private int contentH()      { return contentBottom() - contentTop(); }
 
         private int listSectionH() {
-            // Always reserve the full ratio-based allowance for the list section rather than shrinking
-            // it down to exactly what the current item count needs — the model's own rendered size is
-            // capped by width, not by however much vertical room modelSectionH() has (see patternSize()),
-            // so a short list previously just left blank canvas below it instead of actually growing the
-            // model. Reserving the full share here means rowPitch() (below) has real room to spread a
-            // short list's rows out and fill it. Long lists that need scrolling are unaffected: they were
-            // already clamped to this same ceiling.
-            return Math.round(contentH() * (1f - MODEL_AREA_RATIO));
+            int maxListSectionH = Math.round(contentH() * (1f - MODEL_AREA_RATIO));
+            if (itemCount <= 0) return maxListSectionH;
+            // Shrink the list section down to exactly what the current item count needs at fixed
+            // ROW_H spacing, anchored to the bottom (listSectionTop() = contentBottom() - listSectionH(),
+            // so a smaller section here just moves its top edge down, never its bottom one). The space
+            // freed above goes to modelSectionH() instead, since the model's rendered size is capped
+            // by width, not by whatever vertical room it's given (see patternSize()) - a short list
+            // previously just left blank canvas below it rather than growing the model into that space.
+            // Long lists that need scrolling are unaffected: once the compact size would exceed the
+            // ratio-based ceiling, this just returns that ceiling like before.
+            int compactListSectionH = itemCount * ROW_H + LIST_CHROME_H;
+            return Math.min(maxListSectionH, compactListSectionH);
         }
         public int listSectionTop() { return contentBottom() - listSectionH(); }
         private int modelSectionH() { return listSectionTop() - contentTop(); }
@@ -187,24 +218,19 @@ public final class MultiblockPreviewPanel {
         public int maxVis() { return Math.max(1, listH() / ROW_H); }
 
         /**
-         * Vertical spacing between successive required-blocks rows. When every item already fits
-         * without scrolling, rows are spread out to use the whole list area (up to a point) instead of
-         * packing at {@link #ROW_H} from the top and leaving a blank gap below the last row — most
-         * visible on EMI's shorter panel with short lists. Once scrolling is needed, falls back to the
-         * tight {@link #ROW_H} spacing so more rows stay visible per scroll position.
+         * Vertical spacing between successive required-blocks rows - always the fixed {@link #ROW_H},
+         * never stretched to fill the list area. A short list no longer means spread-out rows with a
+         * gap below them: {@link #listSectionH()} already shrinks the list section itself to fit a
+         * short list at this fixed spacing, handing the freed space to the model instead.
          */
         public float rowPitch() {
-            if (itemCount <= 0) return ROW_H;
-            int maxV = maxVis();
-            if (itemCount <= maxV) {
-                return Math.max(ROW_H, (float) listH() / itemCount);
-            }
             return ROW_H;
         }
     }
 
     public static Layout layout(MultiblockDefinition def, int width, int height) {
-        return new Layout(width, height, countItems(def).size(), def.getLayerCount());
+        String devSourceLabel = CommonConfig.DEV_MODE.get() ? computeDevSourceLabel(def) : "";
+        return new Layout(width, height, countItems(def).size(), def.getLayerCount(), devSourceLabel);
     }
 
     /**
@@ -219,11 +245,38 @@ public final class MultiblockPreviewPanel {
         return vs;
     }
 
-    // ── Text labels shown in the panel — callers pass already-resolved Components so each viewer
+    // ── Text labels shown in the panel - callers pass already-resolved Components so each viewer
     //    can keep using its own lang-key convention where required (category title stays per-viewer;
     //    these three are free-standing strings we control, unified under shared "multilib.preview.*"
-    //    keys — see assets/multilib/lang/en_us.json). ───────────────────────────────────────────
+    //    keys - see assets/multilib/lang/en_us.json). ───────────────────────────────────────────
     public record Labels(Component layerAll, Component requiredBlocks) {}
+
+    /**
+     * Which mechanism actually registered {@code def} - {@link MultiblockRegistry#getSource} instead of
+     * guessing from dev-tool output file existence: a definition's real registration can come from
+     * anywhere (a mod's own Java code, a KubeJS script in any folder, a JSON datapack under any
+     * namespace) that has nothing to do with the dev-tool's own configured output directories, so
+     * checking only those directories left every other definition's label blank - only ever finding a
+     * match for whatever happened to already live under the currently-configured
+     * {@link CommonConfig#DEVTOOL_NAMESPACE}/folder-name settings. The registry already knows the true source
+     * unconditionally, tagged at the exact moment each definition was registered (see
+     * {@link MultiblockRegistry.Source}), so this is both simpler and correct for every definition.
+     * Returns {@code ""} (not {@code null}) when nothing is registered under this id - {@link Layout}'s
+     * own {@code devSourceLabel} field uses that directly to decide whether to reserve room for it at
+     * all, so this and the layout math never disagree about whether a label exists.
+     */
+    private static String computeDevSourceLabel(MultiblockDefinition def) {
+        Optional<MultiblockRegistry.Source> source = MultiblockRegistry.getSource(def.getId());
+        if (source.isEmpty()) return "";
+
+        String idText = def.getId().getPath() + "." + def.getId().getNamespace();
+        String formatName = switch (source.get()) {
+            case JAVA -> "Java";
+            case JSON -> "JSON";
+            case KUBEJS -> "KubeJS";
+        };
+        return formatName + ": " + idText;
+    }
 
     // ── Rendering ────────────────────────────────────────────────────────────────────────────────
 
@@ -244,6 +297,23 @@ public final class MultiblockPreviewPanel {
             drawCenteredNoShadow(gfx, font, title, lo.width / 2, (TITLE_H - font.lineHeight) / 2, 0x404040);
         } else {
             drawTicker(gfx, font, title, P_X1, (TITLE_H - font.lineHeight) / 2, maxTitleW, 0x404040, hoveringTitle, vs.titleTicker);
+        }
+
+        // ── Dev-mode id label - between the title and the model, so it's clear which registered
+        // multiblock this preview belongs to even when several share a similar name, and which single
+        // mechanism actually registered it (Java/JSON/KubeJS - see MultiblockRegistry.Source). Reserved
+        // layout space and drawn content are driven by the exact same lo.devSourceLabel (see Layout's
+        // own javadoc) - when it's empty the model already expanded to fill this space, so there's
+        // nothing left to draw here either. ──
+        if (!lo.devSourceLabel.isEmpty()) {
+            String idLabel = lo.devSourceLabel;
+            int labelY = TITLE_H + (DEV_ID_LABEL_H - font.lineHeight) / 2;
+            if (font.width(idLabel) <= maxTitleW) {
+                drawCenteredNoShadow(gfx, font, idLabel, lo.width / 2, labelY, 0x808080);
+            } else {
+                boolean hoveringLabel = mouseX >= 0 && mouseX < lo.width && mouseY >= TITLE_H && mouseY < TITLE_H + DEV_ID_LABEL_H;
+                drawTicker(gfx, font, idLabel, P_X1, labelY, maxTitleW, 0x808080, hoveringLabel, vs.devIdTicker);
+            }
         }
 
         // ── 3D model ──
@@ -414,12 +484,12 @@ public final class MultiblockPreviewPanel {
             return true;
         }
         if (localX < 0 || localX >= lo.width || localY < 0 || localY >= lo.height) return false;
-        // This gesture just turned into a rotate-drag — whatever was under the initial press no
+        // This gesture just turned into a rotate-drag - whatever was under the initial press no
         // longer counts as a click (see resolveClickOnRelease / armPendingClick).
         vs.pendingClick = false;
         if (!vs.dragActive) {
             // Only snap yaw to match wherever auto-rotate currently is at the START of a drag
-            // gesture (first sample since the button went down) — not every time DRAG_PAUSE_MS
+            // gesture (first sample since the button went down) - not every time DRAG_PAUSE_MS
             // happens to have elapsed since the last *sample*, which also happens whenever the user
             // simply holds still for a moment mid-drag without releasing, and previously made the
             // model visibly jump on resuming movement even though nothing was actually released.
@@ -436,11 +506,11 @@ public final class MultiblockPreviewPanel {
 
     /**
      * Arms a pending model click if ({@code localX}, {@code localY}) lands on the model (and not on
-     * the selected-block badge). Safe to call from a dry-run/probe pass — arming has no visible
+     * the selected-block badge). Safe to call from a dry-run/probe pass - arming has no visible
      * effect on its own; it's only actually applied by {@link #resolveClickOnRelease}, and only if a
      * rotate-drag hasn't cancelled it first (see {@link #onDrag}). Callers invoke this once per
      * genuine press: REI/EMI's single {@code mouseClicked}, or JEI's {@code handleInput} on the
-     * simulate/probe pass specifically (JEI's real release pass must NOT call this again — see
+     * simulate/probe pass specifically (JEI's real release pass must NOT call this again - see
      * {@link #resolveClickOnRelease}'s javadoc for why re-arming on release would undo the very
      * cancellation this mechanism exists for).
      *
@@ -463,8 +533,8 @@ public final class MultiblockPreviewPanel {
      * actually been released, provided no rotate-drag cancelled it first (see {@link #onDrag}, which
      * clears {@code pendingClick} the moment real drag motion is observed). Also ends the current drag
      * gesture ({@code dragActive}), regardless of whether a click was pending. Callers must invoke
-     * this from their viewer's own mouse-release hook — {@code mouseReleased} for REI/EMI, or the
-     * real (non-simulate) pass of JEI's {@code handleInput} — passing the same panel-local
+     * this from their viewer's own mouse-release hook - {@code mouseReleased} for REI/EMI, or the
+     * real (non-simulate) pass of JEI's {@code handleInput} - passing the same panel-local
      * coordinates used elsewhere. Using the real release event instead of a fixed timer means a click
      * can never be confirmed while the button is still down, however slowly the drag that will cancel
      * it develops.
@@ -479,7 +549,7 @@ public final class MultiblockPreviewPanel {
         if (!vs.pendingClick) return false;
         vs.pendingClick = false;
         // Pick against the exact (yaw, pitch, layer, center, viewSize) the last render() call actually
-        // drew — NOT a freshly recomputed effectiveYaw()/lo, which (with auto-rotate on, the default)
+        // drew - NOT a freshly recomputed effectiveYaw()/lo, which (with auto-rotate on, the default)
         // would have silently advanced past what the user saw and clicked on by however many
         // milliseconds elapsed between that frame and this release event. Falls back to a fresh
         // computation only if render() genuinely hasn't run yet (defensive; shouldn't happen in
@@ -513,7 +583,7 @@ public final class MultiblockPreviewPanel {
     }
 
     /**
-     * @param simulate if true, only reports whether the click WOULD be consumed — no state is
+     * @param simulate if true, only reports whether the click WOULD be consumed - no state is
      *                 mutated. Needed by viewers (JEI) whose input API probes handlers with a
      *                 simulate pass before committing the real one, to avoid double-applying
      *                 toggles/layer changes/selection when both passes reach here.
@@ -527,7 +597,7 @@ public final class MultiblockPreviewPanel {
                 if (current) vs.yaw = effectiveYaw(vs); // freeze in place when turning auto-rotate off
                 ClientConfig.JEI_PREVIEW_AUTO_ROTATE.set(!current);
                 // ConfigValue#set() only updates the in-memory value ("without firing events or writing
-                // the config to disk", per its own javadoc) — without this explicit save(), the toggle
+                // the config to disk", per its own javadoc) - without this explicit save(), the toggle
                 // silently reverted to the TOML default on every game restart, which is the actual bug
                 // being reported here (nothing to do with per-recipe rotation/zoom/layer, which already
                 // persists correctly via ViewStatePersistence).
@@ -545,7 +615,7 @@ public final class MultiblockPreviewPanel {
         }
 
         // Click on the model is handled by armPendingClick (called separately by each viewer at the
-        // right press-time moment) + resolveClickOnRelease — not here. See armPendingClick's javadoc
+        // right press-time moment) + resolveClickOnRelease - not here. See armPendingClick's javadoc
         // for why this needs its own entry point instead of living in this simulate-gated method:
         // JEI's press is a simulate=true probe and its release is simulate=false, the OPPOSITE of
         // what this method's `simulate` flag would otherwise gate arming behind.
@@ -574,7 +644,7 @@ public final class MultiblockPreviewPanel {
         return false;
     }
 
-    // ── Tooltip target lookup — callers translate the result into whatever tooltip mechanism
+    // ── Tooltip target lookup - callers translate the result into whatever tooltip mechanism
     //    their own viewer API uses (JEI: ITooltipBuilder; REI: Tooltip.queue() in render(); EMI:
     //    getTooltip()). Keeping the actual Component text/logic here means all three read the same
     //    words, not three independently-typed copies. ─────────────────────────────────────────────
@@ -622,7 +692,10 @@ public final class MultiblockPreviewPanel {
     private static void drawTicker(GuiGraphics gfx, Font font, String text, int x, int y, int maxWidth,
                                     int color, boolean hovering, Ticker ticker) {
         long nowNanos = System.nanoTime();
-        if (ticker.lastFrameNanos != 0L && !hovering) {
+        // Only advance the scroll clock while actually hovered - previously this was inverted (advanced
+        // whenever *not* hovering, froze while hovering), the exact opposite of the intended "static by
+        // default, scrolls on hover" behavior.
+        if (ticker.lastFrameNanos != 0L && hovering) {
             ticker.scrollMs += (nowNanos - ticker.lastFrameNanos) / 1_000_000L;
         }
         ticker.lastFrameNanos = nowNanos;
@@ -652,7 +725,7 @@ public final class MultiblockPreviewPanel {
         return new int[]{Math.round(v.x), Math.round(v.y)};
     }
 
-    // ── Shared pure helpers (single canonical copy — was triplicated across compat/jei, compat/rei,
+    // ── Shared pure helpers (single canonical copy - was triplicated across compat/jei, compat/rei,
     //    compat/emi) ──────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -708,18 +781,17 @@ public final class MultiblockPreviewPanel {
         return ItemStack.EMPTY;
     }
 
-    /** The recipe-category icon shared by JEI/REI/EMI/FTB Quests — {@link ClientConfig#CATEGORY_ICON}, falling back to a structure block. */
+    /**
+     * The recipe-category icon shared by JEI/REI/EMI/FTB Quests. Resolution order: the
+     * {@code categoryIcon} client config value if set (always wins), then whatever a consuming mod
+     * registered via {@link net.astronomy.multilib.api.client.MultiLibClientAPI#setCategoryIcon},
+     * then a plain structure block.
+     */
     public static ItemStack categoryIconStack() {
-        String id = ClientConfig.CATEGORY_ICON.get();
-        ResourceLocation loc = ResourceLocation.tryParse(id);
-        if (loc != null) {
-            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(loc).orElse(null);
-            if (item != null) return new ItemStack(item);
-        }
-        return new ItemStack(Items.STRUCTURE_BLOCK);
+        return net.astronomy.multilib.api.client.MultiLibClientAPI.getCategoryIconStack();
     }
 
-    /** The multiblock's "name", for the title row — the core/activation block's own display name. */
+    /** The multiblock's "name", for the title row - the core/activation block's own display name. */
     public static String multiblockName(MultiblockDefinition def) {
         if (def.getNameTranslationKey().isPresent()) {
             return Component.translatable(def.getNameTranslationKey().get()).getString();

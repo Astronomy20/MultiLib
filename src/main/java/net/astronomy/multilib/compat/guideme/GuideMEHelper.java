@@ -14,7 +14,7 @@ import java.util.Optional;
 /**
  * GuideME integration.
  *
- * <p>GuideME does not expose a Java registration API for "structures to preview" — instead, guide
+ * <p>GuideME does not expose a Java registration API for "structures to preview" - instead, guide
  * pages embed a {@code <GameScene><ImportStructure src="..."/></GameScene>} tag that points at a
  * plain structure NBT/SNBT file shipped next to the page. This helper generates that file directly
  * from a {@link MultiblockDefinition} (via {@link MultiblockStructureExporter}), so mod devs don't

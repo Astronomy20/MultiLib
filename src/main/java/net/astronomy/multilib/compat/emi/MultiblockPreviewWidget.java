@@ -18,7 +18,7 @@ import java.util.List;
  * which owns all layout/rendering/view-state logic identically across all three integrations.
  * <p>
  * EMI's {@link Widget} only exposes {@link #render}, {@link #getTooltip}, {@link #mouseClicked}
- * and {@link #keyPressed} — there is no {@code mouseScrolled}/{@code mouseDragged} hook reaching
+ * and {@link #keyPressed} - there is no {@code mouseScrolled}/{@code mouseDragged} hook reaching
  * individual recipe widgets (verified against EMI 1.1.24 sources: {@code Widget.java} exposes
  * exactly those four overridable members, nothing else). Two workarounds are used, both avoiding
  * any mixin:
@@ -28,7 +28,7 @@ import java.util.List;
  *       last one seen while the button is held. Because EMI (like most Minecraft GUI code) can
  *       invoke {@code render()} more than once within what is visually a single displayed frame
  *       (e.g. tooltip/preview passes), naively treating every such call as a fresh drag sample would
- *       apply the rotation multiple times per real frame — this is exactly what produced the
+ *       apply the rotation multiple times per real frame - this is exactly what produced the
  *       "exploded"/ghosted multi-copy rendering seen in testing. To prevent that, a drag sample is
  *       only accepted if at least {@link #MIN_SAMPLE_INTERVAL_NANOS} of real wall-clock time has
  *       passed since the last one, which comfortably separates genuine successive frames (even at
@@ -43,11 +43,11 @@ import java.util.List;
  * </ul>
  * State (zoom/yaw/pitch/layer/scroll/selection) lives directly on this widget instance: EMI
  * recreates recipe widgets whenever the recipe screen/page is rebuilt, so it naturally resets at
- * roughly the same granularity JEI/REI reset on screen-close — no dedicated handler is needed.
+ * roughly the same granularity JEI/REI reset on screen-close - no dedicated handler is needed.
  */
 public class MultiblockPreviewWidget extends Widget {
 
-    /** Minimum real time between accepted drag samples — rejects same-frame duplicate render() calls. */
+    /** Minimum real time between accepted drag samples - rejects same-frame duplicate render() calls. */
     private static final long MIN_SAMPLE_INTERVAL_NANOS = 3_000_000L; // 3 ms
 
     private final int x, y, width, height;
@@ -64,7 +64,7 @@ public class MultiblockPreviewWidget extends Widget {
 
     /**
      * @param vs shared per-definition state (owned by {@code MultiblockEmiRecipe}'s static map, the
-     *           same pattern REI/JEI use) rather than a fresh instance per widget — EMI recreates this
+     *           same pattern REI/JEI use) rather than a fresh instance per widget - EMI recreates this
      *           widget every time its recipe screen/page is rebuilt, so a widget-local field would
      *           reset rotation/zoom/layer far more often than the user closing and reopening the
      *           recipe view, which was part of why rotation appeared to never "stick" in EMI.
@@ -171,7 +171,7 @@ public class MultiblockPreviewWidget extends Widget {
     /**
      * Resolves a pending model-click (see {@link MultiblockPreviewPanel#onClick}) on the real mouse
      * release, fed in by {@link EmiInputBridge} via NeoForge's {@code ScreenEvent.MouseButtonReleased.Pre}
-     * — EMI's own {@code Widget} has no {@code mouseReleased} hook to override directly. No
+     * - EMI's own {@code Widget} has no {@code mouseReleased} hook to override directly. No
      * coordinates are needed: the pending click already recorded its own press-time position, and
      * only {@link MultiblockPreviewPanel.ViewState#pendingClick}'s current value decides whether this
      * does anything, so it's safe to call unconditionally on every release regardless of where the

@@ -14,7 +14,6 @@ import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -31,15 +30,11 @@ import java.util.Set;
 @EventBusSubscriber(modid = MultiLib.MODID, value = Dist.CLIENT)
 public class GhostBlockRenderer {
 
-    // Dev debug chat message is rate-limited so it doesn't spam once per frame.
-    private static final long DEBUG_MESSAGE_INTERVAL_MS = 1000L;
-    private static long lastDebugMessageTime = 0L;
-
     // RenderType.translucent() bakes its own DepthTestStateShard (LEQUAL) into its CompositeState,
-    // which gets re-applied when the buffer is actually drawn at endBatch — silently undoing a plain
+    // which gets re-applied when the buffer is actually drawn at endBatch - silently undoing a plain
     // RenderSystem.disableDepthTest() call around it. A real fix needs the "no depth test" state
-    // baked into the RenderType itself, so the WRONG (mismatch) ghosts — the ones that must show
-    // through an already-placed wrong block — use this dedicated type instead.
+    // baked into the RenderType itself, so the WRONG (mismatch) ghosts - the ones that must show
+    // through an already-placed wrong block - use this dedicated type instead.
     private static final RenderType GHOST_NO_DEPTH = RenderType.create(
             "multilib_ghost_no_depth",
             net.minecraft.client.renderer.RenderType.translucent().format(),
@@ -88,8 +83,6 @@ public class GhostBlockRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
-        long renderStartNanos = System.nanoTime();
-
         BlockRenderDispatcher dispatcher = mc.getBlockRenderer();
         PoseStack poseStack = event.getPoseStack();
         Camera camera = event.getCamera();
@@ -100,7 +93,7 @@ public class GhostBlockRenderer {
         // MISSING/CORE ghosts sit over air or an already-correct block, so normal LEQUAL depth
         // testing against the world is fine (and keeps them properly occluded by anything genuinely
         // in front of them, e.g. the player's own arm or nearer terrain). WRONG ghosts, though, sit
-        // on top of a real (incorrect) block that already wrote nearer depth — RenderType.translucent()
+        // on top of a real (incorrect) block that already wrote nearer depth - RenderType.translucent()
         // bakes a LEQUAL depth-test shard into itself that gets re-applied at endBatch regardless of
         // any RenderSystem.disableDepthTest() call wrapped around it, so WRONG ghosts need their own
         // RenderType with depth testing baked off, or they silently lose to the block underneath.
@@ -119,7 +112,8 @@ public class GhostBlockRenderer {
             poseStack.scale(0.8F, 0.8F, 0.8F);
             poseStack.translate(-0.5, -0.5, -0.5);
 
-            RenderType renderType = ghost.status() == GhostBlockData.Status.WRONG
+            RenderType renderType = (ghost.status() == GhostBlockData.Status.WRONG
+                    || ghost.status() == GhostBlockData.Status.WRONG_STATE)
                     ? GHOST_NO_DEPTH
                     : RenderType.translucent();
             VertexConsumer baseConsumer = bufferSource.getBuffer(renderType);
@@ -127,9 +121,12 @@ public class GhostBlockRenderer {
             switch (ghost.status()) {
                 case MISSING -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 1f, 1f, 1f, 0.45f);
                 case WRONG -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 1f, 0.27f, 0.27f, 0.5f);
+                // WRONG_STATE: the right block is already placed, just with the wrong blockstate
+                // properties (e.g. facing) - yellow instead of red, since it's a much smaller fix.
+                case WRONG_STATE -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 1f, 0.85f, 0.2f, 0.5f);
                 // CORE: already-correct core block, highlighted green so it always stands out.
                 case CORE -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 0.3f, 1f, 0.3f, 0.4f);
-                // PLACEABLE: the held item can fill this position right now — no color tint, just
+                // PLACEABLE: the held item can fill this position right now - no color tint, just
                 // the plain translucent ghost so the block's real texture reads clearly.
                 case PLACEABLE -> renderGhostBlock(poseStack, baseConsumer, dispatcher, ghost, 1f, 1f, 1f, 0.55f);
             }
@@ -139,19 +136,6 @@ public class GhostBlockRenderer {
 
         bufferSource.endBatch(RenderType.translucent());
         bufferSource.endBatch(GHOST_NO_DEPTH);
-
-        if (GhostOverlayState.INSTANCE.isDebugTiming()) {
-            long now = System.currentTimeMillis();
-            if (now - lastDebugMessageTime >= DEBUG_MESSAGE_INTERVAL_MS) {
-                lastDebugMessageTime = now;
-                double renderMs = (System.nanoTime() - renderStartNanos) / 1_000_000.0;
-                if (mc.player != null) {
-                    mc.player.displayClientMessage(Component.literal(String.format(
-                            "[MultiLib debug] Ghost overlay render: %.3f ms (%d blocks)",
-                            renderMs, blocks.size())), false);
-                }
-            }
-        }
     }
 
     private static void renderGhostBlock(PoseStack poseStack, VertexConsumer baseConsumer,

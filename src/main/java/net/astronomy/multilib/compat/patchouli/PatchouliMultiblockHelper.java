@@ -43,7 +43,7 @@ public final class PatchouliMultiblockHelper {
 
         // Patchouli expects layers bottom-to-top; MultiLib stores top-to-bottom.
         // MultiLib uses ' ' (space) for empty/air positions in its own pattern strings,
-        // never '0' — so '0' never occurs naturally here.
+        // never '0' - so '0' never occurs naturally here.
         int layerCount = layers.size();
         char[][][] grid = new char[layerCount][][];
         for (int i = 0; i < layerCount; i++) {
@@ -53,7 +53,7 @@ public final class PatchouliMultiblockHelper {
 
         // Patchouli requires exactly one '0' cell in the whole pattern: it marks the
         // structure's anchor/center point (see DenseMultiblock#build, "A structure can't
-        // have no center"). '0' is NOT simply an air alias — it defaults to air only
+        // have no center"). '0' is NOT simply an air alias - it defaults to air only
         // because nothing else claims it. We pick the definition's core symbol position
         // (falling back to the first occupied cell) and mark it as the center, while
         // keeping its original block matcher so the book preview still shows the right block.

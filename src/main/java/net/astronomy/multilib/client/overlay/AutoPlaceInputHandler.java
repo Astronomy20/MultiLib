@@ -28,10 +28,10 @@ import java.util.List;
 /**
  * Holding the auto-place modifier key (Left Ctrl by default) and Right-clicking triggers
  * auto-placement on an autoPlace()-enabled core block, placing exactly one missing block per click.
- * The modifier key is not a Controls-menu keybind — its default only changes if the integrating
+ * The modifier key is not a Controls-menu keybind - its default only changes if the integrating
  * mod's own client-side code calls {@link MultiLibClientAPI#setAutoPlaceModifierKey(int)}. The
  * default doesn't collide with the ghost overlay's Shift+Right-click trigger. Works with an item in
- * hand too — the server picks a missing position that matches the held item, so holding something
+ * hand too - the server picks a missing position that matches the held item, so holding something
  * unrelated to the structure places nothing rather than a random block.
  * <p>
  * Holding the click down re-fires at a configurable speed relative to vanilla: vanilla only
@@ -73,7 +73,7 @@ public class AutoPlaceInputHandler {
 
         if (!holding) {
             // Fresh press: place immediately, same as vanilla's own zero-delay first click. While
-            // already holding, vanilla still re-fires this event on its own 4-tick cadence — don't
+            // already holding, vanilla still re-fires this event on its own 4-tick cadence - don't
             // send another request for it, onClientTick alone paces the configured repeat speed.
             holding = true;
             ticksSinceLastRequest = 0;

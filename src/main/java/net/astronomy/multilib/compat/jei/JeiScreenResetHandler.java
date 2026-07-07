@@ -14,8 +14,8 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
  *
  * <p>Detects JEI's recipes screen by class name instead of importing {@code mezz.jei.gui.recipes.RecipesGui}
  * directly: that class lives in JEI's implementation jar, which this project only depends on at
- * runtime ({@code localRuntime}), not at compile time (only the API jars are {@code compileOnly} —
- * see build.gradle) — an internal import here would break compilation.
+ * runtime ({@code localRuntime}), not at compile time (only the API jars are {@code compileOnly} -
+ * see build.gradle) - an internal import here would break compilation.
  */
 public class JeiScreenResetHandler {
 

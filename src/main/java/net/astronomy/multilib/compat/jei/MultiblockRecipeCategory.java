@@ -47,7 +47,7 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
     private final IDrawable icon;
 
     /**
-     * Persistent per-definition state — survives layout re-creation while the JEI recipes GUI
+     * Persistent per-definition state - survives layout re-creation while the JEI recipes GUI
      * stays open (so switching between recipes/categories keeps zoom etc.), but is reset whenever
      * the JEI recipes GUI screen is closed; see {@link JeiScreenResetHandler}.
      */
@@ -98,7 +98,7 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
         builder.addInputHandler(new InputHandler(state(def), def));
     }
 
-    // ── Input handler — delegates entirely to MultiblockPreviewPanel ─────────────────────────────
+    // ── Input handler - delegates entirely to MultiblockPreviewPanel ─────────────────────────────
 
     private static final class InputHandler implements IJeiInputHandler {
 
@@ -129,11 +129,11 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
         }
 
         // JEI calls handleInput(...) TWICE per left-click: once on mouse press with
-        // input.isSimulate()==true (a probe to find which handler wants the click — see JEI's
+        // input.isSimulate()==true (a probe to find which handler wants the click - see JEI's
         // UserInputRouter.handleSimulateClick / CombinedInputHandler.handleClickInternal, decompiled
         // from jei-1.21.1-neoforge-19.27.0.340.jar), and again on mouse *release* with
         // input.isSimulate()==false to actually commit (handleExecuteClick), but only against the
-        // same handler that answered true on the simulate pass — confirmed via
+        // same handler that answered true on the simulate pass - confirmed via
         // ForgeUserInput.fromEvent(ScreenEvent.MouseButtonPressed) building InputType.SIMULATE and
         // fromEvent(ScreenEvent.MouseButtonReleased) building InputType.EXECUTE. So the non-simulate
         // call already *is* JEI's real mouse-release notification: no separate release hook exists on
@@ -148,7 +148,7 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
             MultiblockPreviewPanel.Layout lo = MultiblockPreviewPanel.layout(def, WIDTH, HEIGHT);
             boolean consumed = MultiblockPreviewPanel.onClick(vs, lo, def, mx, my, input.isSimulate());
             if (input.isSimulate()) {
-                // Press probe: arm a pending model click here (NOT on the real/release call below —
+                // Press probe: arm a pending model click here (NOT on the real/release call below -
                 // re-arming there would erase whatever onDrag already cancelled in between, see
                 // armPendingClick's javadoc).
                 consumed = MultiblockPreviewPanel.armPendingClick(vs, lo, mx, my) || consumed;

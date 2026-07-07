@@ -15,7 +15,7 @@ import net.astronomy.multilib.core.registry.MultiblockRegistry;
  * REI client plugin for MultiLib.
  *
  * Discovery on NeoForge: REI scans for the {@link REIPluginClient} annotation via NeoForge's mod
- * annotation index (see {@code me.shedaniel.rei.forge.PluginDetectorImpl}), not Java ServiceLoader —
+ * annotation index (see {@code me.shedaniel.rei.forge.PluginDetectorImpl}), not Java ServiceLoader -
  * so this class must carry {@code @REIPluginClient} rather than a {@code META-INF/services} entry.
  * Do NOT register this class manually in MultiLib.java.
  */
@@ -29,7 +29,7 @@ public class MultiblockReiPlugin implements REIClientPlugin {
         registry.add(new MultiblockCategory());
         // Lets other MultiLib compat modules (e.g. compat/ftbquests) open this exact multiblock's
         // recipe page without depending on REI directly. filterCategory restricts the search to our
-        // own category — without it, addRecipesFor(stack) alone would also surface unrelated recipes
+        // own category - without it, addRecipesFor(stack) alone would also surface unrelated recipes
         // that happen to output the same core/activation block (e.g. a structure whose core is an
         // emerald block would land on the emerald block's own crafting recipe instead of the
         // multiblock tab). See RecipeViewerLink's javadoc.
@@ -46,18 +46,18 @@ public class MultiblockReiPlugin implements REIClientPlugin {
         // regardless of which item you clicked, which is why every structure used to show up no
         // matter which core/activation block was opened. MultiblockRecipeDisplay.of(...) now gives
         // each display a real per-definition output (its own core/activation block, see
-        // registerDisplays below) — REI's standard "Recipes" lookup on an item already filters by
+        // registerDisplays below) - REI's standard "Recipes" lookup on an item already filters by
         // output, so clicking a specific block correctly surfaces only its own structure.
 
         // Suppress REI's built-in "+" quick-craft button (bottom-right of the recipe box). It exists
         // to trigger a registered TransferHandler (e.g. "move items into a crafting grid"), which has
-        // no meaning for a multiblock structure — there's nothing to auto-craft/transfer. With no
+        // no meaning for a multiblock structure - there's nothing to auto-craft/transfer. With no
         // TransferHandler registered for this category, REI's own AutoCraftingEvaluator finds nothing
         // applicable (AutoCraftingEvaluator#evaluateAutoCrafting never sets hasApplicable) and renders
         // the button as a red "!" instead of "+", which reads as a stray error icon.
         //
         // removePlusButton()/setPlusButtonArea(bounds -> null) does NOT actually remove it, despite the
-        // name — confirmed by decompiling CategoryRegistryImpl.CategoryConfigurationImpl in
+        // name - confirmed by decompiling CategoryRegistryImpl.CategoryConfigurationImpl in
         // RoughlyEnoughItems-neoforge-16.0.799.jar: getPlusButtonArea() unconditionally returns
         // Optional.of(...) (so DefaultDisplayViewingScreen's `plusButtonArea.isPresent()` check never
         // skips adding the widget) and wraps the provider in

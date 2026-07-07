@@ -8,7 +8,7 @@ import java.util.function.Consumer;
  * Client-side indirection so an always-compiled caller (e.g. {@code compat/ftbquests}) can ask "open
  * whichever recipe viewer is installed, focused on this specific multiblock" without depending on
  * JEI/REI/EMI at compile time. Each of {@code compat/jei}, {@code compat/rei}, {@code compat/emi}
- * (already individually gated on their own optional dependency) registers itself here if loaded —
+ * (already individually gated on their own optional dependency) registers itself here if loaded -
  * this class itself has zero dependencies and is always compiled, so callers never need reflection or
  * a ModList check of their own.
  * <p>

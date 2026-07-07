@@ -10,8 +10,6 @@ import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.compat.MultiblockPreviewPanel;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import java.util.HashMap;
 import java.util.List;
@@ -28,21 +26,15 @@ public class MultiblockEmiRecipe implements EmiRecipe {
 
     static EmiRecipeCategory getOrCreateCategory() {
         if (CATEGORY == null) {
-            String id = net.astronomy.multilib.client.ClientConfig.CATEGORY_ICON.get();
-            net.minecraft.resources.ResourceLocation loc = net.minecraft.resources.ResourceLocation.tryParse(id);
-            net.minecraft.world.item.Item item = loc != null
-                    ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(loc).orElse(null)
-                    : null;
-            ItemStack iconStack = item != null ? new ItemStack(item) : new ItemStack(Items.STRUCTURE_BLOCK);
             CATEGORY = new EmiRecipeCategory(
                     ResourceLocation.fromNamespaceAndPath("multilib", "multiblock_structure"),
-                    EmiStack.of(iconStack)
+                    EmiStack.of(MultiblockPreviewPanel.categoryIconStack())
             );
         }
         return CATEGORY;
     }
 
-    // Persistent per-definition state — shared across every rebuild of EMI's recipe widget for this
+    // Persistent per-definition state - shared across every rebuild of EMI's recipe widget for this
     // multiblock (EMI recreates addWidgets()'s widgets on every screen/page rebuild), same pattern as
     // REI's MultiblockCategory.STATES / JEI's MultiblockRecipeCategory.states.
     private static final Map<ResourceLocation, MultiblockPreviewPanel.ViewState> STATES = new HashMap<>();
@@ -65,7 +57,7 @@ public class MultiblockEmiRecipe implements EmiRecipe {
     @Override
     public ResourceLocation getId() {
         // EMI requires synthetic recipes (not in the vanilla recipe manager) to have their path
-        // prefixed with '/' — without it EMI logs "Recipe X not present in recipe manager" errors.
+        // prefixed with '/' - without it EMI logs "Recipe X not present in recipe manager" errors.
         return ResourceLocation.fromNamespaceAndPath("multilib", "/" + data.definition().getId().getPath());
     }
 
@@ -100,13 +92,13 @@ public class MultiblockEmiRecipe implements EmiRecipe {
         // EmiConfig.maximumRecipeScreenHeight = 256 by default; RecipeTab#constructWidgets places
         // each recipe's widget group at y + 37 + off, i.e. 37px of fixed header chrome above the
         // recipe's own content on every page; RecipeDisplay#addButtons anchors EMI's own right-side
-        // buttons — recipe-tree/"set as default" — at y = height + DISPLAY_PADDING/2 - 12 - space/2,
+        // buttons - recipe-tree/"set as default" - at y = height + DISPLAY_PADDING/2 - 12 - space/2,
         // which for 2 stacked 12px buttons bottoms out 2px below our declared height). So the real
         // vertical budget per recipe page is 256 - 37 - 2 = 217px; at 240 we already overflow EMI's
         // own page cap by 25px, which is exactly what pushed those buttons below the visible panel.
         // 210 stays under that 217px ceiling with a small safety margin, while giving noticeably more
         // room than the previous 200 for the model/list areas (Layout's own proportions in
-        // MultiblockPreviewPanel are ratio-based, so the extra height is redistributed automatically —
+        // MultiblockPreviewPanel are ratio-based, so the extra height is redistributed automatically -
         // no separate EMI-specific layout tweak needed).
         return 210;
     }
@@ -117,17 +109,17 @@ public class MultiblockEmiRecipe implements EmiRecipe {
         widgets.add(new MultiblockPreviewWidget(def, state(def), 0, 0, getDisplayWidth(), getDisplayHeight()));
 
         // EMI dev-mode logs "Recipe's slots do not include any outputs / Call SlotWidget.recipeContext(this)
-        // on outputs" for any recipe that never registers a SlotWidget for its output — our panel draws
+        // on outputs" for any recipe that never registers a SlotWidget for its output - our panel draws
         // everything manually via GuiGraphics (MultiblockPreviewPanel), so EMI never otherwise sees an
         // official output slot. That silently disables output-slot-driven features: recipe-tree
         // resolution, the "set as default recipe" toggle, and favoriting via this recipe (see
         // SlotWidget#recipeContext's javadoc and WidgetGroup#decorateDevMode's exact check, both in
-        // EMI 1.1.24 sources — decorateDevMode only scans for *any* SlotWidget in this group whose
+        // EMI 1.1.24 sources - decorateDevMode only scans for *any* SlotWidget in this group whose
         // getRecipe() != null, it doesn't care about size or position). Register a real SlotWidget tied
         // to our actual output (the core/activation block) to satisfy that contract. getBounds() is
         // overridden to shrink it from the default 18x18 down to 1x1 at the top-left corner (0,0): a
         // 1px hit-box is negligible for click/hover interference with the panel's own title area
-        // underneath, and drawBack(false) means nothing is actually painted there either — it exists
+        // underneath, and drawBack(false) means nothing is actually painted there either - it exists
         // purely to give EMI its required output-slot reference, not to be seen or clicked.
         List<EmiStack> outputs = getOutputs();
         if (!outputs.isEmpty()) {

@@ -33,18 +33,26 @@ public class GhostOverlayInputHandler {
         Block block = level.getBlockState(pos).getBlock();
 
         // The ghost overlay is only previewable from the core block, not the activation block (when
-        // a structure splits them) — clicking any other block that merely happens to be a body
+        // a structure splits them) - clicking any other block that merely happens to be a body
         // block of some other registered structure must never trigger it.
         boolean isTrigger = MultiblockRegistry.getCandidatesFor(block).stream()
             .anyMatch(def -> def.matchesCore(level.getBlockState(pos)));
 
         if (!isTrigger) return;
 
+        // A block that's a real multiblock's core can also fall inside a Multiblock Dev Block's active
+        // area preview (the "Render" toggle) - that same sneak+right-click is also the dev-tool's
+        // tagging gesture (see MultiblockDevTagHandler, server-side, a separate/independent listener
+        // that this client-side cancel can't reach). Rather than ever pick one feature to silently win,
+        // suppress the ghost overlay specifically while the dev-block's preview box covers this
+        // position, so tagging isn't fighting the overlay for the same click.
+        if (isWithinDevBlockPreview(pos)) return;
+
         event.setCanceled(true);
         event.setCancellationResult(InteractionResult.SUCCESS);
 
         // Horizontal orientation follows the direction the player is facing, not the face of the
-        // block they happened to click — clicking the west wall of the core while facing north must
+        // block they happened to click - clicking the west wall of the core while facing north must
         // still preview the structure facing north. The UP/DOWN flip trigger is the one case that
         // genuinely depends on which face was clicked (there's no "vertical" player facing), so that
         // part still reads the clicked face.
@@ -54,5 +62,16 @@ public class GhostOverlayInputHandler {
                         ? face
                         : player.getDirection();
         PacketDistributor.sendToServer(new RequestOverlayPacket(pos, 0, orientationFace != null ? orientationFace.ordinal() : -1));
+    }
+
+    private static boolean isWithinDevBlockPreview(BlockPos pos) {
+        net.astronomy.multilib.client.devtool.ClientMultiblockDevAreaPreviewState.Box box =
+                net.astronomy.multilib.client.devtool.ClientMultiblockDevAreaPreviewState.get();
+        if (box == null) return false;
+        BlockPos min = box.min();
+        BlockPos max = box.max();
+        return pos.getX() >= min.getX() && pos.getX() <= max.getX()
+                && pos.getY() >= min.getY() && pos.getY() <= max.getY()
+                && pos.getZ() >= min.getZ() && pos.getZ() <= max.getZ();
     }
 }

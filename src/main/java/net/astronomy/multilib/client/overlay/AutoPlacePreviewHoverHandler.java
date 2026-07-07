@@ -21,7 +21,7 @@ import java.util.Objects;
 
 /**
  * Every {@link #POLL_INTERVAL_TICKS} ticks, checks whether the player is looking at the core block of
- * an unformed, {@code autoPlaceOverlay()}-enabled structure while holding a non-empty item — if so,
+ * an unformed, {@code autoPlaceOverlay()}-enabled structure while holding a non-empty item - if so,
  * (re)requests the preview from the server; otherwise clears it locally without a round trip. No
  * click is needed, mirroring how the ghost overlay and auto-place both key off looking at the core.
  */

@@ -10,15 +10,11 @@ import me.shedaniel.rei.api.client.registry.display.DisplayCategory;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.util.EntryStacks;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
-import net.astronomy.multilib.client.ClientConfig;
 import net.astronomy.multilib.compat.MultiblockPreviewPanel;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +26,7 @@ import java.util.Map;
  * lives in the viewer-agnostic {@link MultiblockPreviewPanel}, shared identically with the JEI and
  * EMI integrations, so all three recipe browsers present the same GUI. This class only adapts REI's
  * specific API shape: {@link Widget} is a {@code GuiEventListener} directly, so a single widget owns
- * rendering, scrolling, dragging, and clicking together — no separate input-handler concept like
+ * rendering, scrolling, dragging, and clicking together - no separate input-handler concept like
  * JEI's {@code IJeiInputHandler}.
  */
 public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
@@ -40,9 +36,9 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
 
     // REI's Widgets.createRecipeBase(bounds) draws its own border/background INSIDE the same
     // bounds we're given, eating a few pixels off the top before our shared panel's title (which
-    // starts flush at local y=0/TITLE_H) gets to draw — unlike JEI/EMI, which don't decorate our
+    // starts flush at local y=0/TITLE_H) gets to draw - unlike JEI/EMI, which don't decorate our
     // bounds this way. Nudging our content down by a few px only for REI keeps the shared panel
-    // (MultiblockPreviewPanel — used identically by JEI/EMI too) untouched. See PreviewWidget.render.
+    // (MultiblockPreviewPanel - used identically by JEI/EMI too) untouched. See PreviewWidget.render.
     private static final int CONTENT_Y_OFFSET = 5;
 
     private static final int WIDTH = 176;
@@ -58,7 +54,7 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
             Component.translatable("multilib.preview.required_blocks"));
 
     /**
-     * Persistent per-definition state — survives layout re-creation while the REI recipe-view
+     * Persistent per-definition state - survives layout re-creation while the REI recipe-view
      * screen stays open (so switching between recipes/categories keeps zoom etc.), but is reset
      * whenever that screen closes; see {@link ReiScreenResetHandler}.
      */
@@ -85,13 +81,7 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
 
     @Override
     public Renderer getIcon() {
-        String id = ClientConfig.CATEGORY_ICON.get();
-        ResourceLocation loc = ResourceLocation.tryParse(id);
-        if (loc != null) {
-            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getOptional(loc).orElse(null);
-            if (item != null) return EntryStacks.of(new ItemStack(item));
-        }
-        return EntryStacks.of(new ItemStack(Items.STRUCTURE_BLOCK));
+        return EntryStacks.of(MultiblockPreviewPanel.categoryIconStack());
     }
 
     @Override
@@ -134,7 +124,7 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
 
         private MultiblockPreviewPanel.Layout layout() {
             // Content is pushed down by CONTENT_Y_OFFSET (see render()) but REI still allocates the
-            // full HEIGHT box for us — using the full HEIGHT here made the panel's own content bottom
+            // full HEIGHT box for us - using the full HEIGHT here made the panel's own content bottom
             // land CONTENT_Y_OFFSET px past the actual bottom of REI's recipe box (the required-blocks
             // list spilling out below it). Shrinking the logical height by that same offset keeps the
             // rendered content flush with the real box: local content bottom (HEIGHT - OFFSET) plus the
@@ -185,10 +175,10 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
         // on actual mouse release rather than a fixed timer, so a slow-starting rotate-drag can never
         // have its cancelling effect on the pending click pre-empted by the click resolving first.
         // REI's Widget is a GuiEventListener (via AbstractContainerEventHandler/ContainerEventHandler),
-        // which declares mouseReleased(double, double, int) as a default method — confirmed via javap
+        // which declares mouseReleased(double, double, int) as a default method - confirmed via javap
         // against RoughlyEnoughItems-api-neoforge-16.0.799.jar (Widget, WidgetWithBounds) and the
         // Minecraft 1.21.1 client (net.minecraft.client.gui.components.events.GuiEventListener /
-        // ContainerEventHandler) — so overriding it here is safe and reaches this widget normally.
+        // ContainerEventHandler) - so overriding it here is safe and reaches this widget normally.
         @Override
         public boolean mouseReleased(double mx, double my, int button) {
             if (button != 0) return false;

@@ -36,29 +36,29 @@ import java.util.List;
  * simply forms it, when {@code requiredState} is unset).
  * <p>
  * Purely event-driven: completion is pushed by {@link MultiblockQuestEventListener} the instant a
- * matching {@code MultiblockFormedEvent}/{@code MultiblockStateChangedEvent} fires — never by polling a
+ * matching {@code MultiblockFormedEvent}/{@code MultiblockStateChangedEvent} fires - never by polling a
  * persisted "ever reached" record, never on login, and never by clicking the task:
  * <ul>
  *   <li>{@link #autoSubmitOnPlayerTick()} returns 0 so FTB Quests never polls {@link #canSubmit} on its
  *       own periodic timer.</li>
  *   <li>{@link #checkOnLogin()} returns false so {@code ServerQuestFile}'s login handler (which calls
  *       {@code submitTask} on every task where it's true, for every unlocked quest) never touches this
- *       task — this was the actual cause of "the quest completes itself every time I open the world":
+ *       task - this was the actual cause of "the quest completes itself every time I open the world":
  *       {@code checkOnLogin} defaults to true, and this task's {@code canSubmit} only ever checked
  *       "is the quest unlocked", which is true almost immediately.</li>
  *   <li>{@link #onButtonClicked} does NOT call {@code super} (which sends a manual
- *       {@code SubmitTaskMessage} whenever {@code autoSubmitOnPlayerTick() <= 0} — exactly the click-to-
+ *       {@code SubmitTaskMessage} whenever {@code autoSubmitOnPlayerTick() <= 0} - exactly the click-to-
  *       complete behavior meant for {@code CheckmarkTask}, not us). It opens the recipe viewer instead.</li>
  * </ul>
  * A formation event alone only ever satisfies a task with no {@code requiredState}: reaching a specific
  * state (including {@code idle}) requires an actual {@code MultiblockStateChangedEvent}, which only
  * fires for multiblocks with a real {@code AbstractMultiblockControllerBE} controller. A JSON-only
  * multiblock (no controller block entity) has no state concept at all, so a task configured with a
- * {@code requiredState} for one will simply never complete — pick "Any" for those.
+ * {@code requiredState} for one will simply never complete - pick "Any" for those.
  */
 public class MultiblockTask extends AbstractBooleanTask {
     private static final ResourceLocation UNSET = ResourceLocation.fromNamespaceAndPath("multilib", "unset");
-    /** Dropdown sentinel for "no specific state required" — distinct from any id a real registered
+    /** Dropdown sentinel for "no specific state required" - distinct from any id a real registered
      *  {@link MultiblockState} could have, so it can sit in the same enum list as actual states. */
     private static final ResourceLocation NO_STATE = ResourceLocation.fromNamespaceAndPath("multilib", "any");
 
@@ -75,13 +75,13 @@ public class MultiblockTask extends AbstractBooleanTask {
         return FtbQuestsCompat.MULTIBLOCK;
     }
 
-    /** Disabled — see class javadoc. Only {@link MultiblockQuestEventListener} ever calls {@link #submitTask}. */
+    /** Disabled - see class javadoc. Only {@link MultiblockQuestEventListener} ever calls {@link #submitTask}. */
     @Override
     public int autoSubmitOnPlayerTick() {
         return 0;
     }
 
-    /** Disabled — see class javadoc. Prevents {@code ServerQuestFile}'s login handler from auto-completing this task. */
+    /** Disabled - see class javadoc. Prevents {@code ServerQuestFile}'s login handler from auto-completing this task. */
     @Override
     public boolean checkOnLogin() {
         return false;
@@ -89,7 +89,7 @@ public class MultiblockTask extends AbstractBooleanTask {
 
     /**
      * Gate for the push from {@link MultiblockQuestEventListener}: is this task actually configured, and
-     * is its quest currently workable for the team? Does NOT re-check the multiblock/state itself — the
+     * is its quest currently workable for the team? Does NOT re-check the multiblock/state itself - the
      * caller already knows the right event just fired for the right definition/state (see {@link #matches}).
      */
     @Override
@@ -100,7 +100,7 @@ public class MultiblockTask extends AbstractBooleanTask {
     /**
      * Whether a {@code definitionId}/{@code stateId} pair just observed in the world satisfies this
      * task's configuration. {@code stateId} is null for a plain formation event with no further state
-     * info (see {@link MultiblockQuestEventListener#onFormed}) — that only satisfies a task with no
+     * info (see {@link MultiblockQuestEventListener#onFormed}) - that only satisfies a task with no
      * {@code requiredState}.
      */
     boolean matches(ResourceLocation definitionId, @Nullable ResourceLocation stateId) {
@@ -165,7 +165,7 @@ public class MultiblockTask extends AbstractBooleanTask {
 
     /**
      * Opens the recipe viewer (JEI/REI/EMI, whichever is installed) on this task's configured multiblock
-     * instead of the default "manual complete" click behavior — see class javadoc. No-ops (via
+     * instead of the default "manual complete" click behavior - see class javadoc. No-ops (via
      * {@link RecipeViewerLink#open}) if no viewer is installed or no multiblock is configured yet.
      */
     @Override
@@ -189,11 +189,11 @@ public class MultiblockTask extends AbstractBooleanTask {
                 NameMap.of(definitionIds.contains(multiblockId) ? multiblockId : definitionIds.get(0), definitionIds)
                         .id(ResourceLocation::toString)
                         // Core/activation block icon per entry, same stack JEI/REI/EMI use as this
-                        // structure's catalyst — ItemStack.EMPTY safely renders as no icon.
+                        // structure's catalyst - ItemStack.EMPTY safely renders as no icon.
                         .icon(id -> ItemIcon.getItemIcon(MultiLibAPI.getDefinition(id)
                                 .map(MultiblockRecipeDisplay::catalystStack)
                                 .orElse(ItemStack.EMPTY)))
-                        // "Display Name [namespace:path]" while editing, for disambiguation — the task's
+                        // "Display Name [namespace:path]" while editing, for disambiguation - the task's
                         // own title (getAltTitle) shows the name alone, see multiblockTitleName.
                         .name(MultiblockTask::multiblockListEntryName)
                         .create()
@@ -206,7 +206,7 @@ public class MultiblockTask extends AbstractBooleanTask {
         }
         ResourceLocation currentStateId = requiredState != null && stateIds.contains(requiredState)
                 ? requiredState : NO_STATE;
-        // Deliberately no .icon(...) here — unlike multiblocks, states aren't visually distinguishable
+        // Deliberately no .icon(...) here - unlike multiblocks, states aren't visually distinguishable
         // by a block/item, so no icon is shown at all (not even a placeholder).
         config.add("required_state", new SearchableEnumConfig<>(
                 NameMap.of(NO_STATE, stateIds)
@@ -219,7 +219,7 @@ public class MultiblockTask extends AbstractBooleanTask {
                 .setNameKey("ftbquests.task.multilib.required_state");
     }
 
-    /** For the task's own title: the display name alone if set, otherwise the raw id — never both. */
+    /** For the task's own title: the display name alone if set, otherwise the raw id - never both. */
     private static MutableComponent multiblockTitleName(ResourceLocation id) {
         return MultiLibAPI.getDefinition(id)
                 .flatMap(MultiblockDefinition::getNameTranslationKey)
@@ -227,7 +227,7 @@ public class MultiblockTask extends AbstractBooleanTask {
                 .orElseGet(() -> Component.literal(id.toString()));
     }
 
-    /** For the picker list: "Display Name [namespace:path]" when set, else just the id — disambiguates while editing. */
+    /** For the picker list: "Display Name [namespace:path]" when set, else just the id - disambiguates while editing. */
     private static MutableComponent multiblockListEntryName(ResourceLocation id) {
         return MultiLibAPI.getDefinition(id)
                 .flatMap(MultiblockDefinition::getNameTranslationKey)

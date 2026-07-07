@@ -71,7 +71,7 @@ public class EmiInputBridge {
     /**
      * EMI's {@code dev.emi.emi.api.widget.Widget} exposes only {@code render}/{@code getTooltip}/
      * {@code mouseClicked}/{@code keyPressed} (verified via javap against
-     * emi-neoforge-1.1.24+1.21.1-api.jar — no {@code mouseReleased} member exists on that class).
+     * emi-neoforge-1.1.24+1.21.1-api.jar - no {@code mouseReleased} member exists on that class).
      * So, exactly like the scroll bridge above, actual mouse release is instead observed via
      * NeoForge's own screen event bus: {@code ScreenEvent.MouseButtonReleased.Pre} exists on every
      * NeoForge-hosted screen (confirmed via javap against
@@ -90,7 +90,7 @@ public class EmiInputBridge {
         // Deliberately not bounds-checked against (offsetX/Y, width, height): the press may have
         // started over the model and the release can legitimately land outside it after a drag, and
         // the widget's own pendingClick flag (already false in that case, cleared by onDrag) is what
-        // actually decides whether anything happens — so it's safe, and correct, to just notify every
+        // actually decides whether anything happens - so it's safe, and correct, to just notify every
         // recently-visible widget unconditionally.
         for (WidgetInfo info : visibleWidgets) {
             info.widget.onMouseReleased();

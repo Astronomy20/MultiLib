@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Pushes {@link MultiblockTask} completion the instant a matching structure formation or state change
- * happens — see {@link MultiblockTask} class javadoc for why this is push-only, never polled.
+ * happens - see {@link MultiblockTask} class javadoc for why this is push-only, never polled.
  */
 public final class MultiblockQuestEventListener {
     private MultiblockQuestEventListener() {}
@@ -27,9 +27,9 @@ public final class MultiblockQuestEventListener {
         // Deliberately does NOT assume IDLE here: formation only guarantees IDLE for multiblocks with a
         // real AbstractMultiblockControllerBE (which fires its own MultiblockStateChangedEvent from
         // onStructureFormed -> setState(IDLE), handled below). A JSON-only multiblock (no controller BE)
-        // never reaches any tracked state at all — pushing IDLE here regardless would let a task that
+        // never reaches any tracked state at all - pushing IDLE here regardless would let a task that
         // requires "idle" complete for a structure that structurally has no state concept. Passing null
-        // means "formed, no state info" — matches() only lets that satisfy tasks with no requiredState.
+        // means "formed, no state info" - matches() only lets that satisfy tasks with no requiredState.
         event.getContext().player().ifPresent(player ->
                 pushComplete(player, event.getDefinition().getId(), null));
     }

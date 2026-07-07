@@ -25,19 +25,19 @@ import java.util.Map;
 
 /**
  * Renders a {@link MultiblockDefinition}'s pattern as a small rotating 3D assembly, for use inside
- * a GUI (e.g. a JEI/REI/EMI recipe category). Auto-rotates over time — there is no drag-to-rotate
+ * a GUI (e.g. a JEI/REI/EMI recipe category). Auto-rotates over time - there is no drag-to-rotate
  * input handling, keeping this self-contained and trivial to call from any draw() method.
  *
  * <p>Uses {@link BlockRenderDispatcher#renderSingleBlock} (the same level-independent path vanilla
  * uses for item icons), so blocks render in isolation without neighbor-aware ambient occlusion or
- * face culling — acceptable for a preview, not meant to look identical to in-world rendering.
+ * face culling - acceptable for a preview, not meant to look identical to in-world rendering.
  */
 @OnlyIn(Dist.CLIENT)
 public final class MultiblockStructurePreviewRenderer {
 
     private MultiblockStructurePreviewRenderer() {}
 
-    /** Identifies one cell of the pattern grid — returned by {@link #pick} and accepted by {@link #render} to highlight it red. */
+    /** Identifies one cell of the pattern grid - returned by {@link #pick} and accepted by {@link #render} to highlight it red. */
     public record BlockHit(int layerIndex, int row, int col, char symbol) {}
 
     /**
@@ -123,14 +123,14 @@ public final class MultiblockStructurePreviewRenderer {
      * Finds which pattern cell, if any, projects under (mouseX, mouseY) given the same camera
      * parameters {@link #render} would use. Among every cell whose screen-projected center falls
      * within a hit radius proportional to the current block size on screen, picks the FRONTMOST one
-     * (largest resulting depth after the full rotation/translation chain — empirically verified: with
+     * (largest resulting depth after the full rotation/translation chain - empirically verified: with
      * this pose-stack chain, larger transformed Z is nearer the viewer, not smaller as first assumed)
-     * rather than the one whose center is nominally closest in 2D — with rotation applied, a block
+     * rather than the one whose center is nominally closest in 2D - with rotation applied, a block
      * further back can easily have a center that lines up slightly better in screen-space than the
      * block actually in front of it, which is what previously made the pick feel arbitrary ("sometimes
      * the front one, sometimes the one behind"), and picking by the wrong depth sign made it worse
      * (consistently selecting the occluded block behind whatever was actually visible/clicked).
-     * Independent of any live {@link GuiGraphics}/pose stack — builds its own matrix replicating
+     * Independent of any live {@link GuiGraphics}/pose stack - builds its own matrix replicating
      * render()'s chain.
      */
     @Nullable
@@ -192,9 +192,9 @@ public final class MultiblockStructurePreviewRenderer {
                     if (dist2 > hitRadius2) continue;
 
                     // Among every cell under the cursor, the frontmost one (largest depth in this
-                    // convention — verified empirically: the initial "smaller Z = nearer camera"
+                    // convention - verified empirically: the initial "smaller Z = nearer camera"
                     // assumption was backwards, it was picking the block visually behind/occluded
-                    // ones instead of the one actually clicked) is the one actually visible/clicked —
+                    // ones instead of the one actually clicked) is the one actually visible/clicked -
                     // not whichever has the nominally closest projected center, which rotation can
                     // easily make a background block win.
                     if (center.z() > bestDepth) {

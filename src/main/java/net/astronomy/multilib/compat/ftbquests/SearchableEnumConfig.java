@@ -13,7 +13,7 @@ import net.minecraft.util.Mth;
 /**
  * {@link EnumConfig} always opens FTB Library's searchable selection popup on click, instead of
  * {@code EnumConfig}'s own default: cycle to the next/previous value on left/right click, only falling
- * back to the popup once an enum has more than 16 entries (or Ctrl is held) — see
+ * back to the popup once an enum has more than 16 entries (or Ctrl is held) - see
  * {@code EnumConfig#onClicked} upstream. MultiLib's multiblock/state pickers want the searchable popup
  * unconditionally, since a modpack may only have a handful of multiblocks registered.
  * <p>

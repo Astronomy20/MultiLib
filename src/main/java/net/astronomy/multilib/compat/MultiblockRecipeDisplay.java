@@ -13,7 +13,7 @@ import java.util.List;
  * {@code inputs} lists a representative stack for every distinct block the pattern requires (so
  * "what uses this item" lookups find the structure from any of its component blocks), and
  * {@code outputs} is the core/activation block alone (so "what produces this item" / right-click
- * "Recipes" lookups resolve to exactly this one structure, not the whole category — see
+ * "Recipes" lookups resolve to exactly this one structure, not the whole category - see
  * {@link #catalystStack}). Both are consumed identically by all three viewers; see
  * {@code compat/jei/MultiblockRecipeCategory}, {@code compat/rei/MultiblockReiPlugin}, and
  * {@code compat/emi/MultiblockEmiPlugin}.
@@ -35,7 +35,7 @@ public record MultiblockRecipeDisplay(
     }
 
     /**
-     * A representative {@link ItemStack} for this definition's core/activation block — the item
+     * A representative {@link ItemStack} for this definition's core/activation block - the item
      * that uniquely identifies this specific structure (used as this display's sole {@link #outputs}
      * entry, and to register a recipe-browser "catalyst"/"workstation" so the category is reachable
      * from REI/EMI/JEI's item-driven UIs at all, not just internally registered).
