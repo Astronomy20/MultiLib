@@ -50,8 +50,21 @@ public class BlockBreakHandler {
 
         MultiblockBrokenContext brokenCtx = new MultiblockBrokenContext(ctx, removedPos, reason);
         MultiblockRegistry.get(instance.getDefinitionId()).ifPresent(def -> {
+            // Mirrors the true-flip on formation (see BlockActivationHandler#handleFormation) - applied
+            // before the broken callbacks below fire, and before the block at removedPos even finishes
+            // breaking (BreakEvent hasn't completed the removal yet), so this simply gets overwritten by
+            // the actual break right after; harmless, not worth special-casing removedPos out.
+            def.getFormedProperty().ifPresent(propertyName -> {
+                for (BlockPos pos : instance.getPositions()) {
+                    BlockActivationHandler.setFormedPropertyIfPresent(level, pos, propertyName, false);
+                }
+            });
             for (MultiblockBrokenCallback cb : def.getBrokenCallbacks()) {
-                cb.onBroken(brokenCtx);
+                try {
+                    cb.onBroken(brokenCtx);
+                } catch (Exception e) {
+                    MultiLib.LOGGER.error("[MultiLib] onBroken callback for '{}' threw", def.getId(), e);
+                }
             }
             if (def.hasCore()) {
                 instance.getCorePos().ifPresent(corePos -> {

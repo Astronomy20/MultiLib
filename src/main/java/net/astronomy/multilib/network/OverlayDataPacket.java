@@ -12,7 +12,8 @@ import java.util.List;
  * Sent server → client with ghost block positions for the overlay.
  * activeMode: -1 = disabled, 0 = full render, N >= 1 = show only layer N
  */
-public record OverlayDataPacket(List<GhostBlockData> blocks, int totalLayers, int activeMode, boolean debugTiming)
+public record OverlayDataPacket(List<GhostBlockData> blocks, int totalLayers, int activeMode, boolean debugTiming,
+                                 int remainingSeconds)
         implements CustomPacketPayload {
 
     public static final Type<OverlayDataPacket> TYPE =
@@ -23,6 +24,7 @@ public record OverlayDataPacket(List<GhostBlockData> blocks, int totalLayers, in
         ByteBufCodecs.VAR_INT, OverlayDataPacket::totalLayers,
         ByteBufCodecs.VAR_INT, OverlayDataPacket::activeMode,
         ByteBufCodecs.BOOL, OverlayDataPacket::debugTiming,
+        ByteBufCodecs.VAR_INT, OverlayDataPacket::remainingSeconds,
         OverlayDataPacket::new
     );
 

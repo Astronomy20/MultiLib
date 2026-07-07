@@ -18,8 +18,8 @@ import java.util.List;
 /**
  * Answers the client's hover-driven "can my held item be auto-placed here" query with the single
  * position where the next Ctrl+Right-click would place the held item (see
- * {@link AutoPlacePreviewDataPacket}) — not every remaining position of that type, so the preview
- * matches what one auto-place click actually does. Purely read-only — no blocks are placed and no
+ * {@link AutoPlacePreviewDataPacket}) - not every remaining position of that type, so the preview
+ * matches what one auto-place click actually does. Purely read-only - no blocks are placed and no
  * items are consumed.
  */
 public class AutoPlacePreviewRequestHandler {
@@ -39,7 +39,7 @@ public class AutoPlacePreviewRequestHandler {
 
     /**
      * (Re)computes and sends the auto-place preview for {@code corePos} right away, instead of
-     * waiting for the client's next hover poll — used right after {@link AutoPlaceRequestHandler}
+     * waiting for the client's next hover poll - used right after {@link AutoPlaceRequestHandler}
      * places a block, so the overlay immediately jumps to the next missing position (or clears once
      * the structure is complete) rather than showing the just-filled spot until the next poll tick.
      */

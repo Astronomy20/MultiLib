@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceLocation;
  * Sent client → server to request or advance the ghost overlay for a multiblock.
  * mode: 0 = advance cycle (next state), -1 = disable
  * faceOrdinal: {@link Direction#ordinal()} of the core face that was shift-clicked, or -1 if unknown/
- * not applicable — lets the overlay preview a different permitted rotation depending on which face
+ * not applicable - lets the overlay preview a different permitted rotation depending on which face
  * was clicked, for definitions that allow more than the default orientation.
  */
 public record RequestOverlayPacket(BlockPos corePos, int mode, int faceOrdinal) implements CustomPacketPayload {

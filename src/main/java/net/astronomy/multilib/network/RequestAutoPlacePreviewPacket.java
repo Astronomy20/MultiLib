@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * Sent client -> server while the player looks at an auto-place-overlay-enabled core block of an
  * unformed structure, asking which missing positions the player's currently held item could fill.
- * Unlike {@link RequestAutoPlacePacket}, this doesn't place anything — it's re-sent periodically
+ * Unlike {@link RequestAutoPlacePacket}, this doesn't place anything - it's re-sent periodically
  * while hovering (see the client-side hover handler) so the preview stays in sync with inventory
  * and world changes, and a corePos of {@link BlockPos#ZERO} with {@code active=false} clears it.
  */

@@ -12,8 +12,10 @@ public record GhostBlockData(BlockPos pos, BlockState expectedState, Status stat
     /**
      * CORE: the structure's core/main block position, always highlighted even when already correct.
      * PLACEABLE: a missing position the player's currently held item can fill via auto-place.
+     * WRONG_STATE: the right block is already there, but with the wrong blockstate properties (e.g.
+     * facing) - as opposed to WRONG, an entirely different block.
      */
-    public enum Status { MISSING, WRONG, CORE, PLACEABLE }
+    public enum Status { MISSING, WRONG, WRONG_STATE, CORE, PLACEABLE }
 
     public static final StreamCodec<ByteBuf, GhostBlockData> STREAM_CODEC = StreamCodec.composite(
         BlockPos.STREAM_CODEC,

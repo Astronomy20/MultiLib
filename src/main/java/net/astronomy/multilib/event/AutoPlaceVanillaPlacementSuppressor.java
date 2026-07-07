@@ -9,7 +9,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
  * Cancels the server-side {@link PlayerInteractEvent.RightClickBlock} that the vanilla client always
- * fires alongside a Ctrl+Right-click on an auto-place core — the client's own cancellation of that
+ * fires alongside a Ctrl+Right-click on an auto-place core - the client's own cancellation of that
  * event (see {@code AutoPlaceInputHandler}) only stops client-side prediction, not the
  * {@code ServerboundUseItemOnPacket} the game unconditionally sends, so without this the server would
  * go on to place the held item's block wherever the player was aiming, on top of whatever the

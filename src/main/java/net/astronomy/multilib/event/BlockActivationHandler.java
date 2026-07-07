@@ -24,6 +24,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
@@ -95,6 +97,16 @@ public class BlockActivationHandler {
         WorldMultiblockTracker tracker = WorldMultiblockTracker.get(level);
         tracker.register(instance, definition);
 
+        // Applied before the formed callbacks below fire, so that any callback (Java/JSON/KubeJS) that
+        // reads world state observes the structure already in its final "formed" blockstate rather than
+        // catching it mid-flip. See MultiblockBuilder#formedProperty for the footgun this can create if
+        // a pattern ingredient matches on the same property.
+        definition.getFormedProperty().ifPresent(propertyName -> {
+            for (BlockPos pos : instance.getPositions()) {
+                setFormedPropertyIfPresent(level, pos, propertyName, true);
+            }
+        });
+
         // Formation always drives the controller to IDLE (see AbstractMultiblockControllerBE#onStructureFormed),
         // so recording IDLE here also covers "formed at least once" progression semantics. Anonymous
         // formations (e.g. a dispenser placing the activation block) have no formedBy and are skipped.
@@ -105,7 +117,15 @@ public class BlockActivationHandler {
 
         MultiblockFormedContext formedCtx = new MultiblockFormedContext(ctx);
         for (MultiblockFormedCallback cb : definition.getFormedCallbacks()) {
-            cb.onFormed(formedCtx);
+            try {
+                cb.onFormed(formedCtx);
+            } catch (Exception e) {
+                // A callback throwing (Java, JSON validator, or a KubeJS .onFormed(...) script bug)
+                // must not stop the structure from finishing formation, and must not stay silent -
+                // without this, a script exception here could otherwise surface as "nothing happened"
+                // with no indication why.
+                MultiLib.LOGGER.error("[MultiLib] onFormed callback for '{}' threw", definition.getId(), e);
+            }
         }
 
         if (definition.hasCore()) {
@@ -132,7 +152,7 @@ public class BlockActivationHandler {
         List<MultiblockDefinition> candidates = MultiblockRegistry.getCandidatesFor(block);
         BlockState state = level.getBlockState(pos);
         for (MultiblockDefinition definition : candidates) {
-            // Accept either the activation block or the core block at pos — they're often the same
+            // Accept either the activation block or the core block at pos - they're often the same
             // symbol, but a structure can split them (e.g. activation = placed last, core = controller).
             if (!definition.matchesActivationOrCore(state)) continue;
 
@@ -145,5 +165,21 @@ public class BlockActivationHandler {
                 break;
             }
         }
+    }
+
+    /**
+     * Flips {@code propertyName} to {@code value} on the block currently at {@code pos}, if (and only
+     * if) that block's state definition actually declares a {@link BooleanProperty} of that name.
+     * Silently does nothing for an unloaded position or a block with no such property - see
+     * {@link net.astronomy.multilib.api.definition.MultiblockBuilder#formedProperty} for why this must
+     * never crash on an arbitrary member block that doesn't opt in.
+     */
+    static void setFormedPropertyIfPresent(ServerLevel level, BlockPos pos, String propertyName, boolean value) {
+        if (!level.isLoaded(pos)) return;
+        BlockState state = level.getBlockState(pos);
+        Property<?> property = state.getBlock().getStateDefinition().getProperty(propertyName);
+        if (!(property instanceof BooleanProperty boolProperty)) return;
+        if (state.getValue(boolProperty) == value) return;
+        level.setBlock(pos, state.setValue(boolProperty, value), 3);
     }
 }

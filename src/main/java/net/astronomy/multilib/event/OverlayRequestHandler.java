@@ -42,18 +42,21 @@ public class OverlayRequestHandler {
     private static int tickCounter = 0;
 
     /**
-     * @param activationTimeMs wall-clock time (ms) when this overlay session was first opened; never
-     *                         updated on layer-cycle clicks, only on fresh activation (different core
-     *                         or no prior state). Used to auto-disable after the configured duration,
-     *                         independently of the live-refresh loop that would otherwise reset the
-     *                         client-side timeout on every packet.
+     * @param activationGameTime the level's game time (in ticks, see {@link ServerLevel#getGameTime()})
+     *                           when this overlay session was first opened; never updated on
+     *                           layer-cycle clicks, only on fresh activation (different core or no
+     *                           prior state). Used to auto-disable after the configured duration,
+     *                           independently of the live-refresh loop that would otherwise reset the
+     *                           client-side timeout on every packet. Game time is used instead of
+     *                           wall-clock time so that pausing the game (integrated server) freezes
+     *                           the countdown instead of letting it keep expiring in the background.
      */
     private record PlayerOverlayState(BlockPos corePos, int currentMode, String axis, int rotation,
-                                      long activationTimeMs) {}
+                                      long activationGameTime) {}
 
     /**
      * The (axis, rotation) a player currently has previewed via the ghost overlay on the given core,
-     * if any — used by auto-place to place blocks in the same orientation the player is looking at
+     * if any - used by auto-place to place blocks in the same orientation the player is looking at
      * instead of silently assuming the default upright placement.
      */
     static StructureOrientation.Orientation getActiveOrientation(UUID playerId, BlockPos corePos) {
@@ -70,7 +73,7 @@ public class OverlayRequestHandler {
 
             if (packet.mode() == -1) {
                 PLAYER_STATES.remove(player.getUUID());
-                PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+                PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false, 0));
                 return;
             }
 
@@ -89,7 +92,7 @@ public class OverlayRequestHandler {
                 nextMode = 0;
             }
 
-            // Re-clicking the same core only cycles through layers/full view — the orientation chosen
+            // Re-clicking the same core only cycles through layers/full view - the orientation chosen
             // on the activating click must be kept fixed for as long as the overlay stays open on
             // that core (regardless of which face is clicked to cycle); only a fresh activation
             // (different core, or no overlay active yet) re-derives it.
@@ -100,7 +103,7 @@ public class OverlayRequestHandler {
                 rotation = current.rotation();
             } else {
                 // A core block declaring .mainFace() (BlockDefinitionBuilder) has a meaningful placed
-                // facing of its own (e.g. a furnace-like FACING property) — the preview must stay
+                // facing of its own (e.g. a furnace-like FACING property) - the preview must stay
                 // pinned to that, ignoring the player's look direction entirely. Otherwise, the face
                 // supplied by the client already encodes the player's facing (see
                 // GhostOverlayInputHandler), so the existing face-based derivation still applies.
@@ -123,19 +126,19 @@ public class OverlayRequestHandler {
                 }
             }
 
-            // Preserve the original activation time when cycling layers on the same core — the
+            // Preserve the original activation time when cycling layers on the same core - the
             // duration timeout must count from when the overlay was first opened, not from the most
             // recent layer-cycle click (which would keep resetting it indefinitely).
-            long activationTimeMs = (current != null && current.corePos().equals(corePos))
-                    ? current.activationTimeMs()
-                    : System.currentTimeMillis();
-            PLAYER_STATES.put(player.getUUID(), new PlayerOverlayState(corePos, nextMode, axis, rotation, activationTimeMs));
-            sendOverlayUpdate(player, level, corePos, definition, nextMode, totalLayers, axis, rotation);
+            long activationGameTime = (current != null && current.corePos().equals(corePos))
+                    ? current.activationGameTime()
+                    : level.getGameTime();
+            PLAYER_STATES.put(player.getUUID(), new PlayerOverlayState(corePos, nextMode, axis, rotation, activationGameTime));
+            sendOverlayUpdate(player, level, corePos, definition, nextMode, totalLayers, axis, rotation, activationGameTime);
         });
     }
 
     /**
-     * Immediately disables any active ghost overlay anchored on the core that just formed — e.g. the
+     * Immediately disables any active ghost overlay anchored on the core that just formed - e.g. the
      * structure was completed by placing its last block while a player had the overlay open on it.
      * Without this, the overlay would just keep showing "0 mismatches" (an empty but still-active
      * preview) until the next {@link #REFRESH_INTERVAL_TICKS} periodic refresh or the player manually
@@ -150,7 +153,7 @@ public class OverlayRequestHandler {
                 PLAYER_STATES.remove(entry.getKey());
                 ServerPlayer player = level.getServer().getPlayerList().getPlayer(entry.getKey());
                 if (player != null) {
-                    PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+                    PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false, 0));
                 }
             }
         });
@@ -163,7 +166,7 @@ public class OverlayRequestHandler {
      */
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
-        // This fires for the client's ClientLevel too (Level#getServer() is null there) — only the
+        // This fires for the client's ClientLevel too (Level#getServer() is null there) - only the
         // integrated/dedicated ServerLevel tick is relevant here.
         if (!(event.getLevel() instanceof ServerLevel)) return;
         if (PLAYER_STATES.isEmpty()) return;
@@ -176,34 +179,36 @@ public class OverlayRequestHandler {
             ServerLevel level = player.serverLevel();
             BlockPos corePos = entry.getValue().corePos();
 
-            // Session duration expired — stop refreshing so the server stops sending packets and the
+            // Session duration expired - stop refreshing so the server stops sending packets and the
             // client-side timeout can fire. This is the primary mechanism: the client's own fallback
             // timeout (GhostOverlayState.isActive) would also fire eventually, but only after the
             // server has already stopped sending updates (which reset the client timer each time).
-            long durationMs = CommonConfig.GHOST_OVERLAY_DURATION_SECONDS.get() * 1000L;
-            if (System.currentTimeMillis() - entry.getValue().activationTimeMs() > durationMs) {
+            // Measured in game ticks (not wall-clock time) so pausing the integrated server (single
+            // player) freezes the countdown instead of letting it expire while the game is paused.
+            long durationTicks = CommonConfig.GHOST_OVERLAY_DURATION_SECONDS.get() * 20L;
+            if (level.getGameTime() - entry.getValue().activationGameTime() > durationTicks) {
                 PLAYER_STATES.remove(entry.getKey());
-                PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+                PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false, 0));
                 continue;
             }
 
-            // The block that triggered the overlay is gone (broken) — disable instead of refreshing
+            // The block that triggered the overlay is gone (broken) - disable instead of refreshing
             // against an empty position.
             if (level.getBlockState(corePos).isAir()) {
                 PLAYER_STATES.remove(entry.getKey());
-                PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+                PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false, 0));
                 continue;
             }
 
             MultiblockDefinition definition = findDefinitionAt(level, corePos);
             int totalLayers = definition != null ? definition.getLayerCount() : 1;
             sendOverlayUpdate(player, level, corePos, definition, entry.getValue().currentMode(), totalLayers,
-                    entry.getValue().axis(), entry.getValue().rotation());
+                    entry.getValue().axis(), entry.getValue().rotation(), entry.getValue().activationGameTime());
         }
     }
 
     /**
-     * Immediately drops a disconnecting player's overlay state — otherwise the entry lingers in
+     * Immediately drops a disconnecting player's overlay state - otherwise the entry lingers in
      * {@link #PLAYER_STATES} until the periodic {@link #onLevelTick} check notices the configured
      * {@link CommonConfig#GHOST_OVERLAY_DURATION_SECONDS} has elapsed, which is bounded but avoidable.
      */
@@ -233,19 +238,24 @@ public class OverlayRequestHandler {
 
     private static void sendOverlayUpdate(ServerPlayer player, ServerLevel level, BlockPos corePos,
                                            MultiblockDefinition definition, int mode, int totalLayers,
-                                           String axis, int rotation) {
+                                           String axis, int rotation, long activationGameTime) {
         List<GhostBlockData> ghostData = calculateGhostBlocks(level, corePos, definition, mode, axis, rotation);
         if (ghostData == null) {
-            // null (as opposed to an empty list) signals the structure is already fully formed —
+            // null (as opposed to an empty list) signals the structure is already fully formed -
             // disable outright instead of leaving an "active but empty" overlay. This is a defensive
             // fallback alongside onMultiblockFormed's immediate disable, for cases that path doesn't
             // cover (e.g. the overlay is (re)activated by clicking a core that's already formed).
             PLAYER_STATES.remove(player.getUUID());
-            PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false));
+            PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false, 0));
             return;
         }
-        boolean debugTiming = definition != null && definition.isGhostOverlayDebug();
-        PacketDistributor.sendToPlayer(player, new OverlayDataPacket(ghostData, totalLayers, mode, debugTiming));
+        boolean debugTiming = CommonConfig.DEV_MODE.get() && definition != null && definition.isGhostOverlayDebug();
+        // Ticks (not wall-clock) so the displayed countdown freezes along with the rest of the timer
+        // while the integrated server is paused (see activationGameTime's javadoc above).
+        long durationTicks = CommonConfig.GHOST_OVERLAY_DURATION_SECONDS.get() * 20L;
+        long elapsedTicks = level.getGameTime() - activationGameTime;
+        int remainingSeconds = (int) Math.max(0, Math.ceil((durationTicks - elapsedTicks) / 20.0));
+        PacketDistributor.sendToPlayer(player, new OverlayDataPacket(ghostData, totalLayers, mode, debugTiming, remainingSeconds));
     }
 
     // The ghost overlay is only previewable from the core block (see GhostOverlayInputHandler), so
@@ -282,7 +292,7 @@ public class OverlayRequestHandler {
 
         for (int layerIdx = 0; layerIdx < layers.size(); layerIdx++) {
             // mode counts up from the bottom (mode=1 = bottommost, displayed "1/N") while layers[]
-            // is declared top-to-bottom (index 0 = topmost) — convert here.
+            // is declared top-to-bottom (index 0 = topmost) - convert here.
             if (mode > 0 && mode <= layers.size() && layerIdx != (layers.size() - mode)) continue;
 
             List<String> layer = layers.get(layerIdx);
@@ -317,8 +327,13 @@ public class OverlayRequestHandler {
                     BlockState actual = level.getBlockState(checkPos);
                     if (actual.isAir()) {
                         ghostData.add(new GhostBlockData(checkPos, expectedState, GhostBlockData.Status.MISSING));
-                    } else if (!ingredient.matches(actual)) {
-                        ghostData.add(new GhostBlockData(checkPos, expectedState, GhostBlockData.Status.WRONG));
+                    } else if (!ingredient.matches(level, checkPos, actual)) {
+                        // Right block, wrong blockstate property (e.g. facing) vs. an entirely
+                        // different block - see BlockIngredient#matchesBlockType.
+                        GhostBlockData.Status status = ingredient.matchesBlockType(actual)
+                                ? GhostBlockData.Status.WRONG_STATE
+                                : GhostBlockData.Status.WRONG;
+                        ghostData.add(new GhostBlockData(checkPos, expectedState, status));
                     } else if (alwaysHighlight) {
                         ghostData.add(new GhostBlockData(checkPos, expectedState, GhostBlockData.Status.CORE));
                     }

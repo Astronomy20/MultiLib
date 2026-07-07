@@ -37,7 +37,7 @@ public class AutoPlaceRequestHandler {
 
     /**
      * The client always sends the vanilla {@code ServerboundUseItemOnPacket} for a Ctrl+Right-click
-     * too (cancelling the client-side event only skips client-side prediction, not the packet — see
+     * too (cancelling the client-side event only skips client-side prediction, not the packet - see
      * {@code MultiPlayerGameMode#useItemOn}), so without this the server would place the held item's
      * block wherever the player is aiming, in addition to the auto-place system's own placement. Since
      * this packet is always sent to the server before that vanilla packet (both queued on the same
@@ -53,7 +53,7 @@ public class AutoPlaceRequestHandler {
     }
 
     /**
-     * Places exactly one missing block per request — one Ctrl+Right-click on the core places one
+     * Places exactly one missing block per request - one Ctrl+Right-click on the core places one
      * block, it does not queue up and finish the whole structure by itself. If the player is holding
      * an item, only a missing position that item can fill is considered, so holding something that
      * isn't part of the structure (an "external" item) places nothing.
@@ -66,7 +66,7 @@ public class AutoPlaceRequestHandler {
             BlockPos corePos = packet.corePos();
 
             // Always suppress the paired vanilla placement, even if nothing ends up being auto-placed
-            // below (e.g. structure already complete) — the player Ctrl+clicked an auto-place core,
+            // below (e.g. structure already complete) - the player Ctrl+clicked an auto-place core,
             // so the held item must never fall through to a normal placement on that click.
             PENDING_VANILLA_SUPPRESSION.put(player.getUUID(), corePos);
 
@@ -82,7 +82,7 @@ public class AutoPlaceRequestHandler {
 
             Candidate target = null;
             if (packet.hasOverlayTarget()) {
-                // The overlay showed this exact position — place there rather than wherever the
+                // The overlay showed this exact position - place there rather than wherever the
                 // player's current facing would recompute, so the block lands where the overlay was.
                 for (Candidate candidate : candidates) {
                     if (!candidate.pos().equals(packet.overlayTargetPos())) continue;
@@ -101,7 +101,13 @@ public class AutoPlaceRequestHandler {
 
             if (!tryPlace(player, level, target.pos(), target.state())) return;
 
-            if (PatternMatcher.matches(level, corePos, definition) instanceof MatchResult.Success) {
+            // Respect formationMode the same way placing the last block by hand would: auto-place
+            // finishing the pattern must not form a WRENCH-only structure on its own, or the wrench
+            // requirement is pointless busywork the player can trivially route around. See the
+            // matching allowsWrench() check in WrenchInteractionHandler.attemptWrenchInteraction -
+            // triggerFormationAt() itself doesn't check formationMode, callers are responsible for it.
+            if (definition.getFormationMode().allowsAutomatic()
+                    && PatternMatcher.matches(level, corePos, definition) instanceof MatchResult.Success) {
                 BlockActivationHandler.triggerFormationAt(level, corePos, player);
             }
 
@@ -115,7 +121,7 @@ public class AutoPlaceRequestHandler {
     /**
      * Every missing/empty position of {@code definition}'s pattern that isn't yet filled, in the
      * structure's current orientation (reusing the player's active ghost-overlay orientation if any,
-     * else falling back to their facing) — sorted bottom-to-top by layer, then within a layer from the
+     * else falling back to their facing) - sorted bottom-to-top by layer, then within a layer from the
      * corner nearest the player's left hand to the one farthest on their right, so blocks that need
      * support from below (or an already-placed neighbor) never get placed before it exists.
      *
@@ -239,7 +245,7 @@ public class AutoPlaceRequestHandler {
     }
 
     // Auto-place sets the block directly rather than going through the normal item-use pipeline, so
-    // it never gets the vanilla placement sound for free — play it manually (passing null for the
+    // it never gets the vanilla placement sound for free - play it manually (passing null for the
     // player so it's audible to the placer too, matching how e.g. dispensers play placement sounds).
     private static void playPlaceSound(ServerLevel level, BlockPos pos, BlockState state, ServerPlayer player) {
         SoundType soundType = state.getSoundType(level, pos, player);
