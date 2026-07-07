@@ -9,7 +9,7 @@ import net.neoforged.bus.api.Event;
 
 /**
  * Fired whenever a formed multiblock's controller transitions from one {@link MultiblockState} to
- * another. Unlike {@link MultiblockFormedEvent}, this is not cancellable — the state has already
+ * another. Unlike {@link MultiblockFormedEvent}, this is not cancellable - the state has already
  * changed by the time this event is posted, so there's nothing left to veto.
  */
 public class MultiblockStateChangedEvent extends Event {
