@@ -27,6 +27,8 @@ nav:
   - Rotation & Matching: Rotation-And-Matching.md
   - Directional Cores Guide: Directional-Cores-Guide.md
   - Advanced Features: Advanced-Features.md
+  - KubeJS Integration: KubeJS-Integration.md
+  - Dev Tools: Dev-Tools.md
   - API Reference:
       - MultiLibAPI: api-reference/MultiLibAPI.md
       - MultiblockBuilder: api-reference/MultiblockBuilder.md
@@ -40,6 +42,11 @@ nav:
       - Multiblock Composition: api-reference/MultiblockComposition.md
       - Multiblock Ability: api-reference/MultiblockAbility.md
       - Multiblock Tier: api-reference/MultiblockTier.md
+      - Capability Components: api-reference/Components.md
+      - Ports (Hatches): api-reference/Ports.md
+      - Process Engine: api-reference/Process-Engine.md
+      - Control & Commands: api-reference/Control-And-Commands.md
+      - HUD Providers: api-reference/HUD-Providers.md
       - RotationUtils: api-reference/RotationUtils.md
   - FAQ & Troubleshooting: FAQ-Troubleshooting.md
   - Migrating from PatternBuilder: Migrating-From-PatternBuilder.md

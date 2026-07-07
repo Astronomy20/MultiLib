@@ -150,6 +150,18 @@ If the core's `BlockDefinition` has `.mainFace()` set (see the [Directional Core
 
 `MultiLibAPI.block(block).ioPort().build()` marks a block as an IO port: item/fluid/energy `BlockCapability` requests on it are transparently forwarded to the controller block entity of whichever multiblock instance currently contains it (`IOPortCapabilityHandler`, registered against NeoForge's `RegisterCapabilitiesEvent`). This lets you place a small, visually distinct "input/output" block anywhere in a large structure and have it act as a proxy for the actual controller's inventory/energy/fluid handlers, without writing the capability-forwarding logic yourself.
 
+## Built-in machine toolkit
+
+Beyond structure detection, MultiLib ships the building blocks a processing machine typically needs, each documented in its own reference page:
+
+- [Capability components](api-reference/Components.md) - energy/fluid/item buffers for controller block entities, with change hooks, NBT persistence, and one-line capability registration; plus `ContentCache` for Mekanism-style content survival across unform/reform.
+- [Ports (hatches)](api-reference/Ports.md) - `AbstractPortBlockEntity`/`AbstractPortBlock` base classes for dedicated port blocks with their own block entity. This complements the simpler `ioPort()` flag above: `ioPort()` forwards capabilities from any plain block MultiLib tracks, while the port base classes give the port its own BE (persistent controller link, custom behavior, typed controller access).
+- [Process engine](api-reference/Process-Engine.md) - a reusable job state machine (progress, one-shot input consumption/output production, pause conditions) driven from your tick callback.
+- [Control helpers & admin commands](api-reference/Control-And-Commands.md) - redstone control modes, comparator scaling, ownership, and the `/multilib` command tree.
+- [HUD providers](api-reference/HUD-Providers.md) - hover-info on Jade/The One Probe from a single viewer-agnostic provider API, with built-in providers for formed status, progress, tiers, and buffers.
+
+All of it is mechanism-only and opt-in: nothing sends chat messages, plays sounds, or blocks players unless your mod explicitly does.
+
 ## Wrench tool
 
 A "wrench" is any `Item` implementing the marker interface `IMultiblockWrench` (single method: `useOn(UseOnContext)`, since it extends the normal item-use contract). **MultiLib ships no wrench item of its own** - implement the interface on your own tool. `ExampleWrenchItem` (`net.astronomy.multilib.example`) is a full reference implementation covering:

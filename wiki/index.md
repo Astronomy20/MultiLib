@@ -22,6 +22,10 @@ Building a multiblock structure by hand usually means reimplementing the same ha
 - **Ghost-overlay preview & auto-place** - players can preview a structure in the world before placing it and place the remaining blocks with a single tool.
 - **JSON/datapack definitions** - structures can also be defined data-driven.
 - **Recipe-browser integration** - JEI, REI, EMI, Patchouli and GuideME support out of the box.
+- **Built-in machine toolkit** - energy/fluid/item buffer components with content caching, port/hatch base classes that proxy the controller's capabilities, and a reusable process engine (progress, one-shot input/output, pause conditions).
+- **Control helpers & admin commands** - redstone control modes, comparator output scaling, ownership tracking, `/multilib` commands.
+- **Hover-info (Jade/The One Probe)** - formed status, progress bars, tier/buffer readouts on hover via a viewer-agnostic provider API; only a minimal default line unless the dev opts in.
+- **Tier stat maps & formed-property** - attach numeric stats to tiers and read them back from the formed structure; flip a blockstate property on member blocks on formation.
 
 ## Quick example
 
@@ -56,7 +60,8 @@ The full API reference and guides live in the [wiki](index.md):
 - [Rotation & Matching Deep Dive](Rotation-And-Matching.md) - how the matchers actually work.
 - [Advanced Features](Advanced-Features.md) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
 - [KubeJS Integration](KubeJS-Integration.md) - creating and modifying multiblocks from KubeJS scripts, wrench events, `MultiblockUtils`.
-- [API Reference](api-reference/MultiLibAPI.md) - full method-by-method reference, including [multiblock states & progress tracking](api-reference/Multiblock-States-And-Progress.md), [structure composition](api-reference/MultiblockComposition.md), [part abilities](api-reference/MultiblockAbility.md), and [tiers](api-reference/MultiblockTier.md).
+- [Dev Tools](Dev-Tools.md) - the in-game dev block/wrench for scanning a built structure and exporting it as a Java scaffold, KubeJS script, or datapack JSON.
+- [API Reference](api-reference/MultiLibAPI.md) - full method-by-method reference, including [multiblock states & progress tracking](api-reference/Multiblock-States-And-Progress.md), [structure composition](api-reference/MultiblockComposition.md), [part abilities](api-reference/MultiblockAbility.md), [tiers](api-reference/MultiblockTier.md), [capability components](api-reference/Components.md), [ports](api-reference/Ports.md), the [process engine](api-reference/Process-Engine.md), [control helpers & commands](api-reference/Control-And-Commands.md), and [HUD providers](api-reference/HUD-Providers.md).
 - [FAQ & Troubleshooting](FAQ-Troubleshooting.md)
 
 ## Compatibility

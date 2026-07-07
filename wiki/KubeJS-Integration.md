@@ -76,6 +76,8 @@ MultiblockEvents.modify(event => {
 
 Internally this snapshots the existing `MultiblockDefinition` via `MultiblockBuilder#toBuilder()`, hands your callback the resulting mutable builder, rebuilds it, and swaps it into `MultiblockRegistry` in place - the original definition (JSON or Java) is unaffected until your callback's rebuild succeeds.
 
+Because everything flows through `toBuilder()`, newer builder features are scriptable for free: `modify` can call [`formedProperty(...)`](api-reference/MultiblockBuilder.md#formed-state-property) and the [tier stat-map overloads / `tierStats(...)`](api-reference/MultiblockBuilder.md#tiers) on an existing definition just like any other builder method.
+
 ## Wrench interaction events
 
 ```js

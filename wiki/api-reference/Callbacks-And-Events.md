@@ -2,7 +2,7 @@
 
 # Callbacks & Events
 
-Package: `net.astronomy.multilib.api.callback` (callbacks/contexts), `net.astronomy.multilib.api.validation` (`ValidationResult`), `net.astronomy.multilib.api.event` (NeoForge events)
+Package: `net.astronomy.multilib.api.callback` (callbacks/contexts), `net.astronomy.multilib.api.validation` (`ValidationResult`), `net.astronomy.multilib.api.event` (NeoForge events), `net.astronomy.multilib.api.tool` (`WrenchResult`)
 
 ## Lifecycle overview
 
@@ -178,6 +178,48 @@ public class MultiblockStateChangedEvent extends Event {
 ```
 
 **Not cancellable.** Posted whenever a formed multiblock's `AbstractMultiblockControllerBE` transitions from one `MultiblockState` to another via `setState(...)` - including the automatic `UNFORMED`→`IDLE` transition on formation. Only fires for multiblocks with a real controller block entity and a resolvable formed instance; a JSON-only multiblock (no controller) never posts this event. See [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md) for the full state lifecycle, including how this event relates to `onStateChanged(...)` and progression tracking.
+
+### `WrenchInteractionEvent`
+
+```java
+public class WrenchInteractionEvent extends Event {
+    public ServerLevel getLevel();
+    public BlockPos getPos();
+    @Nullable public ServerPlayer getPlayer();
+    public WrenchResult getResult();
+}
+```
+
+**Not cancellable.** Fired every time a registered wrench (see `IMultiblockWrench`/[`MultiLibAPI.registerWrenchItem(Item)`](MultiLibAPI.md#registerwrenchitemitem-item)) is used on a block - **including** when nothing happens because the clicked block isn't part of any multiblock. MultiLib's own chat feedback for this (`event.WrenchFeedbackHandler`) is gated behind `CommonConfig.DEV_MODE` and off by default - in line with the library's policy of never hardcoding player-facing behavior - so a mod that wants player-facing wrench feedback regardless of dev mode should listen for this event itself (or use the `MultiblockEvents.wrench(...)` KubeJS event for scripts).
+
+`getResult()` returns a `WrenchResult`, a sealed interface with one variant per outcome:
+
+```java
+public sealed interface WrenchResult {
+    record NotAMultiblock() implements WrenchResult {}
+    record AlreadyFormed(MultiblockInstance instance) implements WrenchResult {}
+    record ModeDisallowsWrench(MultiblockDefinition definition) implements WrenchResult {}
+    record Formed(MultiblockDefinition definition) implements WrenchResult {}
+    record FormationFailed(MultiblockDefinition definition, String reason) implements WrenchResult {}
+}
+```
+
+- `NotAMultiblock` - the clicked block isn't the activation/core block of any registered multiblock.
+- `AlreadyFormed` - a multiblock is already formed at this position, so nothing was attempted.
+- `ModeDisallowsWrench` - the pattern is actually complete, but this definition's `FormationMode` doesn't allow a wrench to finish it (e.g. `AUTOMATIC`). Only reported once the pattern is confirmed complete - an incomplete structure always reports `FormationFailed` instead, regardless of `FormationMode`, so the wrench stays useful as a "what's missing" diagnostic even on structures that only ever form automatically.
+- `Formed` - formation was attempted and succeeded.
+- `FormationFailed` - the pattern doesn't match (most common), or it did but something else (e.g. a custom validator) rejected the attempt anyway; `reason` is the pattern matcher's failure summary in the first case, a generic message in the second.
+
+### `MultiblockDefinitionsReloadedEvent`
+
+```java
+public class MultiblockDefinitionsReloadedEvent extends Event {
+}
+```
+
+**Not cancellable.** Fired once, on the server, right after JSON-datapack multiblock definitions finish (re)loading - i.e. after `MultiblockJsonLoader` finishes applying a resource reload, including the very first one on server start, and every subsequent `/reload`. At the point this fires, `MultiblockRegistry` holds the full, current set of definitions for this reload cycle: Java-registered ones (registered earlier, at mod setup) plus whatever JSON datapack definitions this reload just (re)loaded.
+
+Intended for integrations that need to act on the complete registry state per reload rather than per-definition as they're parsed - e.g. re-registering script/dynamic definitions, or patching an existing definition via `MultiLibAPI.redefine(...)`, which requires the target to already be registered. This is what KubeJS's `MultiblockEvents.create(...)`/`modify(...)` hook into - see [KubeJS Integration § When scripts run](../KubeJS-Integration.md#when-scripts-run).
 
 ## See also
 

@@ -144,7 +144,22 @@ Declares one named tier level for `symbol`, backed by an explicit set of blocks.
 ### `tier(char symbol, String name, TagKey<Block> tag)`
 Same, but backed by a `TagKey` instead of a fixed block list - so a third-party addon can contribute its own blocks to this tier via datapack (adding to the tag) without this definition needing to know about them ahead of time.
 
+### `tier(char symbol, String name, Map<String, Double> stats, Block... blocks)` / `tier(char symbol, String name, Map<String, Double> stats, TagKey<Block> tag)`
+Same two declarations, with a **stat map** attached to the tier: arbitrary `key → value` numbers (e.g. `"speed" → 2.0`) your machine logic reads back from the resolved tier instead of `switch`-ing on tier names. See [MultiblockTier § stats](MultiblockTier.md#multiblocktierresolution) for the resolution-side accessors.
+
+### `tierStats(char symbol, String tierName, Map<String, Double> stats)`
+Attaches (or replaces) the stat map on an **already-declared** tier, identified by symbol + tier name. Fail-fast: throws `IllegalArgumentException` if no tier was declared under that symbol/name - a typo here should break at mod load, not silently resolve to no stats.
+
+Tiers and their stats are Java/KubeJS-builder-only - the JSON datapack format has no tier support.
+
 See [MultiblockTier](MultiblockTier.md) for resolving which tier is actually present in a formed instance.
+
+## Formed-state property
+
+### `formedProperty(String propertyName)`
+When set, forming the structure flips the `BooleanProperty` with this name to `true` on every member block **that declares it** (blocks without the property are silently skipped), and breaking flips it back to `false`. Happens after the instance is registered and *before* `onFormed` callbacks run, so callbacks observe the final world state. Taken as a `String` (not a `BooleanProperty` reference) so the JSON format can express it too: `"formed_property": "lit"`.
+
+> **Footgun**: never toggle a property that one of your pattern ingredients also matches on (e.g. a `StatePropertyIngredient` requiring `lit=false` while `formedProperty("lit")` sets it to true) - the structure would invalidate itself right after forming.
 
 ## Visuals & recipe browsers
 

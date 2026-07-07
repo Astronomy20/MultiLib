@@ -41,6 +41,16 @@ MultiLibAPI.block(MyBlocks.CONTROLLER_BLOCK).mainFace().build();
 
 ---
 
+### `registerWrenchItem(Item item)`
+
+```java
+public static void registerWrenchItem(Item item)
+```
+
+Registers `item` as a wrench without it implementing `IMultiblockWrench`: `WrenchInteractionHandler` will treat right-clicking any multiblock's activation/core block with it exactly like an `IMultiblockWrench` implementation would - a formation attempt, nothing else. Backed by `WrenchItemRegistry`. No chat message or other feedback is sent by the library; surfacing anything to the player is entirely up to the mod using this - listen for [`WrenchInteractionEvent`](Callbacks-And-Events.md#wrenchinteractionevent) if you want it. Meant for data-driven/scripted items (e.g. KubeJS) that can't implement a custom Java interface; a hand-written `Item` subclass should just implement `IMultiblockWrench` instead.
+
+---
+
 ### `getDefinition(ResourceLocation id)`
 
 ```java
@@ -48,6 +58,18 @@ public static Optional<MultiblockDefinition> getDefinition(ResourceLocation id)
 ```
 
 Looks up a registered [`MultiblockDefinition`](MultiblockDefinition.md) by id.
+
+---
+
+### `redefine(ResourceLocation id, Consumer<MultiblockBuilder> mutator)`
+
+```java
+public static Optional<MultiblockDefinition> redefine(ResourceLocation id, Consumer<MultiblockBuilder> mutator)
+```
+
+Patches an already-registered definition (Java, JSON, or previously KubeJS-defined) in place: snapshots it into a [`MultiblockBuilder`](MultiblockBuilder.md) via `MultiblockDefinition.toBuilder()`, lets `mutator` adjust it with the same fluent methods used to declare one from scratch, rebuilds it, and swaps it into the registry. Returns `Optional.empty()` without calling `mutator` if nothing is registered under `id`; also returns `Optional.empty()` (leaving the original definition registered and untouched) if the rebuilt definition fails validation.
+
+Deliberately named differently from `define(...)`: that one fails loudly on a duplicate id (protects against accidental overwrites), this one exists specifically to overwrite. If `mutator` renames the definition via `.id(...)`, only the *original* `id` is removed from the registry - the rebuilt definition registers under its new id instead.
 
 ---
 
