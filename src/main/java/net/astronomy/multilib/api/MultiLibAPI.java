@@ -7,10 +7,12 @@ import net.astronomy.multilib.api.definition.WallSharingMode;
 import net.astronomy.multilib.api.state.MultiblockState;
 import net.astronomy.multilib.api.state.MultiblockStateRegistry;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
+import net.astronomy.multilib.core.registry.WrenchItemRegistry;
 import net.astronomy.multilib.core.tracking.MultiblockProgressionTracker;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public class MultiLibAPI {
 
@@ -33,8 +36,49 @@ public class MultiLibAPI {
         return new BlockDefinitionBuilder(block);
     }
 
+    /**
+     * Registers {@code item} as a wrench: {@code WrenchInteractionHandler} will treat right-clicking
+     * any multiblock's activation/core block with it exactly like an {@code IMultiblockWrench}
+     * implementation would - a formation attempt, nothing else. No chat message or other feedback is
+     * sent by the library; surfacing anything to the player is entirely up to the mod using this. For
+     * data-driven/scripted items (e.g. KubeJS) that can't implement a custom Java interface - a
+     * hand-written Item subclass should just implement {@link net.astronomy.multilib.api.tool.IMultiblockWrench} instead.
+     */
+    public static void registerWrenchItem(Item item) {
+        WrenchItemRegistry.register(item);
+    }
+
     public static Optional<MultiblockDefinition> getDefinition(ResourceLocation id) {
         return MultiblockRegistry.get(id);
+    }
+
+    /**
+     * Patches an already-registered definition (Java, JSON, or previously KubeJS-defined) in place:
+     * snapshots it into a {@link MultiblockBuilder} via {@link MultiblockDefinition#toBuilder()},
+     * lets {@code mutator} adjust it with the same fluent methods used to declare one from scratch,
+     * rebuilds it, and swaps it into the registry. Returns {@link Optional#empty()} without calling
+     * {@code mutator} if no definition is registered under {@code id}.
+     * <p>
+     * Deliberately named differently from {@link #define(ResourceLocation)}: that one fails loudly on
+     * a duplicate id (protects against accidental overwrites), this one exists specifically to
+     * overwrite. If {@code mutator} renames the definition via {@code .id(...)}, only the <em>original</em>
+     * {@code id} is removed - the rebuilt definition registers under its new id instead.
+     */
+    public static Optional<MultiblockDefinition> redefine(ResourceLocation id, Consumer<MultiblockBuilder> mutator) {
+        Optional<MultiblockDefinition> existing = MultiblockRegistry.get(id);
+        if (existing.isEmpty()) {
+            return Optional.empty();
+        }
+        MultiblockBuilder builder = existing.get().toBuilder();
+        mutator.accept(builder);
+        MultiblockDefinition rebuilt = builder.buildWithoutRegistering();
+        if (rebuilt == null) {
+            // Validation failed (already logged by buildWithoutRegistering()) - leave the original
+            // definition registered and untouched rather than replacing it with nothing.
+            return Optional.empty();
+        }
+        MultiblockRegistry.replace(id, rebuilt);
+        return Optional.of(rebuilt);
     }
 
     public static Collection<MultiblockDefinition> getAllDefinitions() {
@@ -83,7 +127,7 @@ public class MultiLibAPI {
                         player.serverLevel().getServer().overworld().getGameTime());
     }
 
-    /** Passthrough to {@link MultiblockStateRegistry} — the single point from which mod developers register custom states. */
+    /** Passthrough to {@link MultiblockStateRegistry} - the single point from which mod developers register custom states. */
     public static MultiblockState registerMultiblockState(ResourceLocation id) {
         return MultiblockStateRegistry.register(id);
     }
