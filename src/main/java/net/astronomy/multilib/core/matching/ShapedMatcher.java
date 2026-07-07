@@ -25,6 +25,12 @@ import java.util.stream.Collectors;
 
 public class ShapedMatcher implements IPatternMatcher {
 
+    // Hoisted out of the per-cell transform loops, which run once per pattern cell per match attempt.
+    private static final String[] VERTICAL_AXES = {"X", "Z", "X_FLIP", "Z_FLIP"};
+    private static final String[] Y_AXIS_ONLY = {"Y"};
+    private static final String[] X_AXES = {"X", "X_FLIP"};
+    private static final String[] Z_AXES = {"Z", "Z_FLIP"};
+
     @Override
     public MatchResult matches(ServerLevel level, BlockPos activationPos, MultiblockDefinition definition) {
         Set<AllowedRotation> allowedRotations = definition.getAllowedRotations();
@@ -53,7 +59,7 @@ public class ShapedMatcher implements IPatternMatcher {
                         char symbol = line.charAt(col);
                         if (symbol == ' ' || !definition.getBlockMap().containsKey(symbol)) continue;
 
-                        // This cell's pattern-local offset (axis=Y, rotation=0 convention — same one
+                        // This cell's pattern-local offset (axis=Y, rotation=0 convention - same one
                         // matchesTransformed/applyTransform use). The candidate origin depends on which
                         // (axis, rotation) is being tried, so it's computed per-transform inside
                         // tryAllTransformsForCell rather than fixed once here: a single origin guessed
@@ -83,8 +89,8 @@ public class ShapedMatcher implements IPatternMatcher {
 
     /**
      * Tries every candidate (axis, rotation) transform for one pattern cell, assuming that cell is the
-     * block at {@code activationPos}. Each transform gets its own origin — {@code origin = activationPos
-     * - applyTransform(relX, relY, relZ, axis, rotation)} — since a structure actually built rotated
+     * block at {@code activationPos}. Each transform gets its own origin - {@code origin = activationPos
+     * - applyTransform(relX, relY, relZ, axis, rotation)} - since a structure actually built rotated
      * only lines up against the origin computed for that same rotation, not against the rotation=0
      * origin tested at a different angle.
      */
@@ -105,7 +111,7 @@ public class ShapedMatcher implements IPatternMatcher {
             }
         }
         if (allowVertical) {
-            for (String axis : new String[]{"X", "Z", "X_FLIP", "Z_FLIP"}) {
+            for (String axis : VERTICAL_AXES) {
                 for (int rotation = 0; rotation < 4; rotation++) {
                     BlockPos origin = originForTransform(activationPos, relX, relY, relZ, axis, rotation);
                     if (matchesTransformed(level, origin, definition, filteredLayers, rotation, axis)) {
@@ -132,9 +138,9 @@ public class ShapedMatcher implements IPatternMatcher {
         for (AllowedRotation allowed : definition.getAllowedRotations()) {
             int step = allowed.normalizedAngle() / 90;
             String[] axesToTry = switch (allowed.axis()) {
-                case Y -> new String[]{"Y"};
-                case X -> new String[]{"X", "X_FLIP"};
-                case Z -> new String[]{"Z", "Z_FLIP"};
+                case Y -> Y_AXIS_ONLY;
+                case X -> X_AXES;
+                case Z -> Z_AXES;
             };
             for (String axisStr : axesToTry) {
                 BlockPos origin = originForTransform(activationPos, relX, relY, relZ, axisStr, step);
@@ -181,7 +187,7 @@ public class ShapedMatcher implements IPatternMatcher {
                     int[] t = applyTransform(relX, relY, relZ, axis, rotation);
                     BlockPos checkPos = origin.offset(t[0], t[1], t[2]);
 
-                    if (!ingredient.matches(level.getBlockState(checkPos))) {
+                    if (!ingredient.matches(level, checkPos, level.getBlockState(checkPos))) {
                         if (optionalSymbols.contains(symbol)) continue;
                         return false;
                     }
@@ -270,7 +276,7 @@ public class ShapedMatcher implements IPatternMatcher {
                     BlockState state = level.getBlockState(pos);
                     for (Map.Entry<Character, FreeBlockSpec> entry : freeBlocks.entrySet()) {
                         FreeBlockSpec spec = entry.getValue();
-                        if (!spec.ingredient().matches(state)) continue;
+                        if (!spec.ingredient().matches(level, pos, state)) continue;
                         if (spec.allowedPositions() != null) {
                             BlockPos relPos = new BlockPos(relX, relY, relZ);
                             if (!spec.allowedPositions().contains(relPos)) continue;
@@ -430,7 +436,7 @@ public class ShapedMatcher implements IPatternMatcher {
                     BlockPos checkPos = origin.offset(t[0], t[1], t[2]);
                     BlockState state = level.getBlockState(checkPos);
 
-                    if (!ingredient.matches(state)) {
+                    if (!ingredient.matches(level, checkPos, state)) {
                         mismatches.add(new MatchFailureReport.FailedPosition(
                                 checkPos, state, describeIngredient(ingredient)));
                     }
@@ -445,7 +451,7 @@ public class ShapedMatcher implements IPatternMatcher {
      * with a "spin" (the {@code rotation} parameter, around that now-vertical target axis). Both
      * steps are proper rotations (not coordinate swaps/reflections), so this stays chirality-correct.
      * The tip direction for X_FLIP/Z_FLIP is the opposite 90° turn, landing the layer axis on the
-     * negative target axis instead of the positive one. axis="Y" needs no tip — it's already vertical.
+     * negative target axis instead of the positive one. axis="Y" needs no tip - it's already vertical.
      */
     public static int[] applyTransform(int relX, int relY, int relZ, String axis, int rotation) {
         return switch (axis) {

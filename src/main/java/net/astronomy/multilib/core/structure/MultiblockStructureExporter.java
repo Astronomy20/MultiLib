@@ -16,8 +16,8 @@ import java.util.Optional;
 /**
  * Converts a shaped {@link MultiblockDefinition} into a vanilla structure NBT (the same format
  * produced by a Structure Block), without needing a real {@code Level} to read block states from.
- * Consumers embed the resulting file wherever a structure-file-driven preview is wanted — e.g. a
- * GuideME {@code <GameScene><ImportStructure src="..."/></GameScene>} tag — without having to
+ * Consumers embed the resulting file wherever a structure-file-driven preview is wanted - e.g. a
+ * GuideME {@code <GameScene><ImportStructure src="..."/></GameScene>} tag - without having to
  * hand-build the structure in a test world first.
  *
  * <p>Only shaped (non-shapeless, non-PatternProvider) definitions with at least one occupied

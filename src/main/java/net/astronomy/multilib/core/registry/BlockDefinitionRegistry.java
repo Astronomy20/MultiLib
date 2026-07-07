@@ -17,10 +17,18 @@ public final class BlockDefinitionRegistry {
 
     private BlockDefinitionRegistry() {}
 
+    /**
+     * Merges with any existing declaration for the same block instead of replacing it outright (see
+     * {@link BlockDefinition#mergedWith} for why a plain overwrite here silently broke multiblocks that
+     * shared a core/activation block with another one declared independently - most commonly two Java
+     * definitions in separate classes, or two datapack files, each unaware of the other).
+     */
     public static void register(BlockDefinition definition) {
-        DEFINITIONS.put(definition.getBlock(), definition);
-        if (definition.isIoPort()) {
-            IO_PORT_BLOCKS.add(definition.getBlock());
+        BlockDefinition existing = DEFINITIONS.get(definition.getBlock());
+        BlockDefinition merged = existing == null ? definition : existing.mergedWith(definition);
+        DEFINITIONS.put(definition.getBlock(), merged);
+        if (merged.isIoPort() && !IO_PORT_BLOCKS.contains(merged.getBlock())) {
+            IO_PORT_BLOCKS.add(merged.getBlock());
         }
     }
 

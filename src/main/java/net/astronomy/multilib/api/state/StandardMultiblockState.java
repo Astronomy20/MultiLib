@@ -15,7 +15,7 @@ public final class StandardMultiblockState {
     private StandardMultiblockState() {}
 
     /**
-     * No-op — calling this forces the class to load (and its fields above to register) without
+     * No-op - calling this forces the class to load (and its fields above to register) without
      * needing an unused-looking bare field reference at the call site. MultiLib calls this before
      * {@link MultiblockStateRegistry#freeze()} for the exact reason documented on
      * {@link MultiblockStateRegistry#register}: registration must happen before freeze, and Java only

@@ -16,7 +16,7 @@ public abstract class AbstractMultiblockControllerBlock extends AbstractMultiblo
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock())) {
-            // Controller removed — WorldMultiblockTracker handles cleanup via BlockBreakHandler
+            // Controller removed - WorldMultiblockTracker handles cleanup via BlockBreakHandler
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }

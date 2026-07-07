@@ -21,11 +21,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class WorldMultiblockTracker extends SavedData {
     private static final String DATA_NAME = "multilib_tracker";
@@ -75,11 +73,14 @@ public class WorldMultiblockTracker extends SavedData {
     }
 
     public Set<MultiblockInstance> getInstancesAt(BlockPos pos) {
-        Set<UUID> ids = positionIndex.getOrDefault(pos, Set.of());
-        return ids.stream()
-                .map(instancesById::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        Set<UUID> ids = positionIndex.get(pos);
+        if (ids == null || ids.isEmpty()) return Set.of();
+        Set<MultiblockInstance> result = new HashSet<>(ids.size());
+        for (UUID id : ids) {
+            MultiblockInstance instance = instancesById.get(id);
+            if (instance != null) result.add(instance);
+        }
+        return result;
     }
 
     public Optional<MultiblockInstance> getById(UUID id) {
@@ -93,26 +94,37 @@ public class WorldMultiblockTracker extends SavedData {
     public void tick(ServerLevel level) {
         currentTick++;
 
+        // Plain null-checked loops instead of Optional/lambda chains: this runs every server tick
+        // per level, and each ifPresent lambda would otherwise be a fresh capturing allocation
+        // per instance per tick.
         for (MultiblockInstance instance : tickableInstances) {
-            MultiblockRegistry.get(instance.getDefinitionId()).ifPresent(def ->
-                    def.getTickCallback().ifPresent(cb -> {
-                        MultiblockContext ctx = new MultiblockContext(level, instance, def);
-                        cb.onTick(new MultiblockTickContext(ctx));
-                    })
-            );
+            MultiblockDefinition def = MultiblockRegistry.get(instance.getDefinitionId()).orElse(null);
+            if (def == null) continue;
+            var cb = def.getTickCallback().orElse(null);
+            if (cb == null) continue;
+            MultiblockContext ctx = new MultiblockContext(level, instance, def);
+            try {
+                cb.onTick(new MultiblockTickContext(ctx));
+            } catch (Exception e) {
+                MultiLib.LOGGER.error("[MultiLib] onTick callback for '{}' threw", def.getId(), e);
+            }
         }
 
         for (MultiblockInstance instance : ambientInstances) {
-            MultiblockRegistry.get(instance.getDefinitionId()).ifPresent(def ->
-                    def.getAmbientCallback().ifPresent(cb -> {
-                        long lastTick = ambientTickCounters.getOrDefault(instance.getId(), 0L);
-                        if (currentTick - lastTick >= def.getAmbientIntervalTicks()) {
-                            ambientTickCounters.put(instance.getId(), currentTick);
-                            MultiblockContext ctx = new MultiblockContext(level, instance, def);
-                            cb.onAmbient(new MultiblockAmbientContext(ctx));
-                        }
-                    })
-            );
+            MultiblockDefinition def = MultiblockRegistry.get(instance.getDefinitionId()).orElse(null);
+            if (def == null) continue;
+            var cb = def.getAmbientCallback().orElse(null);
+            if (cb == null) continue;
+            long lastTick = ambientTickCounters.getOrDefault(instance.getId(), 0L);
+            if (currentTick - lastTick >= def.getAmbientIntervalTicks()) {
+                ambientTickCounters.put(instance.getId(), currentTick);
+                MultiblockContext ctx = new MultiblockContext(level, instance, def);
+                try {
+                    cb.onAmbient(new MultiblockAmbientContext(ctx));
+                } catch (Exception e) {
+                    MultiLib.LOGGER.error("[MultiLib] onAmbient callback for '{}' threw", def.getId(), e);
+                }
+            }
         }
     }
 

@@ -40,6 +40,11 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
     private UUID instanceId = null;
     private int validationInterval = 0;
     private int validationTicker = 0;
+    // Set by invalidateStructure() to force the very next tick to (re)validate/try formation
+    // immediately, instead of waiting out the rest of validationInterval - the interval remains a
+    // periodic fallback (in case some change bypasses whatever calls invalidateStructure()), but a dev
+    // who already knows something relevant changed shouldn't have to wait for it.
+    private boolean structureDirty = false;
     /** Set while formed iff the structure's definition has {@code .model(...)}; read by {@link MultiblockMasterModelRenderer}. */
     private ResourceLocation activeModelId = null;
 
@@ -92,6 +97,17 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
 
     public void setValidationInterval(int ticks) {
         this.validationInterval = ticks;
+    }
+
+    /**
+     * Marks the structure for (re)validation/formation on the very next server tick, instead of waiting
+     * out the rest of {@link #setValidationInterval(int)}'s countdown. For a dev whose own code knows a
+     * relevant block changed (e.g. reacting to a neighbor update) and wants the controller to notice
+     * immediately rather than up to {@code validationInterval} ticks later. Safe to call from anywhere,
+     * any number of times - it only ever brings the next check closer, never delays it.
+     */
+    public void invalidateStructure() {
+        this.structureDirty = true;
     }
 
     public @Nullable ResourceLocation getActiveModelId() { return activeModelId; }
@@ -169,8 +185,13 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
     }
 
     void tickInternal() {
+        boolean dueToDirty = structureDirty;
+        structureDirty = false;
+
         if (!isFormed()) {
-            if (validationInterval > 0) {
+            if (dueToDirty) {
+                tryPeriodicFormation();
+            } else if (validationInterval > 0) {
                 validationTicker++;
                 if (validationTicker >= validationInterval) {
                     validationTicker = 0;
@@ -179,7 +200,9 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
             }
             return;
         }
-        if (validationInterval > 0) {
+        if (dueToDirty) {
+            tryPeriodicValidation();
+        } else if (validationInterval > 0) {
             validationTicker++;
             if (validationTicker >= validationInterval) {
                 validationTicker = 0;

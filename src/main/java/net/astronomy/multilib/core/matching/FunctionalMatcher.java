@@ -23,6 +23,11 @@ import java.util.stream.Collectors;
 
 public class FunctionalMatcher implements IPatternMatcher {
 
+    // Hoisted out of the per-cell transform loops, which run once per pattern cell per match attempt.
+    private static final String[] Y_AXIS_ONLY = {"Y"};
+    private static final String[] X_AXES = {"X", "X_FLIP"};
+    private static final String[] Z_AXES = {"Z", "Z_FLIP"};
+
     @Override
     public MatchResult matches(ServerLevel level, BlockPos activationPos, MultiblockDefinition definition) {
         PatternProvider provider = definition.getPatternProvider()
@@ -44,6 +49,7 @@ public class FunctionalMatcher implements IPatternMatcher {
                 : definition.getRotationMode() == RotationMode.ALL;
 
         int orientationsTried = 0;
+        List<String[]> axes = buildAxes(allowHorizontal, allowVertical); // same for every anchor cell
 
         // Find all (x,y,z) in provider that have the activation ingredient
         char activationSym = definition.getActivationSymbol();
@@ -74,7 +80,6 @@ public class FunctionalMatcher implements IPatternMatcher {
                         continue;
                     }
 
-                    List<String[]> axes = buildAxes(allowHorizontal, allowVertical);
                     for (String[] axisInfo : axes) {
                         String axis = axisInfo[0];
                         for (int rotation = 0; rotation < 4; rotation++) {
@@ -115,9 +120,9 @@ public class FunctionalMatcher implements IPatternMatcher {
         for (AllowedRotation allowed : definition.getAllowedRotations()) {
             int step = allowed.normalizedAngle() / 90;
             String[] axesToTry = switch (allowed.axis()) {
-                case Y -> new String[]{"Y"};
-                case X -> new String[]{"X", "X_FLIP"};
-                case Z -> new String[]{"Z", "Z_FLIP"};
+                case Y -> Y_AXIS_ONLY;
+                case X -> X_AXES;
+                case Z -> Z_AXES;
             };
             for (String axisStr : axesToTry) {
                 int[] t = ShapedMatcher.applyTransform(relX, relY, relZ, axisStr, step);
@@ -165,7 +170,7 @@ public class FunctionalMatcher implements IPatternMatcher {
                     int[] t = ShapedMatcher.applyTransform(relX, relY, relZ, axis, rotation);
                     BlockPos checkPos = origin.offset(t[0], t[1], t[2]);
 
-                    if (!ing.matches(level.getBlockState(checkPos))) return false;
+                    if (!ing.matches(level, checkPos, level.getBlockState(checkPos))) return false;
                 }
             }
         }

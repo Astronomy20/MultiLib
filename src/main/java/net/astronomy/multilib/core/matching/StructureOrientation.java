@@ -17,7 +17,7 @@ import java.util.Set;
 
 /**
  * Resolves the (axis, rotation) a multiblock structure is being previewed/placed/tracked in. Shared
- * by the ghost overlay, auto-place, and the progress API — extracted into core/matching since it's
+ * by the ghost overlay, auto-place, and the progress API - extracted into core/matching since it's
  * pattern-matching logic, not event-handling logic, and duplicating it per-caller risks the same
  * silent drift already found once between {@link ShapedMatcher} and {@link FunctionalMatcher}.
  */
@@ -31,7 +31,7 @@ public final class StructureOrientation {
     /**
      * Mirrors how {@link ShapedMatcher} derives a match's origin from a symbol's own cell, instead of
      * the layer's geometric center, so a preview/placement/progress-check lines up with the block
-     * that was clicked, wherever in the pattern it sits — for whichever (axis, rotation) is active.
+     * that was clicked, wherever in the pattern it sits - for whichever (axis, rotation) is active.
      */
     public static BlockPos findSymbolOrigin(BlockPos clickedPos, List<List<String>> layers, char symbol,
                                              String axis, int rotation) {
@@ -58,16 +58,16 @@ public final class StructureOrientation {
                 }
             }
         }
-        // Symbol not found in the pattern — fall back to treating clickedPos as the origin.
+        // Symbol not found in the pattern - fall back to treating clickedPos as the origin.
         return clickedPos;
     }
 
     /**
      * Picks which (axis, rotation) a preview/placement should use for a click on the given face of
-     * the core. The four horizontal faces always cycle the four Y-axis (yaw) rotations — that works
+     * the core. The four horizontal faces always cycle the four Y-axis (yaw) rotations - that works
      * for every definition, rotated or not, since axis=Y rotation=0 is always the baseline. UP keeps
      * the default upright placement. DOWN previews the structure flipped onto its head, but only if
-     * the definition actually declared an X/Z-axis rotation via {@code .allowRotation(...)} —
+     * the definition actually declared an X/Z-axis rotation via {@code .allowRotation(...)} -
      * otherwise DOWN falls back to the same default as UP, since flipping isn't a valid placement.
      */
     public static Orientation orientationForFace(MultiblockDefinition definition, Direction face) {
@@ -169,7 +169,7 @@ public final class StructureOrientation {
                         int[] t = ShapedMatcher.applyTransform(relX, relY, relZ, axis, rotation);
                         BlockPos worldPos = origin.offset(t[0], t[1], t[2]);
 
-                        if (ingredient.matches(level.getBlockState(worldPos))) {
+                        if (ingredient.matches(level, worldPos, level.getBlockState(worldPos))) {
                             count++;
                         }
                     }

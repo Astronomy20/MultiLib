@@ -44,4 +44,28 @@ public final class BlockDefinition {
      * look direction. See {@link BlockDefinitionBuilder#mainFace()}.
      */
     public boolean hasMainFace() { return mainFace; }
+
+    /**
+     * Combines this declaration with another one for the same block, unioning {@code coreOfMultiblocks}
+     * and OR-ing the boolean flags, instead of one call silently discarding the other. Needed because two
+     * independent multiblocks (most commonly two Java definitions in unrelated classes, or two separate
+     * datapack files, unaware of each other) can each declare the same shared block as their own core via
+     * separate {@code MultiLibAPI.block(sameBlock).core(id).build()} calls - before this merge existed,
+     * {@code BlockDefinitionRegistry.register} used a plain {@code Map.put}, so the second declaration
+     * replaced the first outright: the first multiblock's {@code coreOfMultiblocks} entry (and its
+     * ioPort/dropOriginalOnBreak/mainFace flags) vanished, and if that multiblock relied on this
+     * declaration to auto-assign its core symbol (see {@code MultiblockBuilder#resolveAndValidateCore}),
+     * it failed core resolution and was silently never registered at all - never appearing in JEI/REI/EMI,
+     * with no error visible to whoever owns the block declaration that "won".
+     */
+    public BlockDefinition mergedWith(BlockDefinition other) {
+        Set<ResourceLocation> combinedCore = new java.util.HashSet<>(this.coreOfMultiblocks);
+        combinedCore.addAll(other.coreOfMultiblocks);
+        Boolean combinedWallSharing = other.wallSharingOverride != null ? other.wallSharingOverride : this.wallSharingOverride;
+        return new BlockDefinition(
+                this.block, combinedCore, combinedWallSharing,
+                this.ioPort || other.ioPort,
+                this.dropOriginalOnBreak || other.dropOriginalOnBreak,
+                this.mainFace || other.mainFace);
+    }
 }

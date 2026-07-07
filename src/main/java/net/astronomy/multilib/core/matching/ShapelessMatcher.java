@@ -21,6 +21,9 @@ import java.util.stream.Collectors;
 
 public class ShapelessMatcher implements IPatternMatcher {
 
+    // Direction.values() clones the array on every call; the flood fill queries it once per visited block.
+    private static final Direction[] DIRECTIONS = Direction.values();
+
     @Override
     public MatchResult matches(ServerLevel level, BlockPos activationPos, MultiblockDefinition definition) {
         Vec3i maxSize = definition.getShapelessMaxSize();
@@ -64,7 +67,7 @@ public class ShapelessMatcher implements IPatternMatcher {
             if (!isShell) continue;
 
             BlockIngredient required = resolveShellIngredient(definition, p, minCorner, actualSize);
-            if (required != null && !required.matches(level.getBlockState(p))) {
+            if (required != null && !required.matches(level, p, level.getBlockState(p))) {
                 return failure("Shell block mismatch at " + p);
             }
         }
@@ -76,7 +79,7 @@ public class ShapelessMatcher implements IPatternMatcher {
                 for (int y = minY + 1; y < maxY; y++) {
                     for (int z = minZ + 1; z < maxZ; z++) {
                         BlockPos p = new BlockPos(x, y, z);
-                        if (!interior.matches(level.getBlockState(p))) {
+                        if (!interior.matches(level, p, level.getBlockState(p))) {
                             return failure("Interior block mismatch at " + p);
                         }
                     }
@@ -88,7 +91,7 @@ public class ShapelessMatcher implements IPatternMatcher {
         for (ShapelessRequirement req : definition.getShapelessRequirements()) {
             int count = 0;
             for (BlockPos p : found) {
-                if (req.ingredient().matches(level.getBlockState(p))) count++;
+                if (req.ingredient().matches(level, p, level.getBlockState(p))) count++;
             }
             if (count < req.min() || count > req.max()) {
                 return failure("Requirement not met: found " + count
@@ -97,11 +100,12 @@ public class ShapelessMatcher implements IPatternMatcher {
         }
 
         // Build symbol position map
+        Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
         Map<Character, Set<BlockPos>> symbolPositions = new HashMap<>();
         for (BlockPos p : found) {
             BlockState state = level.getBlockState(p);
-            for (Map.Entry<Character, BlockIngredient> entry : definition.getBlockMap().entrySet()) {
-                if (entry.getValue().matches(state)) {
+            for (Map.Entry<Character, BlockIngredient> entry : blockMap.entrySet()) {
+                if (entry.getValue().matches(level, p, state)) {
                     symbolPositions.computeIfAbsent(entry.getKey(), k -> new HashSet<>()).add(p);
                     break;
                 }
@@ -115,7 +119,7 @@ public class ShapelessMatcher implements IPatternMatcher {
         MatchData matchData = new MatchData(
                 activationPos,
                 new TransformData(0, false, "NONE"),
-                Collections.unmodifiableSet(new HashSet<>(found)),
+                Collections.unmodifiableSet(found), // floodFill's set is local and never touched again - no defensive copy needed
                 immutableSymbolPos,
                 actualSize
         );
@@ -137,7 +141,7 @@ public class ShapelessMatcher implements IPatternMatcher {
 
             found.add(current);
 
-            for (Direction dir : Direction.values()) {
+            for (Direction dir : DIRECTIONS) {
                 BlockPos next = current.relative(dir);
                 if (visited.contains(next)) continue;
 

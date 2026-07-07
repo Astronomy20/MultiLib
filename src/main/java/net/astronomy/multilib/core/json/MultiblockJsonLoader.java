@@ -9,7 +9,9 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import net.astronomy.multilib.api.definition.MultiblockBuilder;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
+import net.astronomy.multilib.api.event.MultiblockDefinitionsReloadedEvent;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
+import net.astronomy.multilib.event.MultiblockLoadErrorNotifier;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -17,6 +19,7 @@ import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 import java.util.Map;
@@ -34,6 +37,9 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
     protected void apply(Map<ResourceLocation, JsonElement> dataMap, ResourceManager resourceManager,
                          ProfilerFiller profiler) {
         MultiblockRegistry.clearJsonDefinitions();
+        // A definition fixed since the last reload shouldn't keep flashing its old error at every
+        // player who joins afterward - see MultiblockLoadErrorNotifier for the join-time delivery.
+        MultiblockLoadErrorNotifier.clear();
 
         int loaded = 0;
         for (Map.Entry<ResourceLocation, JsonElement> entry : dataMap.entrySet()) {
@@ -49,6 +55,7 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
             }
         }
         LOGGER.info("[MultiLib] Loaded {} multiblock definition(s) from datapacks", loaded);
+        NeoForge.EVENT_BUS.post(new MultiblockDefinitionsReloadedEvent());
     }
 
     private MultiblockDefinition parseDefinition(ResourceLocation id, JsonElement json) {
@@ -222,6 +229,13 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
                         sound, SoundSource.BLOCKS, 1.0F, 1.0F));
                 }
             }
+        }
+
+        // formed_property: flips a BooleanProperty of this name true/false on every member block as the
+        // structure forms/breaks - see MultiblockBuilder#formedProperty for the same footgun warning
+        // that applies here (don't match a pattern ingredient on the same property).
+        if (obj.has("formed_property")) {
+            builder.formedProperty(obj.get("formed_property").getAsString());
         }
 
         // icon

@@ -6,7 +6,7 @@ import java.util.Optional;
 
 /**
  * Governs how a structure is allowed to form. Not a plain enum so third-party mods can register
- * their own modes (e.g. a redstone-pulse trigger) via {@link #register} — code must go through
+ * their own modes (e.g. a redstone-pulse trigger) via {@link #register} - code must go through
  * {@link #allowsAutomatic()} / {@link #allowsWrench()} rather than switching on a fixed set.
  */
 public final class FormationMode {

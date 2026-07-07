@@ -66,7 +66,7 @@ public final class BlockDefinitionBuilder {
 
     /**
      * Marks this block as having a meaningful placed facing of its own (e.g. a furnace-like block
-     * with a {@code FACING}/{@code HORIZONTAL_FACING} property) — when used as a multiblock's core,
+     * with a {@code FACING}/{@code HORIZONTAL_FACING} property) - when used as a multiblock's core,
      * the ghost overlay/auto-place preview orientation is pinned to the block's actual in-world
      * facing instead of following the player's look direction.
      */

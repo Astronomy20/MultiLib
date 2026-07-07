@@ -15,17 +15,17 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Long-term "has this player ever reached this state on this definition, and when" memory — survives
+ * Long-term "has this player ever reached this state on this definition, and when" memory - survives
  * the underlying {@link MultiblockInstance} being broken and reformed, unlike
  * {@link WorldMultiblockTracker} which only tracks currently-live instances. Always persisted on the
  * overworld regardless of which dimension the multiblock actually formed in, since progression is
  * conceptually per-player, not per-dimension.
  * <p>
- * General-purpose record-keeping — exposed via {@link net.astronomy.multilib.api.MultiLibAPI} for mod
+ * General-purpose record-keeping - exposed via {@link net.astronomy.multilib.api.MultiLibAPI} for mod
  * developers and integrations that want an "ever/last reached" answer. Note {@code compat/ftbquests}'
  * {@code MultiblockTask} deliberately does NOT use this for its completion check: a permanently-standing
  * historical record would let a quest re-complete instantly on reset, or "complete" a task for a
- * structure that's since been broken. It reacts to the live formation/state-change events instead — see
+ * structure that's since been broken. It reacts to the live formation/state-change events instead - see
  * {@code MultiblockQuestEventListener}.
  */
 public class MultiblockProgressionTracker extends SavedData {

@@ -69,6 +69,8 @@ public final class MultiblockDefinition {
     private final boolean autoPlace;
     private final boolean autoPlaceOverlay;
     private final Set<AllowedRotation> allowedRotations;
+    private final Map<Character, List<TierSpec>> tierSpecs;
+    private final String formedProperty;
 
     MultiblockDefinition(ResourceLocation id, Map<Character, BlockIngredient> blockMap,
                          List<List<String>> layers, RotationMode rotationMode,
@@ -106,7 +108,9 @@ public final class MultiblockDefinition {
                          Set<Character> keepVisibleSymbols,
                          boolean autoPlace,
                          boolean autoPlaceOverlay,
-                         Set<AllowedRotation> allowedRotations) {
+                         Set<AllowedRotation> allowedRotations,
+                         Map<Character, List<TierSpec>> tierSpecs,
+                         String formedProperty) {
         this.id = id;
         this.blockMap = Map.copyOf(blockMap);
         this.layers = layers.stream().map(List::copyOf).collect(Collectors.toUnmodifiableList());
@@ -148,6 +152,19 @@ public final class MultiblockDefinition {
         this.autoPlace = autoPlace;
         this.autoPlaceOverlay = autoPlaceOverlay;
         this.allowedRotations = Set.copyOf(allowedRotations);
+        this.tierSpecs = tierSpecs.entrySet().stream()
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, e -> List.copyOf(e.getValue())));
+        this.formedProperty = formedProperty;
+    }
+
+    /**
+     * Snapshots this definition into a fresh, mutable {@link MultiblockBuilder} pre-populated with
+     * every field, for patching an already-registered definition (Java or JSON-sourced) instead of
+     * declaring one from scratch. See {@link MultiblockBuilder#fromDefinition} - kept next to this
+     * class's constructor deliberately, both need updating together when a field is added.
+     */
+    public MultiblockBuilder toBuilder() {
+        return MultiblockBuilder.fromDefinition(this);
     }
 
     public ResourceLocation getId() { return id; }
@@ -201,6 +218,15 @@ public final class MultiblockDefinition {
     public boolean isAutoPlace() { return autoPlace; }
     public boolean isAutoPlaceOverlay() { return autoPlaceOverlay; }
     public Set<AllowedRotation> getAllowedRotations() { return allowedRotations; }
+    /** Tier levels declared via {@code .tier(...)} for each symbol, in ascending order (index 0 = lowest). */
+    public Map<Character, List<TierSpec>> getTierSpecs() { return tierSpecs; }
+    /**
+     * Name of the {@code BooleanProperty} (e.g. {@code "lit"}) that every member block's state gets
+     * flipped true/false on as the structure forms/breaks, if set via
+     * {@code MultiblockBuilder#formedProperty(String)}. Empty = feature disabled (no state is touched).
+     */
+    public Optional<String> getFormedProperty() { return Optional.ofNullable(formedProperty); }
+    public boolean hasFormedProperty() { return formedProperty != null; }
 
     public WallSharingMode getWallSharingMode(char symbol) {
         if (symbol == coreSymbol || symbol == activationSymbol) {
@@ -250,7 +276,7 @@ public final class MultiblockDefinition {
 
     /**
      * Whether the given block state matches this structure's activation symbol, core symbol, or
-     * both — they're often the same symbol, but a structure can split them (e.g. activation = the
+     * both - they're often the same symbol, but a structure can split them (e.g. activation = the
      * block placed last, core = the controller). Used to decide whether to react to a block at all.
      */
     /** Whether the given block state matches this structure's core symbol specifically. */

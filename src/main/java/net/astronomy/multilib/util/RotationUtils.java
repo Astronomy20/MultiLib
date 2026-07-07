@@ -22,10 +22,12 @@ public class RotationUtils {
         int normalized = ((angle % 360) + 360) % 360;
         normalized = (normalized / 90) % 4; // convert to 0–3 (representing 0°, 90°, 180°, 270°)
 
-        return switch (axis.toUpperCase()) {
-            case "X" -> rotateAroundX(x, y, z, normalized);
-            case "Y" -> rotateAroundY(x, y, z, normalized);
-            case "Z" -> rotateAroundZ(x, y, z, normalized);
+        // Matching both cases directly avoids the toUpperCase() allocation on this hot path
+        // (called once per pattern cell per orientation attempt); accepted inputs are unchanged.
+        return switch (axis) {
+            case "X", "x" -> rotateAroundX(x, y, z, normalized);
+            case "Y", "y" -> rotateAroundY(x, y, z, normalized);
+            case "Z", "z" -> rotateAroundZ(x, y, z, normalized);
             default -> new int[]{x, y, z};
         };
     }

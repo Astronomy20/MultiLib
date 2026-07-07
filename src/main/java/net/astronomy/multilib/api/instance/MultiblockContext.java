@@ -24,7 +24,7 @@ public record MultiblockContext(
      * from {@link MultiblockInstance#getFormedBy()} via the server's player list rather than stored
      * directly on the record, since a live {@link ServerPlayer} reference would go stale across
      * save/load and shouldn't be kept around beyond the formation call that already has one in hand.
-     * Never throws — returns empty if {@code formedBy} is absent or the player isn't online right now.
+     * Never throws - returns empty if {@code formedBy} is absent or the player isn't online right now.
      */
     public Optional<ServerPlayer> player() {
         return instance.getFormedBy()
