@@ -28,7 +28,7 @@
     },
     {
       "type": "patchouli:spotlight",
-      "item": "multilib:wrench",
+      "item": "multilib:example_wrench",
       "title": "Multiblock Wrench",
       "text": "A tool item for manually triggering multiblock formation on structures that support wrench activation, instead of relying purely on automatic detection. Right-click the core block of an assembled pattern with the wrench to attempt formation."
     }
