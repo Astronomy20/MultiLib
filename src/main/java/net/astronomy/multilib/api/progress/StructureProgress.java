@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 /**
  * A snapshot of how complete a multiblock structure is, computed fresh from the current world state
- * (not cached) — see {@link MultiblockProgressAPI#compute}.
+ * (not cached) - see {@link MultiblockProgressAPI#compute}.
  */
 public record StructureProgress(int totalRequired, List<MissingBlock> missing) {
 
@@ -18,7 +18,7 @@ public record StructureProgress(int totalRequired, List<MissingBlock> missing) {
 
     public boolean isComplete() { return missing.isEmpty(); }
 
-    /** Missing positions grouped by expected block type with counts — a ready-to-display "shopping list". */
+    /** Missing positions grouped by expected block type with counts - a ready-to-display "shopping list". */
     public Map<Block, Long> missingCountsByBlock() {
         return missing.stream().collect(Collectors.groupingBy(
                 m -> m.expectedState().getBlock(), Collectors.counting()));
