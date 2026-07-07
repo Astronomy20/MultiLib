@@ -19,7 +19,7 @@ group = mod_group_id
 
 repositories {
     // Add here additional repositories if required by some of the dependencies below.
-    // Compat integrations (JEI/REI/EMI/Patchouli) pull their API from Maven — see the dependencies
+    // Compat integrations (JEI/REI/EMI/Patchouli) pull their API from Maven - see the dependencies
     // block below. Each repo is only needed once you set the matching *_version property in
     // gradle.properties; harmless to leave all four declared otherwise.
     maven { name = "JEI";       url = "https://maven.blamejared.com" }
@@ -31,6 +31,13 @@ repositories {
     // (RoughlyEnoughItems-api-neoforge is built from Fabric-first sources). See hasReiLib below.
     maven { name = "Fabric";    url = "https://maven.fabricmc.net" }
     maven { name = "FTB";       url = "https://maven.ftb.dev/releases" }
+    maven { name = "KubeJS";    url = "https://maven.latvian.dev/releases" }
+    // Jade (compat/jade) is only published through CurseForge; CurseMaven proxies CurseForge files as
+    // a normal Maven repo (`curse.maven:<slug>-<projectId>:<fileId>`). See build note below for the
+    // exact coordinates pinned.
+    maven { name = "CurseMaven"; url = "https://cursemaven.com" }
+    // The One Probe (compat/top) publishes its own Maven repo directly.
+    maven { name = "K4U";        url = "https://maven.k-4u.nl" }
 }
 
 base {
@@ -117,18 +124,26 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 // Compat integrations: each package that imports from JEI/REI/EMI/Patchouli/FTB Quests APIs is only compiled
 // when the matching *_version property is set in gradle.properties (so the dependencies block
-// below has a version to resolve from Maven). Unset a property to drop that integration entirely —
+// below has a version to resolve from Maven). Unset a property to drop that integration entirely -
 // no local JARs needed, just the Maven coordinates declared in `dependencies {}`.
 ext.hasJeiLib = project.hasProperty('jei_version') && !project.jei_version.isEmpty()
 ext.hasReiLib = project.hasProperty('rei_version') && !project.rei_version.isEmpty()
 ext.hasEmiLib = project.hasProperty('emi_version') && !project.emi_version.isEmpty()
 ext.hasPatchouliLib = project.hasProperty('patchouli_version') && !project.patchouli_version.isEmpty()
 ext.hasFtbQuestsLib = project.hasProperty('ftbquests_version') && !project.ftbquests_version.isEmpty()
+ext.hasKubeJSLib = project.hasProperty('kubejs_version') && !project.kubejs_version.isEmpty()
 if (!ext.hasJeiLib) sourceSets.main.java.exclude 'net/astronomy/multilib/compat/jei/**'
 if (!ext.hasReiLib) sourceSets.main.java.exclude 'net/astronomy/multilib/compat/rei/**'
 if (!ext.hasEmiLib) sourceSets.main.java.exclude 'net/astronomy/multilib/compat/emi/**'
 if (!ext.hasPatchouliLib) sourceSets.main.java.exclude 'net/astronomy/multilib/compat/patchouli/**'
 if (!ext.hasFtbQuestsLib) sourceSets.main.java.exclude 'net/astronomy/multilib/compat/ftbquests/**'
+if (!ext.hasKubeJSLib) sourceSets.main.java.exclude 'net/astronomy/multilib/compat/kubejs/**'
+// kubejs.plugins.txt (KubeJS's own plugin discovery file - NOT a java.util.ServiceLoader descriptor,
+// KubeJS reads this plain-text file itself, see KubeJSPlugins#loadMod) references a class under
+// compat/kubejs/ by fully-qualified name; if that package isn't compiled in, the reference would
+// dangle and KubeJS would throw trying to load it on a machine that has KubeJS installed despite
+// this build not targeting it.
+if (!ext.hasKubeJSLib) sourceSets.main.resources.exclude 'kubejs.plugins.txt'
 
 // Example/demo multiblock sources are excluded from the published jar only, so they still
 // work in runClient (and other dev runs) which consume sourceSets.main directly, not the jar.
@@ -137,9 +152,8 @@ tasks.named('jar', Jar) {
     exclude 'assets/multilib/blockstates/example_*.json'
     exclude 'assets/multilib/models/block/example_*.json'
     exclude 'assets/multilib/models/item/example_*.json'
-    exclude 'assets/multilib/models/item/wrench.json'
     exclude 'assets/multilib/textures/block/example_*.png'
-    exclude 'assets/multilib/textures/item/wrench.png'
+    exclude 'assets/multilib/textures/item/example_wrench.png'
     exclude 'assets/multilib/guides/multilib/guide/example_multiblock.md'
     exclude 'assets/multilib/patchouli_books/multiblockguide/**'
     exclude 'data/multilib/multiblocks/example_simple.json'
@@ -173,7 +187,7 @@ dependencies {
     // activates only when its *_version property is set in gradle.properties (see hasJeiLib/etc.
     // above). The full mod jars are NOT added as localRuntime here on purpose: which of these
     // recipe-viewer mods actually load in `runClient` is controlled entirely by what you drop into
-    // run/mods (and run/mods/disabled) — that's the only way to test "just REI" or "just EMI" in
+    // run/mods (and run/mods/disabled) - that's the only way to test "just REI" or "just EMI" in
     // isolation without recompiling. Grab the matching jars from run/mods/disabled if you need them.
     if (project.ext.hasJeiLib) {
         compileOnly "mezz.jei:jei-${minecraft_version}-common-api:${jei_version}"
@@ -199,6 +213,26 @@ dependencies {
         compileOnly "dev.ftb.mods:ftb-library-neoforge:${ftblibrary_version}"
         compileOnly "dev.ftb.mods:ftb-quests-neoforge:${ftbquests_version}"
     }
+    if (project.ext.hasKubeJSLib) {
+        compileOnly "dev.latvian.mods:kubejs-neoforge:${kubejs_version}"
+    }
+
+    // Jade (compat/jade) and The One Probe (compat/top): API used at compile time only, same
+    // compileOnly/soft-dependency shape as JEI/REI/EMI/Patchouli above. Unlike those, these two
+    // versions are pinned directly here rather than through a gradle.properties property - both
+    // packages are always compiled (Jade auto-discovers its `@WailaPlugin` class only if Jade itself
+    // is loaded at runtime; compat/top's TopCompat gates everything behind a ModList.isLoaded check
+    // before ever touching a TOP class - see that class's javadoc), so there's no "disable this
+    // integration entirely" property to gate on the way there is for JEI/etc.
+    //
+    // Jade: pulled via CurseMaven (curse.maven:<slug>-<projectId>:<fileId>) since Jade only publishes
+    // through CurseForge. Pinned to Jade-1.21.1-NeoForge-15.10.5 (CurseForge project 324717, file
+    // 7545219).
+    compileOnly "curse.maven:jade-324717:7545219"
+    // The One Probe: published directly to maven.k-4u.nl. Pinned to the "-api" classifier (the small,
+    // dependency-light jar exposing just mcjty.theoneprobe.api) at version 1.21_neo-12.0.8-7, the
+    // latest NeoForge build for Minecraft 1.21/1.21.1 at the time this was pinned.
+    compileOnly "mcjty.theoneprobe:theoneprobe:1.21_neo-12.0.8-7:api"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

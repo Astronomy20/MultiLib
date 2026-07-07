@@ -121,3 +121,17 @@ description='''${mod_description}'''
     versionRange="[1.21.1,)"
     ordering="NONE"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="jade"
+    type="optional"
+    versionRange="[15,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="theoneprobe"
+    type="optional"
+    versionRange="[12,)"
+    ordering="NONE"
+    side="BOTH"
