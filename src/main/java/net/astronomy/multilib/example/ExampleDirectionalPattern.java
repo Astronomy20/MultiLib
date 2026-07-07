@@ -10,8 +10,8 @@ import net.minecraft.world.level.block.Blocks;
 /**
  * Test/demo structure for the "rigid" {@code mainFace()} ghost-overlay behavior: the core
  * ({@code multilib:example_directional_controller}) has its own placed facing (like a furnace), and
- * the pattern is deliberately asymmetric on all 4 horizontal sides — gold north, diamond east,
- * emerald south, iron west of the core — so the preview's orientation is visually obvious. With
+ * the pattern is deliberately asymmetric on all 4 horizontal sides - gold north, diamond east,
+ * emerald south, iron west of the core - so the preview's orientation is visually obvious. With
  * {@code .mainFace()} declared on the core's BlockDefinition (see {@link ExampleSetup}), the ghost
  * overlay must always show this cross in the orientation the core is actually facing, never rotating
  * to match the player's look direction the way {@link ExamplePattern}'s non-directional core does.
@@ -37,11 +37,12 @@ public class ExampleDirectionalPattern {
                 .core('O')
                 .formationMode(FormationMode.AUTOMATIC_AND_WRENCH)
                 .rotations(RotationMode.HORIZONTAL)
+                .autoPlace().autoPlaceOverlay()
                 .ghostOverlayDebug()
                 .build();
 
         // The core's own placed facing (read from its HORIZONTAL_FACING blockstate property) pins the
-        // ghost overlay/auto-place preview orientation — see OverlayRequestHandler.extractMainFace.
+        // ghost overlay/auto-place preview orientation - see OverlayRequestHandler.extractMainFace.
         MultiLibAPI.block(ExampleSetup.DIRECTIONAL_CONTROLLER_BLOCK).mainFace().build();
     }
 }

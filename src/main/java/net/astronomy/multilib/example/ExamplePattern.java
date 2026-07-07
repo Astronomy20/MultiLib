@@ -25,7 +25,7 @@ public class ExamplePattern {
     public static void registerAll() {
         // 'O' (multilib:example_controller) is the core. .core('O') with no separate .activation(..)
         // call makes 'O' the activation symbol too (MultiblockBuilder.core() defaults activation to
-        // the core symbol when none was set) — so placing the controller last, with the rest of the
+        // the core symbol when none was set) - so placing the controller last, with the rest of the
         // pattern already in place, both triggers and forms the structure. The ghost overlay only
         // ever previews from the core (see GhostOverlayInputHandler), so this also keeps it from
         // being confused with example_simple.json's diamond/emerald blocks, which 'D'/'E' reuse here

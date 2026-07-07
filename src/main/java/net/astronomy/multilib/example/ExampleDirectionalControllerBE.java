@@ -18,7 +18,7 @@ public class ExampleDirectionalControllerBE extends AbstractMultiblockController
         setValidationInterval(100);
     }
 
-    // Referenced by ExampleSetup's BlockEntityType.Builder — same lazy-lookup reasoning as
+    // Referenced by ExampleSetup's BlockEntityType.Builder - same lazy-lookup reasoning as
     // ExampleControllerBE.create.
     public static ExampleDirectionalControllerBE create(BlockPos pos, BlockState state) {
         return new ExampleDirectionalControllerBE(ExampleSetup.DIRECTIONAL_CONTROLLER_BE_TYPE, pos, state);
@@ -36,6 +36,6 @@ public class ExampleDirectionalControllerBE extends AbstractMultiblockController
 
     @Override
     protected void serverTick() {
-        // Tick logic here — only runs when isFormed() == true
+        // Tick logic here - only runs when isFormed() == true
     }
 }

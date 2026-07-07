@@ -18,7 +18,7 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Test/demo controller block — placing it completes the {@code multilib:example} structure
+ * Test/demo controller block - placing it completes the {@code multilib:example} structure
  * (it is both the core and the activation symbol 'O' in {@link ExamplePattern}).
  * When the structure is formed the {@code formed} blockstate property flips to {@code true},
  * swapping the rendered model to {@code example_multiblock_model}.
@@ -44,9 +44,9 @@ public class ExampleControllerBlock extends AbstractMultiblockControllerBlock im
     protected InteractionResult openMenu(Player player, Level level, BlockPos pos, BlockState state) {
         if (level.getBlockEntity(pos) instanceof ExampleControllerBE be) {
             // openMenu() is only reached server-side (see useWithoutItem below), and
-            // Player#displayClientMessage is a no-op on ServerPlayer — only LocalPlayer overrides it.
+            // Player#displayClientMessage is a no-op on ServerPlayer - only LocalPlayer overrides it.
             player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                    "[MultiLib] Example structure formed — state: " + be.getState().getId()));
+                    "[MultiLib] Example structure formed - state: " + be.getState().getId()));
         }
         return InteractionResult.SUCCESS;
     }
