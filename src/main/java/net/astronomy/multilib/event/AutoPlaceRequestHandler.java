@@ -6,7 +6,7 @@ import net.astronomy.multilib.core.matching.MatchResult;
 import net.astronomy.multilib.core.matching.PatternMatcher;
 import net.astronomy.multilib.core.matching.ShapedMatcher;
 import net.astronomy.multilib.core.matching.StructureOrientation;
-import net.astronomy.multilib.core.registry.MultiblockRegistry;
+import net.astronomy.multilib.core.registry.MultiblockAmbiguityResolver;
 import net.astronomy.multilib.network.RequestAutoPlacePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -254,15 +254,13 @@ public class AutoPlaceRequestHandler {
     }
 
     // Only definitions opted into autoPlace() and whose core symbol matches the clicked block are
-    // considered here, mirroring GhostOverlayInputHandler's trigger detection.
+    // considered here, mirroring GhostOverlayInputHandler's trigger detection. Ambiguity resolution
+    // (2+ eligible candidates) goes through the same MultiblockAmbiguityResolver the ghost overlay
+    // uses, so a MultiblockPreferenceTracker override applies here too.
     static MultiblockDefinition findAutoPlaceDefinitionAt(ServerLevel level, BlockPos pos) {
-        BlockState state = level.getBlockState(pos);
-        for (MultiblockDefinition def : MultiblockRegistry.getCandidatesFor(state.getBlock())) {
-            if (def.isAutoPlace() && def.matchesCore(state)) {
-                return def;
-            }
-        }
-        return null;
+        return MultiblockAmbiguityResolver.resolve(level, pos,
+                        (def, state) -> def.isAutoPlace() && def.matchesCore(state))
+                .orElse(null);
     }
 
     static BlockState getRepresentativeState(BlockIngredient ingredient) {

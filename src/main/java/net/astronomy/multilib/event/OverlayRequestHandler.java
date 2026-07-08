@@ -9,7 +9,7 @@ import net.astronomy.multilib.core.matching.MatchResult;
 import net.astronomy.multilib.core.matching.PatternMatcher;
 import net.astronomy.multilib.core.matching.ShapedMatcher;
 import net.astronomy.multilib.core.matching.StructureOrientation;
-import net.astronomy.multilib.core.registry.MultiblockRegistry;
+import net.astronomy.multilib.core.registry.MultiblockAmbiguityResolver;
 import net.astronomy.multilib.network.GhostBlockData;
 import net.astronomy.multilib.network.OverlayDataPacket;
 import net.astronomy.multilib.network.RequestOverlayPacket;
@@ -110,17 +110,16 @@ public class OverlayRequestHandler {
                 BlockState clickedState = level.getBlockState(corePos);
                 anchorSymbol = definition != null ? resolveAnchorSymbol(definition, clickedState) : '\0';
 
-                // A genuine activation-symbol click (distinct from the core - most definitions never
-                // hit this, since core() defaults activation to the same symbol) has no meaningful
-                // "which face did the player click" relationship the way the core does, since the
-                // activation symbol can sit anywhere in the pattern. Ground truth from whatever's
-                // already physically placed around it is far more reliable than guessing a default
-                // orientation - see StructureOrientation#detectFromPlacedBlocks. Only falls through to
-                // the face-based guess below when nothing's placed yet to detect from (e.g. the
-                // activation block was placed first, alone).
-                StructureOrientation.Orientation detected = (definition != null
-                        && anchorSymbol == definition.getActivationSymbol()
-                        && anchorSymbol != definition.getCoreSymbol())
+                // Ground truth from whatever's already physically placed around the clicked block beats
+                // guessing from player facing/mainFace whenever there's anything to detect from - a
+                // partially built structure should preview aligned to the blocks that already exist,
+                // not spawn a ghost offset from them just because the player happened to be facing a
+                // different way. Tried for every fresh activation now (core or activation symbol alike -
+                // detectFromPlacedBlocks is generic over which symbol anchors it, see its own javadoc),
+                // not just genuine activation-symbol clicks as before. Only falls through to the
+                // face/mainFace-based guess below when nothing's placed yet to detect from (e.g. only the
+                // core/activation block itself exists so far).
+                StructureOrientation.Orientation detected = definition != null
                         ? StructureOrientation.detectFromPlacedBlocks(level, corePos, definition, anchorSymbol).orElse(null)
                         : null;
 
@@ -327,15 +326,13 @@ public class OverlayRequestHandler {
     // gets a preview no matter which one the player actually has in hand/placed first. Filtered on
     // isGhostOverlayEnabled() too, defensively: a client running an older/different build could still
     // send a request for a definition that opted out, and this must refuse it rather than preview
-    // anyway.
+    // anyway. Ambiguity (2+ eligible candidates for this exact block) is resolved by
+    // MultiblockAmbiguityResolver - priority order by default, or a MultiblockPreferenceTracker
+    // override if one was set (see MultiLibAPI#setPreferredDefinition / core.preference).
     private static MultiblockDefinition findDefinitionAt(ServerLevel level, BlockPos pos) {
-        BlockState state = level.getBlockState(pos);
-        for (MultiblockDefinition def : MultiblockRegistry.getCandidatesFor(state.getBlock())) {
-            if (def.isGhostOverlayEnabled() && def.matchesActivationOrCore(state)) {
-                return def;
-            }
-        }
-        return null;
+        return MultiblockAmbiguityResolver.resolve(level, pos,
+                        (def, state) -> def.isGhostOverlayEnabled() && def.matchesActivationOrCore(state))
+                .orElse(null);
     }
 
     /**

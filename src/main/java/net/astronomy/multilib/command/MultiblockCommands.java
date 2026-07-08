@@ -10,6 +10,7 @@ import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.api.callback.MultiblockBrokenContext;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.api.instance.MultiblockInstance;
+import net.astronomy.multilib.core.registry.MultiblockAmbiguityResolver;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
 import net.astronomy.multilib.core.tracking.WorldMultiblockTracker;
 import net.astronomy.multilib.event.BlockActivationHandler;
@@ -82,6 +83,14 @@ public final class MultiblockCommands {
                 .then(Commands.literal("unform")
                         .then(Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(MultiblockCommands::unform)))
+                .then(Commands.literal("prefer")
+                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                .then(Commands.argument("definition", ResourceLocationArgument.id())
+                                        .suggests(MultiblockCommands::suggestPreferCandidates)
+                                        .executes(MultiblockCommands::preferSet)))
+                        .then(Commands.literal("clear")
+                                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                        .executes(MultiblockCommands::preferClear))))
         );
     }
 
@@ -89,6 +98,30 @@ public final class MultiblockCommands {
                                                                         SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggestResource(
                 MultiblockRegistry.getAll().stream().map(MultiblockDefinition::getId), builder);
+    }
+
+    /**
+     * Unlike {@link #suggestDefinitionIds} (every registered id, used by {@code info}/{@code prefer
+     * clear}-less contexts), {@code prefer}'s {@code definition} argument only ever makes sense as one of
+     * the definitions actually ambiguous at the already-typed {@code pos} - the same "core or activation
+     * symbol at this block" candidate set {@link net.astronomy.multilib.api.MultiLibAPI#setPreferredDefinition}
+     * itself validates against (see {@link MultiblockAmbiguityResolver#candidatesAt}), so a suggestion
+     * offered here always resolves to a binding {@code setPreferredDefinition} will actually accept.
+     * {@code pos} may not be a loaded/valid position yet while the player is still mid-typing (or may be
+     * relative coordinates Brigadier can't resolve outside a real command execution) - both are treated
+     * as "nothing to suggest yet" rather than an error.
+     */
+    private static CompletableFuture<Suggestions> suggestPreferCandidates(CommandContext<CommandSourceStack> ctx,
+                                                                           SuggestionsBuilder builder) {
+        try {
+            ServerLevel level = ctx.getSource().getLevel();
+            BlockPos pos = BlockPosArgument.getBlockPos(ctx, "pos");
+            List<MultiblockDefinition> candidates = MultiblockAmbiguityResolver
+                    .candidatesAt(level, pos, (def, state) -> def.matchesActivationOrCore(state));
+            return SharedSuggestionProvider.suggestResource(candidates.stream().map(MultiblockDefinition::getId), builder);
+        } catch (Exception e) {
+            return builder.buildFuture();
+        }
     }
 
     // ---- list ----
@@ -104,6 +137,10 @@ public final class MultiblockCommands {
             ResourceLocation id = def.getId();
             String sourceLabel = MultiblockRegistry.getSource(id).map(Enum::name).orElse("UNKNOWN");
             src.sendSuccess(() -> Component.translatable("command.multilib.list.entry", id.toString(), sourceLabel), false);
+            // Own key ("list.entry_variants"), not "info.variants" - list.entry's own leading "- "
+            // pushes its text one column further right than info's plain-indented sibling lines, so the
+            // two contexts need different indentation to actually line up under their own list.
+            sendVariantsLineIfApplicable(src, def, "command.multilib.list.entry_variants");
         }
         int count = all.size();
         src.sendSuccess(() -> Component.translatable("command.multilib.list.count", count), false);
@@ -131,16 +168,24 @@ public final class MultiblockCommands {
                 dims.getX(), dims.getY(), dims.getZ(), def.getLayerCount()), false);
         src.sendSuccess(() -> Component.translatable("command.multilib.info.candidates", def.getCandidateBlocks().size()), false);
         src.sendSuccess(() -> Component.translatable("command.multilib.info.priority", def.getPriority()), false);
-        // Only meaningful for definitions built through variant(...) - the legacy single-shape
-        // path reports the implicit "default" name, which isn't worth a line.
-        if (def.getAllVariants().size() > 1) {
-            String variantNames = def.getAllVariants().stream()
-                    .map(MultiblockDefinition::getVariantName)
-                    .reduce((a, b) -> a + ", " + b).orElse("");
-            src.sendSuccess(() -> Component.translatable("command.multilib.info.variants",
-                    def.getAllVariants().size(), variantNames), false);
-        }
+        sendVariantsLineIfApplicable(src, def, "command.multilib.info.variants");
         return 1;
+    }
+
+    /**
+     * Shared by {@code list}/{@code info}: only meaningful for definitions built through
+     * {@code variant(...)} - the legacy single-shape path reports the implicit "default" name, which
+     * isn't worth a line. {@code translationKey} is the caller's own indentation-matched key (see the two
+     * call sites' own comments) - both format identically ({@code count, names}), only the leading
+     * whitespace differs to line up under that caller's own list style.
+     */
+    private static void sendVariantsLineIfApplicable(CommandSourceStack src, MultiblockDefinition def, String translationKey) {
+        if (def.getAllVariants().size() <= 1) return;
+        String variantNames = def.getAllVariants().stream()
+                .map(MultiblockDefinition::getVariantName)
+                .reduce((a, b) -> a + ", " + b).orElse("");
+        int variantCount = def.getAllVariants().size();
+        src.sendSuccess(() -> Component.translatable(translationKey, variantCount, variantNames), false);
     }
 
     // ---- instances ----
@@ -252,5 +297,35 @@ public final class MultiblockCommands {
         src.sendSuccess(() -> Component.translatable("command.multilib.unform.success",
                 count, pos.getX(), pos.getY(), pos.getZ()), true);
         return count;
+    }
+
+    // ---- prefer ----
+
+    private static int preferSet(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerLevel level = src.getLevel();
+        BlockPos pos = BlockPosArgument.getLoadedBlockPos(ctx, "pos");
+        ResourceLocation id = ResourceLocationArgument.getId(ctx, "definition");
+
+        boolean accepted = net.astronomy.multilib.api.MultiLibAPI.setPreferredDefinition(level, pos, id);
+        if (!accepted) {
+            src.sendFailure(Component.translatable("command.multilib.prefer.invalid",
+                    id.toString(), pos.getX(), pos.getY(), pos.getZ()));
+            return 0;
+        }
+        src.sendSuccess(() -> Component.translatable("command.multilib.prefer.set",
+                id.toString(), pos.getX(), pos.getY(), pos.getZ()), true);
+        return 1;
+    }
+
+    private static int preferClear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        ServerLevel level = src.getLevel();
+        BlockPos pos = BlockPosArgument.getLoadedBlockPos(ctx, "pos");
+
+        net.astronomy.multilib.api.MultiLibAPI.clearPreferredDefinition(level, pos);
+        src.sendSuccess(() -> Component.translatable("command.multilib.prefer.cleared",
+                pos.getX(), pos.getY(), pos.getZ()), true);
+        return 1;
     }
 }

@@ -97,4 +97,25 @@ public class ClientPacketHandler {
             }
         });
     }
+
+    /**
+     * Standalone chat feedback for {@link net.astronomy.multilib.network.PreferredDefinitionResultPacket}
+     * - not tied to whatever screen (if any) is currently open, since the picker screen that sent the
+     * request already closed itself immediately on selection (see {@code MultiblockPreferenceScreen}),
+     * well before this response could ever arrive.
+     */
+    public static void handlePreferredDefinitionResult(
+            net.astronomy.multilib.network.PreferredDefinitionResultPacket packet, IPayloadContext ctx) {
+        ctx.enqueueWork(() -> {
+            var player = Minecraft.getInstance().player;
+            if (player == null) return;
+            if (packet.success()) {
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                        "multilib.preference.set", packet.definitionId().toString()), false);
+            } else {
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                        "multilib.preference.invalid", packet.definitionId().toString()), false);
+            }
+        });
+    }
 }

@@ -9,6 +9,7 @@ import net.astronomy.multilib.core.json.MultiblockJsonSetup;
 import net.astronomy.multilib.event.AutoPlacePreviewRequestHandler;
 import net.astronomy.multilib.event.AutoPlaceRequestHandler;
 import net.astronomy.multilib.event.MultiblockDevPacketHandler;
+import net.astronomy.multilib.event.MultiblockPreferencePacketHandler;
 import net.astronomy.multilib.event.OverlayRequestHandler;
 import net.astronomy.multilib.network.AutoPlacePreviewDataPacket;
 import net.astronomy.multilib.network.DevExportResultPacket;
@@ -28,6 +29,8 @@ import net.astronomy.multilib.network.RequestDevRenderTogglePacket;
 import net.astronomy.multilib.network.RequestDevSaveFieldsPacket;
 import net.astronomy.multilib.network.RequestDevScanPacket;
 import net.astronomy.multilib.network.RequestOverlayPacket;
+import net.astronomy.multilib.network.RequestSetPreferredDefinitionPacket;
+import net.astronomy.multilib.network.PreferredDefinitionResultPacket;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -231,6 +234,16 @@ public class MultiLib {
             DevLoadResultPacket.TYPE,
             DevLoadResultPacket.STREAM_CODEC,
             ClientPacketHandler::handleDevLoadResult
+        );
+        registrar.playToServer(
+            RequestSetPreferredDefinitionPacket.TYPE,
+            RequestSetPreferredDefinitionPacket.STREAM_CODEC,
+            MultiblockPreferencePacketHandler::handleSetRequest
+        );
+        registrar.playToClient(
+            PreferredDefinitionResultPacket.TYPE,
+            PreferredDefinitionResultPacket.STREAM_CODEC,
+            ClientPacketHandler::handlePreferredDefinitionResult
         );
     }
 }

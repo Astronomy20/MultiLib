@@ -694,9 +694,16 @@ public final class MultiblockPreviewPanel {
         long nowNanos = System.nanoTime();
         // Only advance the scroll clock while actually hovered - previously this was inverted (advanced
         // whenever *not* hovering, froze while hovering), the exact opposite of the intended "static by
-        // default, scrolls on hover" behavior.
-        if (ticker.lastFrameNanos != 0L && hovering) {
-            ticker.scrollMs += (nowNanos - ticker.lastFrameNanos) / 1_000_000L;
+        // default, scrolls on hover" behavior. Losing hover also snaps straight back to the start
+        // (scrollMs reset, not just paused) - matching the dev block's own hover-scroll
+        // (MultiblockDevScreen#scrollOffsetIfHovered), which is stateless and always returns to offset 0
+        // the instant the mouse leaves, rather than freezing mid-scroll until hovered again.
+        if (hovering) {
+            if (ticker.lastFrameNanos != 0L) {
+                ticker.scrollMs += (nowNanos - ticker.lastFrameNanos) / 1_000_000L;
+            }
+        } else {
+            ticker.scrollMs = 0L;
         }
         ticker.lastFrameNanos = nowNanos;
 
@@ -791,7 +798,7 @@ public final class MultiblockPreviewPanel {
         return net.astronomy.multilib.api.client.MultiLibClientAPI.getCategoryIconStack();
     }
 
-    /** The multiblock's "name", for the title row - the core/activation block's own display name. */
+    /** The multiblock's display name, for the title row - its auto-derived translation key's text. */
     public static String multiblockName(MultiblockDefinition def) {
         String base = baseMultiblockName(def);
         // Variant definitions all share the parent's id/name - the variant name is the only thing
