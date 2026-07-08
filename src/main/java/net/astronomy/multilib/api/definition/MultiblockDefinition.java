@@ -58,7 +58,7 @@ public final class MultiblockDefinition {
     private final List<ShapelessRequirement> shapelessRequirements;
     private final boolean wallSharingEnabled;
     private final Map<Character, WallSharingMode> symbolWallSharingOverrides;
-    private final boolean ghostOverlayDebug;
+    private final boolean ghostOverlay;
     private final int ghostOverlayDurationSeconds;
     private final ResourceLocation modelId;
     private final ResourceLocation iconItem;
@@ -115,7 +115,7 @@ public final class MultiblockDefinition {
                          List<ShapelessRequirement> shapelessRequirements,
                          boolean wallSharingEnabled,
                          Map<Character, WallSharingMode> symbolWallSharingOverrides,
-                         boolean ghostOverlayDebug,
+                         boolean ghostOverlay,
                          int ghostOverlayDurationSeconds,
                          ResourceLocation modelId,
                          ResourceLocation iconItem,
@@ -163,7 +163,7 @@ public final class MultiblockDefinition {
         this.shapelessRequirements = List.copyOf(shapelessRequirements);
         this.wallSharingEnabled = wallSharingEnabled;
         this.symbolWallSharingOverrides = Map.copyOf(symbolWallSharingOverrides);
-        this.ghostOverlayDebug = ghostOverlayDebug;
+        this.ghostOverlay = ghostOverlay;
         this.ghostOverlayDurationSeconds = ghostOverlayDurationSeconds;
         this.modelId = modelId;
         this.iconItem = iconItem;
@@ -233,7 +233,16 @@ public final class MultiblockDefinition {
     public List<ShapelessRequirement> getShapelessRequirements() { return shapelessRequirements; }
     public boolean isWallSharingEnabled() { return wallSharingEnabled; }
     public Map<Character, WallSharingMode> getSymbolWallSharingOverrides() { return symbolWallSharingOverrides; }
-    public boolean isGhostOverlayDebug() { return ghostOverlayDebug; }
+    /**
+     * Whether this definition previews via the ghost overlay at all - {@code MultiblockBuilder#ghostOverlay(boolean)}.
+     * {@code true} by default: this is existing baseline behavior (every layer-based definition has
+     * always previewed from its core), not a new opt-in capability, so flipping the default to
+     * {@code false} would have silently disabled ghost overlay for every definition already out there
+     * the moment they picked up this version. Set {@code false} only for a definition where a preview
+     * genuinely doesn't make sense (e.g. one whose formation is driven entirely by script/validator
+     * logic rather than physical placement).
+     */
+    public boolean isGhostOverlayEnabled() { return ghostOverlay; }
 
     /**
      * Per-definition override of {@code CommonConfig#GHOST_OVERLAY_DURATION_SECONDS}, set via

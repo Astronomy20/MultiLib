@@ -64,7 +64,9 @@ public final class MultiblockBuilder {
     private final List<ShapelessRequirement> shapelessRequirements = new ArrayList<>();
     private boolean wallSharingEnabled = false;
     private final Map<Character, WallSharingMode> symbolWallSharingOverrides = new HashMap<>();
-    private boolean ghostOverlayDebug = false;
+    // true by default - see MultiblockBuilder#ghostOverlay's javadoc for why (existing baseline
+    // behavior, not a new opt-in capability).
+    private boolean ghostOverlay = true;
     /** 0 = unset (use {@code CommonConfig.GHOST_OVERLAY_DURATION_SECONDS}), -1 = never expires, positive = override seconds. */
     private int ghostOverlayDurationSeconds = 0;
     private boolean autoPlace = false;
@@ -153,7 +155,7 @@ public final class MultiblockBuilder {
         b.shapelessRequirements.addAll(def.getShapelessRequirements());
         b.wallSharingEnabled = def.isWallSharingEnabled();
         b.symbolWallSharingOverrides.putAll(def.getSymbolWallSharingOverrides());
-        b.ghostOverlayDebug = def.isGhostOverlayDebug();
+        b.ghostOverlay = def.isGhostOverlayEnabled();
         b.ghostOverlayDurationSeconds = def.getGhostOverlayDurationSeconds().orElse(0);
         b.autoPlace = def.isAutoPlace();
         b.autoPlaceOverlay = def.isAutoPlaceOverlay();
@@ -463,8 +465,21 @@ public final class MultiblockBuilder {
      * Dev-only switch: while enabled, players see a chat debug line with the ghost overlay's
      * render time whenever it's drawn for this structure. Meant to be toggled off before shipping.
      */
-    public MultiblockBuilder ghostOverlayDebug() {
-        this.ghostOverlayDebug = true;
+    /**
+     * Whether this definition previews via the ghost overlay at all: right-clicking a core (or
+     * activation - see {@code GhostOverlayInputHandler}) block while sneaking shows a translucent
+     * preview of what's missing/mismatched. Defaults to {@code true} - this is existing baseline
+     * behavior every definition has always had, not a new opt-in feature, so most definitions never
+     * need to call this at all. Call {@code .ghostOverlay(false)} to opt a definition out entirely
+     * (e.g. one whose formation logic doesn't map to a fixed physical layout a preview could show).
+     * <p>
+     * The dev-facing debug countdown line (chat message showing how long an overlay session has left)
+     * used to be a separate per-definition {@code ghostOverlayDebug()} flag; it's now purely gated on
+     * {@code CommonConfig.DEV_MODE} globally instead, since restricting a diagnostic message to
+     * specific definitions never added anything a dev actually wanted less of.
+     */
+    public MultiblockBuilder ghostOverlay(boolean enabled) {
+        this.ghostOverlay = enabled;
         return this;
     }
 
@@ -818,7 +833,7 @@ public final class MultiblockBuilder {
                         effectiveFreeBlocks,
                         shapeless, shapelessMinSize, shapelessMaxSize,
                         shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
-                        wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug, ghostOverlayDurationSeconds,
+                        wallSharingEnabled, symbolWallSharingOverrides, ghostOverlay, ghostOverlayDurationSeconds,
                         modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
                         keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty,
                         spec.name(), List.of(), List.of(), Map.of()
@@ -836,7 +851,7 @@ public final class MultiblockBuilder {
                 effectiveFreeBlocks,
                 shapeless, shapelessMinSize, shapelessMaxSize,
                 shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
-                wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug, ghostOverlayDurationSeconds,
+                wallSharingEnabled, symbolWallSharingOverrides, ghostOverlay, ghostOverlayDurationSeconds,
                 modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
                 keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty,
                 variantName, derivedVariants, rawSpecsForRecord, sharedBlockMapForRecord

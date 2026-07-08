@@ -32,11 +32,15 @@ public class GhostOverlayInputHandler {
         BlockPos pos = event.getPos();
         Block block = level.getBlockState(pos).getBlock();
 
-        // The ghost overlay is only previewable from the core block, not the activation block (when
-        // a structure splits them) - clicking any other block that merely happens to be a body
-        // block of some other registered structure must never trigger it.
+        // Previewable from either the core or the activation block (when a structure splits them -
+        // see OverlayRequestHandler#resolveAnchorSymbol, which detects the structure's placed
+        // orientation from ground truth when anchored on the activation symbol specifically, rather
+        // than guessing from player facing). Clicking any other block that merely happens to be a
+        // body block of some other registered structure must never trigger it. Also requires
+        // isGhostOverlayEnabled() - a definition that opted out never previews, no matter which
+        // symbol was clicked.
         boolean isTrigger = MultiblockRegistry.getCandidatesFor(block).stream()
-            .anyMatch(def -> def.matchesCore(level.getBlockState(pos)));
+            .anyMatch(def -> def.isGhostOverlayEnabled() && def.matchesActivationOrCore(level.getBlockState(pos)));
 
         if (!isTrigger) return;
 

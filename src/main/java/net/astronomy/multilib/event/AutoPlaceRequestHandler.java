@@ -146,7 +146,7 @@ public class AutoPlaceRequestHandler {
         // remembered ghost-overlay session was showing. Only fall back to those guesses when nothing
         // beyond the core is actually placed yet in any valid orientation.
         Optional<StructureOrientation.Orientation> detected =
-                StructureOrientation.detectFromPlacedBlocks(level, corePos, definition);
+                StructureOrientation.detectFromPlacedBlocks(level, corePos, definition, definition.getCoreSymbol());
         if (detected.isPresent()) {
             axis = detected.get().axis();
             rotation = detected.get().rotation();

@@ -52,8 +52,11 @@ public class GhostOverlayState {
         lastPrintedRemainingSeconds = remainingSeconds;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        mc.player.displayClientMessage(Component.literal(
-                "[MultiLib debug] Ghost overlay expires in " + remainingSeconds + "s"), false);
+        // -1 is OverlayRequestHandler's "never expires" sentinel (MultiblockBuilder#ghostOverlayPersistent()).
+        String message = remainingSeconds < 0
+                ? "[MultiLib debug] Ghost overlay is persistent (won't expire)"
+                : "[MultiLib debug] Ghost overlay expires in " + remainingSeconds + "s";
+        mc.player.displayClientMessage(Component.literal(message), false);
     }
 
     public boolean isActive() {

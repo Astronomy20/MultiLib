@@ -41,7 +41,9 @@ public class ExamplePattern {
                 .formationMode(FormationMode.AUTOMATIC_AND_WRENCH)
                 .rotations(RotationMode.HORIZONTAL)
                 .allowRotation(RotationAxis.values(), 90, 180, 270, -90)
-                .ghostOverlayDebug()
+                // Ghost overlay is on by default (see .ghostOverlay's javadoc) - no call needed here.
+                // The dev-only debug countdown line is now purely CommonConfig.DEV_MODE-gated, not a
+                // per-definition opt-in, so it already shows for this structure in dev mode too.
                 .autoPlace().autoPlaceOverlay()
                 .onFormed(ctx -> {
                     Level level = ctx.level();

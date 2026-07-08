@@ -55,7 +55,7 @@ public class OverlayRequestHandler {
      *                           the countdown instead of letting it keep expiring in the background.
      */
     private record PlayerOverlayState(BlockPos corePos, int currentMode, String axis, int rotation,
-                                      long activationGameTime) {}
+                                      char anchorSymbol, long activationGameTime) {}
 
     /**
      * The (axis, rotation) a player currently has previewed via the ghost overlay on the given core,
@@ -101,31 +101,55 @@ public class OverlayRequestHandler {
             // (different core, or no overlay active yet) re-derives it.
             String axis;
             int rotation;
+            char anchorSymbol;
             if (current != null && current.corePos().equals(corePos)) {
                 axis = current.axis();
                 rotation = current.rotation();
+                anchorSymbol = current.anchorSymbol();
             } else {
-                // A core block declaring .mainFace() (BlockDefinitionBuilder) has a meaningful placed
-                // facing of its own (e.g. a furnace-like FACING property) - the preview must stay
-                // pinned to that, ignoring the player's look direction entirely. Otherwise, the face
-                // supplied by the client already encodes the player's facing (see
-                // GhostOverlayInputHandler), so the existing face-based derivation still applies.
-                Direction mainFace = net.astronomy.multilib.core.registry.BlockDefinitionRegistry
-                        .get(level.getBlockState(corePos).getBlock())
-                        .filter(net.astronomy.multilib.api.block.BlockDefinition::hasMainFace)
-                        .map(bd -> extractMainFace(level.getBlockState(corePos)))
-                        .orElse(null);
-                Direction effectiveFace = mainFace != null
-                        ? mainFace
-                        : (packet.faceOrdinal() >= 0 && packet.faceOrdinal() < Direction.values().length
-                                ? Direction.values()[packet.faceOrdinal()] : null);
-                if (effectiveFace != null) {
-                    StructureOrientation.Orientation o = StructureOrientation.orientationForFace(definition, effectiveFace);
-                    axis = o.axis();
-                    rotation = o.rotation();
+                BlockState clickedState = level.getBlockState(corePos);
+                anchorSymbol = definition != null ? resolveAnchorSymbol(definition, clickedState) : '\0';
+
+                // A genuine activation-symbol click (distinct from the core - most definitions never
+                // hit this, since core() defaults activation to the same symbol) has no meaningful
+                // "which face did the player click" relationship the way the core does, since the
+                // activation symbol can sit anywhere in the pattern. Ground truth from whatever's
+                // already physically placed around it is far more reliable than guessing a default
+                // orientation - see StructureOrientation#detectFromPlacedBlocks. Only falls through to
+                // the face-based guess below when nothing's placed yet to detect from (e.g. the
+                // activation block was placed first, alone).
+                StructureOrientation.Orientation detected = (definition != null
+                        && anchorSymbol == definition.getActivationSymbol()
+                        && anchorSymbol != definition.getCoreSymbol())
+                        ? StructureOrientation.detectFromPlacedBlocks(level, corePos, definition, anchorSymbol).orElse(null)
+                        : null;
+
+                if (detected != null) {
+                    axis = detected.axis();
+                    rotation = detected.rotation();
                 } else {
-                    axis = "Y";
-                    rotation = 0;
+                    // A core block declaring .mainFace() (BlockDefinitionBuilder) has a meaningful placed
+                    // facing of its own (e.g. a furnace-like FACING property) - the preview must stay
+                    // pinned to that, ignoring the player's look direction entirely. Otherwise, the face
+                    // supplied by the client already encodes the player's facing (see
+                    // GhostOverlayInputHandler), so the existing face-based derivation still applies.
+                    Direction mainFace = net.astronomy.multilib.core.registry.BlockDefinitionRegistry
+                            .get(clickedState.getBlock())
+                            .filter(net.astronomy.multilib.api.block.BlockDefinition::hasMainFace)
+                            .map(bd -> extractMainFace(clickedState))
+                            .orElse(null);
+                    Direction effectiveFace = mainFace != null
+                            ? mainFace
+                            : (packet.faceOrdinal() >= 0 && packet.faceOrdinal() < Direction.values().length
+                                    ? Direction.values()[packet.faceOrdinal()] : null);
+                    if (effectiveFace != null) {
+                        StructureOrientation.Orientation o = StructureOrientation.orientationForFace(definition, effectiveFace);
+                        axis = o.axis();
+                        rotation = o.rotation();
+                    } else {
+                        axis = "Y";
+                        rotation = 0;
+                    }
                 }
             }
 
@@ -135,8 +159,8 @@ public class OverlayRequestHandler {
             long activationGameTime = (current != null && current.corePos().equals(corePos))
                     ? current.activationGameTime()
                     : level.getGameTime();
-            PLAYER_STATES.put(player.getUUID(), new PlayerOverlayState(corePos, nextMode, axis, rotation, activationGameTime));
-            sendOverlayUpdate(player, level, corePos, definition, nextMode, totalLayers, axis, rotation, activationGameTime);
+            PLAYER_STATES.put(player.getUUID(), new PlayerOverlayState(corePos, nextMode, axis, rotation, anchorSymbol, activationGameTime));
+            sendOverlayUpdate(player, level, corePos, definition, nextMode, totalLayers, axis, rotation, anchorSymbol, activationGameTime);
         });
     }
 
@@ -210,7 +234,8 @@ public class OverlayRequestHandler {
 
             int totalLayers = tickDefinition != null ? tickDefinition.getLayerCount() : 1;
             sendOverlayUpdate(player, level, corePos, tickDefinition, entry.getValue().currentMode(), totalLayers,
-                    entry.getValue().axis(), entry.getValue().rotation(), entry.getValue().activationGameTime());
+                    entry.getValue().axis(), entry.getValue().rotation(), entry.getValue().anchorSymbol(),
+                    entry.getValue().activationGameTime());
         }
     }
 
@@ -269,8 +294,8 @@ public class OverlayRequestHandler {
 
     private static void sendOverlayUpdate(ServerPlayer player, ServerLevel level, BlockPos corePos,
                                            MultiblockDefinition definition, int mode, int totalLayers,
-                                           String axis, int rotation, long activationGameTime) {
-        List<GhostBlockData> ghostData = calculateGhostBlocks(level, corePos, definition, mode, axis, rotation);
+                                           String axis, int rotation, char anchorSymbol, long activationGameTime) {
+        List<GhostBlockData> ghostData = calculateGhostBlocks(level, corePos, definition, mode, axis, rotation, anchorSymbol);
         if (ghostData == null) {
             // null (as opposed to an empty list) signals the structure is already fully formed -
             // disable outright instead of leaving an "active but empty" overlay. This is a defensive
@@ -280,7 +305,10 @@ public class OverlayRequestHandler {
             PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false, 0));
             return;
         }
-        boolean debugTiming = CommonConfig.DEV_MODE.get() && definition != null && definition.isGhostOverlayDebug();
+        // No longer gated per-definition (the old ghostOverlayDebug() flag) - see MultiblockBuilder
+        // #ghostOverlay's javadoc for why restricting this diagnostic to specific definitions never
+        // added anything a dev actually wanted less of.
+        boolean debugTiming = CommonConfig.DEV_MODE.get();
         // Ticks (not wall-clock) so the displayed countdown freezes along with the rest of the timer
         // while the integrated server is paused (see activationGameTime's javadoc above).
         long durationTicks = resolveDurationTicks(definition);
@@ -294,22 +322,36 @@ public class OverlayRequestHandler {
         PacketDistributor.sendToPlayer(player, new OverlayDataPacket(ghostData, totalLayers, mode, debugTiming, remainingSeconds));
     }
 
-    // The ghost overlay is only previewable from the core block (see GhostOverlayInputHandler), so
-    // only definitions whose core symbol actually matches the clicked block are considered here.
+    // Previewable from either the core or the activation block (see GhostOverlayInputHandler, which
+    // gates the client-side trigger the same way) - a structure that splits the two symbols still
+    // gets a preview no matter which one the player actually has in hand/placed first. Filtered on
+    // isGhostOverlayEnabled() too, defensively: a client running an older/different build could still
+    // send a request for a definition that opted out, and this must refuse it rather than preview
+    // anyway.
     private static MultiblockDefinition findDefinitionAt(ServerLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         for (MultiblockDefinition def : MultiblockRegistry.getCandidatesFor(state.getBlock())) {
-            if (def.matchesCore(state)) {
+            if (def.isGhostOverlayEnabled() && def.matchesActivationOrCore(state)) {
                 return def;
             }
         }
         return null;
     }
 
+    /**
+     * Which declared symbol {@code state} was actually clicked as - the core (the common case, and
+     * always preferred when {@code state} matches both, e.g. a structure with no separate activation
+     * symbol), or the activation symbol otherwise. {@code findDefinitionAt} already guarantees one of
+     * the two matches before this is ever called.
+     */
+    private static char resolveAnchorSymbol(MultiblockDefinition def, BlockState state) {
+        return def.matchesCore(state) ? def.getCoreSymbol() : def.getActivationSymbol();
+    }
+
     /** @return ghost data for the requested view, or null if the structure is already fully formed. */
     private static List<GhostBlockData> calculateGhostBlocks(ServerLevel level, BlockPos corePos,
                                                                MultiblockDefinition definition, int mode,
-                                                               String axis, int rotation) {
+                                                               String axis, int rotation, char anchorSymbol) {
         if (definition == null || definition.getLayers().isEmpty()) return List.of();
 
         MatchResult result = PatternMatcher.matches(level, corePos, definition);
@@ -321,10 +363,13 @@ public class OverlayRequestHandler {
         List<List<String>> layers = definition.getLayers();
         Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
 
-        // The overlay only ever triggers from the core block (findDefinitionAt already verified
-        // that), so anchor directly on the core symbol's cell.
+        // findDefinitionAt/handleRequest already resolved which declared symbol was actually clicked
+        // (core or activation - see resolveAnchorSymbol) - anchor on that cell specifically, since
+        // findSymbolOrigin needs to know exactly where in the pattern grid corePos sits. The core
+        // symbol is kept separately below purely for the "always highlight the core" rendering rule,
+        // regardless of which symbol the preview was anchored on.
         char coreSymbol = definition.getCoreSymbol();
-        BlockPos origin = StructureOrientation.findSymbolOrigin(corePos, layers, coreSymbol, axis, rotation);
+        BlockPos origin = StructureOrientation.findSymbolOrigin(corePos, layers, anchorSymbol, axis, rotation);
 
         for (int layerIdx = 0; layerIdx < layers.size(); layerIdx++) {
             // mode counts up from the bottom (mode=1 = bottommost, displayed "1/N") while layers[]

@@ -47,7 +47,7 @@ public final class MultiblockProgressAPI {
         // block *types* in the same *quantities*, just at different world positions, so the choice
         // only affects where a caller would highlight/render the missing positions, not the totals.
         StructureOrientation.Orientation orientation = StructureOrientation
-                .detectFromPlacedBlocks(level, corePos, definition)
+                .detectFromPlacedBlocks(level, corePos, definition, definition.getCoreSymbol())
                 .orElse(new StructureOrientation.Orientation("Y", 0));
 
         List<List<String>> layers = definition.getLayers();
@@ -110,7 +110,7 @@ public final class MultiblockProgressAPI {
         if (definition == null || definition.getLayers().isEmpty()) return Optional.empty();
 
         StructureOrientation.Orientation orientation = StructureOrientation
-                .detectFromPlacedBlocks(level, corePos, definition)
+                .detectFromPlacedBlocks(level, corePos, definition, definition.getCoreSymbol())
                 .orElse(new StructureOrientation.Orientation("Y", 0));
 
         List<List<String>> layers = definition.getLayers();

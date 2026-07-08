@@ -92,19 +92,23 @@ public final class StructureOrientation {
     /**
      * Scans every orientation the pattern matcher would ever try (mirroring {@link ShapedMatcher}'s
      * own {@code tryAllTransformsForCell}/{@code tryGranularTransformsForCell} enumeration) and picks
-     * whichever orientation has the most already-placed, matching non-core pattern blocks around
-     * {@code corePos}. This is ground truth from the physical structure, not a guess, so callers
-     * should prefer it over a guessed player-facing orientation or a remembered overlay session
-     * whenever it's available.
+     * whichever orientation has the most already-placed, matching pattern blocks (excluding
+     * {@code anchorSymbol} itself) around {@code anchorPos}. This is ground truth from the physical
+     * structure, not a guess, so callers should prefer it over a guessed player-facing orientation or
+     * a remembered overlay session whenever it's available.
+     * <p>
+     * {@code anchorSymbol} is whichever symbol {@code anchorPos} is being treated as - almost always
+     * the definition's core symbol (the original, still most common caller), but not necessarily: a
+     * structure that splits its core and activation symbols can be previewed/detected from either
+     * one's placed position, as long as {@link #findSymbolOrigin} is given the matching symbol.
      *
-     * @return empty if no orientation has any matching placed blocks beyond the core (i.e. only the
-     *         core itself exists so far, so there's nothing to detect from).
+     * @return empty if no orientation has any matching placed blocks beyond the anchor itself (i.e.
+     *         only the anchor block exists so far, so there's nothing to detect from).
      */
     public static Optional<Orientation> detectFromPlacedBlocks(
-            ServerLevel level, BlockPos corePos, MultiblockDefinition definition) {
+            ServerLevel level, BlockPos anchorPos, MultiblockDefinition definition, char anchorSymbol) {
         List<List<String>> layers = definition.getLayers();
         Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
-        char coreSymbol = definition.getCoreSymbol();
         Set<Character> freeBlockSymbols = definition.getFreeBlocks().keySet();
 
         List<String[]> orientationCandidates = new ArrayList<>();
@@ -142,7 +146,7 @@ public final class StructureOrientation {
             String axis = candidate[0];
             int rotation = Integer.parseInt(candidate[1]);
 
-            BlockPos origin = findSymbolOrigin(corePos, layers, coreSymbol, axis, rotation);
+            BlockPos origin = findSymbolOrigin(anchorPos, layers, anchorSymbol, axis, rotation);
 
             int count = 0;
             for (int layerIdx = 0; layerIdx < layers.size(); layerIdx++) {
@@ -159,7 +163,7 @@ public final class StructureOrientation {
                     for (int col = 0; col < Math.min(width, line.length()); col++) {
                         char symbol = line.charAt(col);
                         if (symbol == ' ') continue;
-                        if (symbol == coreSymbol) continue;
+                        if (symbol == anchorSymbol) continue;
                         if (freeBlockSymbols.contains(symbol)) continue;
                         BlockIngredient ingredient = blockMap.get(symbol);
                         if (ingredient == null) continue;
