@@ -82,8 +82,12 @@ public final class MultiblockDevRegistry {
      * yet (see the class javadoc - confirmed to happen on every {@link RegisterEvent} in this project,
      * not just rarely), falls back to reading the raw {@code devMode} line straight out of
      * {@code config/multilib/common.toml} instead of just assuming "disabled".
+     * <p>
+     * Public so other {@code RegisterEvent}-time, dev-mode-gated registrations (e.g.
+     * {@code core.preference.MultiblockPreferenceToolRegistry}) can reuse this exact fallback instead
+     * of duplicating the documented workaround above.
      */
-    private static boolean isDevModeEnabled() {
+    public static boolean isDevModeEnabled() {
         try {
             return CommonConfig.DEV_MODE.get();
         } catch (IllegalStateException e) {
@@ -121,7 +125,7 @@ public final class MultiblockDevRegistry {
 
         event.register(Registries.BLOCK, helper -> {
             DEV_BLOCK = new MultiblockDevBlock(BlockBehaviour.Properties.of().strength(0.5F).noOcclusion());
-            helper.register(id("multiblock_dev_block"), DEV_BLOCK);
+            helper.register(id("dev_block"), DEV_BLOCK);
         });
         event.register(Registries.ITEM, helper -> {
             // getDescriptionId() overridden to reuse the block's own translation key - a plain BlockItem
@@ -134,18 +138,18 @@ public final class MultiblockDevRegistry {
                     return getBlock().getDescriptionId();
                 }
             };
-            helper.register(id("multiblock_dev_block"), DEV_ITEM);
+            helper.register(id("dev_block"), DEV_ITEM);
             DEV_WRENCH_ITEM = new MultiblockDevWrenchItem(new Item.Properties().stacksTo(1));
-            helper.register(id("multiblock_dev_wrench"), DEV_WRENCH_ITEM);
+            helper.register(id("dev_wrench"), DEV_WRENCH_ITEM);
         });
         event.register(Registries.BLOCK_ENTITY_TYPE, helper -> {
             DEV_BLOCK_ENTITY_TYPE = BlockEntityType.Builder.of(MultiblockDevBlockEntity::create, DEV_BLOCK).build(null);
-            helper.register(id("multiblock_dev_block"), DEV_BLOCK_ENTITY_TYPE);
+            helper.register(id("dev_block"), DEV_BLOCK_ENTITY_TYPE);
         });
         event.register(Registries.MENU, helper -> {
             DEV_MENU_TYPE = IMenuTypeExtension.create(
                     (containerId, inventory, buf) -> new MultiblockDevMenu(containerId, inventory, buf.readBlockPos()));
-            helper.register(id("multiblock_dev_block"), DEV_MENU_TYPE);
+            helper.register(id("dev_block"), DEV_MENU_TYPE);
         });
     }
 

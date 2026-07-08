@@ -1,5 +1,0 @@
-{
-  "variants": {
-    "": { "model": "multilib:block/multiblock_dev_block" }
-  }
-}

@@ -112,7 +112,7 @@ public class MultiblockDevBlock extends Block implements EntityBlock {
         serverPlayer.openMenu(new net.minecraft.world.MenuProvider() {
             @Override
             public Component getDisplayName() {
-                return Component.translatable("block.multilib.multiblock_dev_block");
+                return Component.translatable("block.multilib.dev_block");
             }
 
             @Override
