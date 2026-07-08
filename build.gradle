@@ -252,7 +252,16 @@ test {
 // `gradle build` should not compile or run src/test - the unit-test source set needs
 // its own setup (see the testImplementation comment above) and shouldn't gate normal
 // builds. Run unit tests explicitly with `gradle test` instead.
-tasks.named('check') { dependsOn.remove(tasks.named('test')) }
+// Match by task name rather than handing a TaskProvider to Set.remove(): each
+// tasks.named('test') call yields a fresh provider whose equals() won't match the one
+// the java plugin registered on check, so a plain remove() would silently no-op.
+tasks.named('check').configure {
+    dependsOn.removeIf { dep ->
+        (dep instanceof TaskProvider && dep.name == 'test') ||
+        (dep instanceof Task && dep.name == 'test') ||
+        dep == 'test'
+    }
+}
 
 // This block of code expands all declared replace properties in the specified resource targets.
 // A missing property will result in an error. Properties are expanded using ${} Groovy notation.
