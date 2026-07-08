@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public final class MultiblockBuilder {
     private ResourceLocation id;
@@ -64,6 +65,8 @@ public final class MultiblockBuilder {
     private boolean wallSharingEnabled = false;
     private final Map<Character, WallSharingMode> symbolWallSharingOverrides = new HashMap<>();
     private boolean ghostOverlayDebug = false;
+    /** 0 = unset (use {@code CommonConfig.GHOST_OVERLAY_DURATION_SECONDS}), -1 = never expires, positive = override seconds. */
+    private int ghostOverlayDurationSeconds = 0;
     private boolean autoPlace = false;
     private boolean autoPlaceOverlay = false;
     private ResourceLocation modelId = null;
@@ -77,6 +80,11 @@ public final class MultiblockBuilder {
     private final Set<AllowedRotation> allowedRotations = new java.util.LinkedHashSet<>();
     private final Map<Character, List<TierSpec>> tierSpecs = new LinkedHashMap<>();
     private String formedProperty = null;
+
+    // F12 step A (multiple pattern variants). Empty = legacy behavior, byte-for-byte unchanged. Each
+    // entry is one .variant(...) declaration in call order; the first becomes this definition's own
+    // geometry at build() time, every later one becomes a derived MultiblockDefinition - see build().
+    private final List<VariantSpec> variantSpecs = new ArrayList<>();
 
     // Short, fix-first description of why build()/buildWithoutRegistering() last rejected this
     // definition - set by whichever validate*() method failed. Lets a caller that only gets `null`
@@ -105,9 +113,19 @@ public final class MultiblockBuilder {
     static MultiblockBuilder fromDefinition(MultiblockDefinition def) {
         MultiblockBuilder b = new MultiblockBuilder();
         b.id = def.getId();
-        b.blockMap.putAll(def.getBlockMap());
-        for (List<String> layer : def.getLayers()) {
-            b.layers.add(new ArrayList<>(layer));
+        // F12 step A: a legacy definition (built without .variant()) copies blockMap/layers straight
+        // across as before. A definition built WITH .variant() instead restores just the shared/
+        // top-level keys plus the raw per-variant declarations, so re-running build() re-derives the
+        // exact same merged layers/keys per variant rather than re-populating b.layers directly (which
+        // would trip the "can't mix top-level layer() with variant()" check in build()).
+        if (def.getRawVariantSpecs().isEmpty()) {
+            b.blockMap.putAll(def.getBlockMap());
+            for (List<String> layer : def.getLayers()) {
+                b.layers.add(new ArrayList<>(layer));
+            }
+        } else {
+            b.blockMap.putAll(def.getSharedBlockMap());
+            b.variantSpecs.addAll(def.getRawVariantSpecs());
         }
         b.rotationMode = def.getRotationMode();
         b.requireAirInEmptyPositions = def.isRequireAirInEmptyPositions();
@@ -136,6 +154,7 @@ public final class MultiblockBuilder {
         b.wallSharingEnabled = def.isWallSharingEnabled();
         b.symbolWallSharingOverrides.putAll(def.getSymbolWallSharingOverrides());
         b.ghostOverlayDebug = def.isGhostOverlayDebug();
+        b.ghostOverlayDurationSeconds = def.getGhostOverlayDurationSeconds().orElse(0);
         b.autoPlace = def.isAutoPlace();
         b.autoPlaceOverlay = def.isAutoPlaceOverlay();
         b.modelId = def.getModelId().orElse(null);
@@ -197,6 +216,34 @@ public final class MultiblockBuilder {
      */
     public MultiblockBuilder layer(String... rows) {
         this.layers.add(Arrays.asList(rows));
+        return this;
+    }
+
+    /**
+     * Declares one named geometry variant (F12 step A): an alternate set of layers - and, optionally,
+     * variant-local key overrides - that forms under the same id, sharing every other behavioral field
+     * (callbacks, formation mode, rotation config, core/activation symbols, priority, formedProperty,
+     * tier specs, validator, ...) with this definition. At {@link #build()}/{@link #buildWithoutRegistering()}
+     * time:
+     * <ul>
+     *   <li>the <em>first</em> declared variant becomes this definition's own geometry - its layers and
+     *   merged keys populate exactly the fields the legacy (no-variant) path populates, and its name
+     *   becomes {@link MultiblockDefinition#getVariantName()};</li>
+     *   <li>every later variant becomes a derived {@link MultiblockDefinition}, reachable via
+     *   {@link MultiblockDefinition#getVariantDefinitions()} - never registered under its own entry in
+     *   {@code MultiblockRegistry}, since it shares the same id as the parent.</li>
+     * </ul>
+     * Shared top-level {@link #key(char, BlockIngredient)} calls apply to every variant; a variant's own
+     * {@link VariantBuilder#key(char, BlockIngredient)} overrides the shared one for that variant only.
+     * <p>
+     * Once any {@code variant(...)} is declared, all geometry must live inside {@code variant(...)}
+     * blocks: mixing with a top-level {@link #layer(String...)} call on this same builder is rejected at
+     * build time, as is an empty or duplicate variant name.
+     */
+    public MultiblockBuilder variant(String name, Consumer<VariantBuilder> config) {
+        VariantBuilder variantBuilder = new VariantBuilder();
+        config.accept(variantBuilder);
+        variantSpecs.add(variantBuilder.toSpec(name));
         return this;
     }
 
@@ -422,6 +469,43 @@ public final class MultiblockBuilder {
     }
 
     /**
+     * Per-definition override of {@code CommonConfig.GHOST_OVERLAY_DURATION_SECONDS}: this
+     * definition's ghost overlay auto-disables after {@code seconds} instead of the configured global
+     * duration. Useful for a dev-tooling structure (e.g. a "preview selector" wrench that cycles
+     * through candidate definitions sharing a core - see {@link #variant}'s sibling use case) where
+     * the developer wants the preview to stay up noticeably longer than a normal player-facing
+     * structure's overlay while they iterate on placement.
+     * <p>
+     * Only affects definitions that opt in - every definition that never calls this (or
+     * {@link #ghostOverlayPersistent()}) keeps using the config value exactly as before.
+     *
+     * @throws IllegalArgumentException if {@code seconds} isn't positive (use
+     *         {@link #ghostOverlayPersistent()} for "never expires" instead of a sentinel value here)
+     */
+    public MultiblockBuilder ghostOverlayDuration(int seconds) {
+        if (seconds <= 0) {
+            throw new IllegalArgumentException(
+                    "ghostOverlayDuration(seconds) requires a positive value, got " + seconds
+                            + " - use ghostOverlayPersistent() for a non-expiring overlay instead.");
+        }
+        this.ghostOverlayDurationSeconds = seconds;
+        return this;
+    }
+
+    /**
+     * This definition's ghost overlay never auto-expires - it stays visible until the player manually
+     * closes it (clicking the core again with mode cycled back past the last layer) or the structure
+     * actually forms. The intended use is a dev-facing structure the developer wants pinned in-world
+     * indefinitely while manually placing blocks to test it, rather than fighting a countdown meant
+     * for ordinary player-facing structures. See {@link #ghostOverlayDuration(int)} for a bounded
+     * override instead of an unbounded one.
+     */
+    public MultiblockBuilder ghostOverlayPersistent() {
+        this.ghostOverlayDurationSeconds = -1;
+        return this;
+    }
+
+    /**
      * Opts this definition into auto-placement: Ctrl+Right-clicking the core block (when the
      * structure isn't yet formed) auto-places every missing pattern position the player has the
      * matching item for, consuming items from their inventory (skipped in creative).
@@ -610,7 +694,7 @@ public final class MultiblockBuilder {
         if (id == null) {
             throw new IllegalStateException("MultiblockDefinition must have an id");
         }
-        if (layers.isEmpty() && patternProvider == null && !shapeless) {
+        if (layers.isEmpty() && variantSpecs.isEmpty() && patternProvider == null && !shapeless) {
             throw new IllegalStateException("MultiblockDefinition must have at least one layer, a PatternProvider, or be shapeless");
         }
         // Not a toggleable feature - every multiblock without a .name(...) translation key always
@@ -624,28 +708,13 @@ public final class MultiblockBuilder {
             MultiLib.LOGGER.warn("[MultiLib] Multiblock '{}' has no display name set via .name(...) - "
                     + "falling back to the core/activation block's own name in JEI/REI/EMI.", id);
         }
-        boolean valid = validateLayerDimensions(id) && resolveAndValidateCore(id) && validateGeometryConstraints(id) && validateUniqueCore(id) && validateCoreActivationInPattern(id);
-        Map<Character, FreeBlockSpec> effectiveFreeBlocks = applyUniqueToFreeBlocks();
-        MultiblockDefinition definition = new MultiblockDefinition(
-                id, blockMap, layers, rotationMode,
-                requireAirInEmptyPositions, activationSymbol, coreSymbol, priority,
-                formationMode, formedCallbacks, brokenCallbacks,
-                tickCallback, ambientCallback, ambientIntervalTicks, validator,
-                patternProvider, boundingBox,
-                optionalSymbols, optionalLayerIndices,
-                effectiveFreeBlocks,
-                shapeless, shapelessMinSize, shapelessMaxSize,
-                shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
-                wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug,
-                modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
-                keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty
-        );
-        if (valid) {
-            MultiblockRegistry.register(definition);
+        BuildResult result = buildDefinitionInternal(resolvedNameKey);
+        if (result.valid()) {
+            MultiblockRegistry.register(result.definition());
         } else {
             MultiLib.LOGGER.error("[MultiLib] Multiblock '{}' was NOT registered due to the validation error(s) above. Fix the definition and reload.", id);
         }
-        return definition;
+        return result.definition();
     }
 
     /**
@@ -659,7 +728,7 @@ public final class MultiblockBuilder {
         if (id == null) {
             throw new IllegalStateException("MultiblockDefinition must have an id");
         }
-        if (layers.isEmpty() && patternProvider == null && !shapeless) {
+        if (layers.isEmpty() && variantSpecs.isEmpty() && patternProvider == null && !shapeless) {
             throw new IllegalStateException("MultiblockDefinition must have at least one layer, a PatternProvider, or be shapeless");
         }
         String resolvedNameKey = nameTranslationKey != null && !nameTranslationKey.isBlank()
@@ -669,14 +738,96 @@ public final class MultiblockBuilder {
             MultiLib.LOGGER.warn("[MultiLib] Multiblock '{}' has no display name set via .name(...) - "
                     + "falling back to the core/activation block's own name in JEI/REI/EMI.", id);
         }
-        boolean valid = validateLayerDimensions(id) && resolveAndValidateCore(id) && validateGeometryConstraints(id) && validateUniqueCore(id) && validateCoreActivationInPattern(id);
-        if (!valid) {
+        BuildResult result = buildDefinitionInternal(resolvedNameKey);
+        if (!result.valid()) {
             MultiLib.LOGGER.error("[MultiLib] Multiblock '{}' was NOT built due to the validation error(s) above. Fix the definition and reload.", id);
             return null;
         }
+        return result.definition();
+    }
+
+    /** Pairing of the built {@link MultiblockDefinition} with whether it passed validation - see {@link #buildDefinitionInternal(String)}. */
+    private record BuildResult(boolean valid, MultiblockDefinition definition) {}
+
+    /**
+     * Shared construction path for {@link #build()} and {@link #buildWithoutRegistering()} - both need
+     * identical resolution/validation/construction logic and only differ in what they do with the
+     * result (register + warn-and-return-anyway vs. return {@code null}), so that part is factored out
+     * here to keep the F12 step A (variant) branching in exactly one place.
+     * <p>
+     * With no {@code .variant(...)} declared, this is byte-for-byte the legacy path: one definition
+     * built from this builder's own {@code layers}/{@code blockMap}, variant name {@code "default"}, no
+     * derived siblings. With {@code .variant(...)} declared, the first variant's layers/merged keys
+     * become this definition's own geometry (and variant name), and every later variant becomes a
+     * derived {@link MultiblockDefinition} sharing every other field.
+     */
+    private BuildResult buildDefinitionInternal(String resolvedNameKey) {
         Map<Character, FreeBlockSpec> effectiveFreeBlocks = applyUniqueToFreeBlocks();
-        return new MultiblockDefinition(
-                id, blockMap, layers, rotationMode,
+
+        String variantName;
+        List<List<String>> effectiveLayers;
+        Map<Character, BlockIngredient> effectiveBlockMap;
+        Map<Character, BlockIngredient> sharedBlockMapForRecord;
+        List<VariantSpec> rawSpecsForRecord;
+        List<MultiblockDefinition> derivedVariants;
+        boolean valid;
+
+        if (variantSpecs.isEmpty()) {
+            variantName = "default";
+            effectiveLayers = layers;
+            effectiveBlockMap = blockMap;
+            sharedBlockMapForRecord = Map.of();
+            rawSpecsForRecord = List.of();
+            derivedVariants = List.of();
+            valid = validateVariantGeometry(id, effectiveLayers, effectiveBlockMap);
+        } else {
+            if (!layers.isEmpty()) {
+                throw new IllegalStateException("Multiblock '" + id + "': cannot mix a top-level .layer(...) "
+                        + "call with .variant(...) - declare all geometry inside variant(...) blocks, or none.");
+            }
+            Set<String> seenNames = new HashSet<>();
+            for (VariantSpec spec : variantSpecs) {
+                if (spec.name() == null || spec.name().isBlank()) {
+                    throw new IllegalStateException("Multiblock '" + id + "': variant name must not be empty.");
+                }
+                if (!seenNames.add(spec.name())) {
+                    throw new IllegalStateException("Multiblock '" + id + "': duplicate variant name '" + spec.name() + "' - variant names must be unique.");
+                }
+            }
+
+            VariantSpec firstSpec = variantSpecs.get(0);
+            variantName = firstSpec.name();
+            effectiveLayers = firstSpec.layers();
+            effectiveBlockMap = mergeKeys(blockMap, firstSpec.keys());
+            sharedBlockMapForRecord = Map.copyOf(blockMap);
+            rawSpecsForRecord = List.copyOf(variantSpecs);
+            valid = validateVariantGeometry(id, effectiveLayers, effectiveBlockMap);
+
+            derivedVariants = new ArrayList<>();
+            for (int i = 1; i < variantSpecs.size(); i++) {
+                VariantSpec spec = variantSpecs.get(i);
+                Map<Character, BlockIngredient> mergedKeys = mergeKeys(blockMap, spec.keys());
+                valid = validateVariantGeometry(id, spec.layers(), mergedKeys) && valid;
+                derivedVariants.add(new MultiblockDefinition(
+                        id, mergedKeys, spec.layers(), rotationMode,
+                        requireAirInEmptyPositions, activationSymbol, coreSymbol, priority,
+                        formationMode, formedCallbacks, brokenCallbacks,
+                        tickCallback, ambientCallback, ambientIntervalTicks, validator,
+                        patternProvider, boundingBox,
+                        optionalSymbols, optionalLayerIndices,
+                        effectiveFreeBlocks,
+                        shapeless, shapelessMinSize, shapelessMaxSize,
+                        shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
+                        wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug, ghostOverlayDurationSeconds,
+                        modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
+                        keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty,
+                        spec.name(), List.of(), List.of(), Map.of()
+                ));
+            }
+        }
+
+        MultiblockDefinition definition = new MultiblockDefinition(
+                id, effectiveBlockMap, effectiveLayers, rotationMode,
                 requireAirInEmptyPositions, activationSymbol, coreSymbol, priority,
                 formationMode, formedCallbacks, brokenCallbacks,
                 tickCallback, ambientCallback, ambientIntervalTicks, validator,
@@ -685,10 +836,18 @@ public final class MultiblockBuilder {
                 effectiveFreeBlocks,
                 shapeless, shapelessMinSize, shapelessMaxSize,
                 shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
-                wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug,
+                wallSharingEnabled, symbolWallSharingOverrides, ghostOverlayDebug, ghostOverlayDurationSeconds,
                 modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
-                keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty
+                keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty,
+                variantName, derivedVariants, rawSpecsForRecord, sharedBlockMapForRecord
         );
+        return new BuildResult(valid, definition);
+    }
+
+    private static Map<Character, BlockIngredient> mergeKeys(Map<Character, BlockIngredient> shared, Map<Character, BlockIngredient> overrides) {
+        Map<Character, BlockIngredient> merged = new LinkedHashMap<>(shared);
+        merged.putAll(overrides);
+        return merged;
     }
 
     private Map<Character, FreeBlockSpec> applyUniqueToFreeBlocks() {
@@ -709,7 +868,7 @@ public final class MultiblockBuilder {
      * declaration: auto-assigns the core symbol when the builder didn't set one, or logs a mismatch error
      * (without throwing) when both sides disagree.
      */
-    private boolean resolveAndValidateCore(ResourceLocation id) {
+    private boolean resolveAndValidateCore(ResourceLocation id, Map<Character, BlockIngredient> blockMap) {
         char declaredSymbol = '\0';
         boolean conflict = false;
 
@@ -746,6 +905,23 @@ public final class MultiblockBuilder {
     }
 
     /**
+     * Runs every geometry validation this builder performs, in the same order {@code build()} always
+     * has, against an explicit {@code layers}/{@code blockMap} pair instead of always this builder's
+     * own fields - so the exact same validation logic can run once for the legacy (no-variant) geometry
+     * and once per {@code .variant(...)} declaration (F12 step A), instead of being duplicated. Symbol
+     * sets that don't vary per variant (core/activation symbols, unique/surfaceOnly/frameOnly/insideOnly,
+     * shapeless) are still read directly off this builder's own fields, since those are shared across
+     * every variant by design.
+     */
+    private boolean validateVariantGeometry(ResourceLocation id, List<List<String>> layers, Map<Character, BlockIngredient> blockMap) {
+        return validateLayerDimensions(id, layers)
+                && resolveAndValidateCore(id, blockMap)
+                && validateGeometryConstraints(id, layers)
+                && validateUniqueCore(id, layers)
+                && validateCoreActivationInPattern(id, layers);
+    }
+
+    /**
      * Every layer in a shaped pattern must have the same number of rows, and every row (across every
      * layer) must have the same length. {@code ShapedMatcher} (and the ghost overlay) computes each
      * layer's own center independently from that layer's own row count/row length - so a shorter layer
@@ -757,7 +933,7 @@ public final class MultiblockBuilder {
      * blank cells (spaces - already the "empty position" convention) instead of omitting them, so every
      * layer shares one common width/height and therefore one common center.
      */
-    private boolean validateLayerDimensions(ResourceLocation id) {
+    private boolean validateLayerDimensions(ResourceLocation id, List<List<String>> layers) {
         if (shapeless || layers.isEmpty()) return true;
 
         int expectedHeight = layers.get(0).size();
@@ -790,7 +966,7 @@ public final class MultiblockBuilder {
     }
 
     /** Statically validates unique/surfaceOnly/frameOnly/insideOnly against the textual pattern layers. */
-    private boolean validateGeometryConstraints(ResourceLocation id) {
+    private boolean validateGeometryConstraints(ResourceLocation id, List<List<String>> layers) {
         if (uniqueSymbols.isEmpty() && surfaceOnlySymbols.isEmpty()
                 && frameOnlySymbols.isEmpty() && insideOnlySymbols.isEmpty()) {
             return true;
@@ -850,7 +1026,7 @@ public final class MultiblockBuilder {
      * once should use {@link #activation(char)} instead for the extra positions (a trigger, not a
      * unique controller).
      */
-    private boolean validateUniqueCore(ResourceLocation id) {
+    private boolean validateUniqueCore(ResourceLocation id, List<List<String>> layers) {
         if (coreSymbol == '\0' || shapeless) return true;
 
         int count = 0;
@@ -878,14 +1054,14 @@ public final class MultiblockBuilder {
      * mistake - usually a typo, or a leftover from an edited pattern - so it's rejected the same way a
      * duplicate core is, rather than silently forming a structure with no real controller/trigger.
      */
-    private boolean validateCoreActivationInPattern(ResourceLocation id) {
+    private boolean validateCoreActivationInPattern(ResourceLocation id, List<List<String>> layers) {
         if (shapeless) return true;
-        if (coreSymbol != '\0' && !patternContainsSymbol(coreSymbol)) {
+        if (coreSymbol != '\0' && !patternContainsSymbol(coreSymbol, layers)) {
             MultiLib.LOGGER.error("[MultiLib] Multiblock '{}': core symbol '{}' does not occur anywhere in the pattern.", id, coreSymbol);
             failValidation(id, "core symbol not found in the pattern");
             return false;
         }
-        if (activationSymbol != '\0' && !patternContainsSymbol(activationSymbol)) {
+        if (activationSymbol != '\0' && !patternContainsSymbol(activationSymbol, layers)) {
             MultiLib.LOGGER.error("[MultiLib] Multiblock '{}': activation symbol '{}' does not occur anywhere in the pattern.", id, activationSymbol);
             failValidation(id, "activation symbol not found in the pattern");
             return false;
@@ -893,7 +1069,7 @@ public final class MultiblockBuilder {
         return true;
     }
 
-    private boolean patternContainsSymbol(char symbol) {
+    private boolean patternContainsSymbol(char symbol, List<List<String>> layers) {
         for (List<String> layer : layers) {
             for (String row : layer) {
                 if (row.indexOf(symbol) >= 0) return true;

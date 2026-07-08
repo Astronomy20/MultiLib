@@ -17,10 +17,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -57,6 +59,7 @@ public final class MultiblockDefinition {
     private final boolean wallSharingEnabled;
     private final Map<Character, WallSharingMode> symbolWallSharingOverrides;
     private final boolean ghostOverlayDebug;
+    private final int ghostOverlayDurationSeconds;
     private final ResourceLocation modelId;
     private final ResourceLocation iconItem;
     private final String nameTranslationKey;
@@ -71,6 +74,21 @@ public final class MultiblockDefinition {
     private final Set<AllowedRotation> allowedRotations;
     private final Map<Character, List<TierSpec>> tierSpecs;
     private final String formedProperty;
+
+    /** "default" for a definition built without {@code .variant(...)}; the declaring variant's own name otherwise. */
+    private final String variantName;
+    /**
+     * Derived sibling definitions (F12 step A) - one per {@code .variant(...)} call after the first, each
+     * sharing every field of this definition except its own layers/blockMap/variantName. Empty for a
+     * legacy definition, and always empty on a derived definition itself (they don't carry further
+     * derivations of their own). Never registered in {@code MultiblockRegistry} under their own entry -
+     * they live only here, on the parent.
+     */
+    private final List<MultiblockDefinition> variantDefinitions;
+    /** Raw {@code .variant(...)} declarations, kept only on the parent, so {@link #toBuilder()} can re-emit them losslessly. Empty for a legacy definition and for every derived definition. */
+    private final List<VariantSpec> rawVariantSpecs;
+    /** The shared/top-level keys declared before any {@code .variant(...)} call, kept only on the parent for {@link #toBuilder()} fidelity. Empty unless {@link #rawVariantSpecs} is non-empty. */
+    private final Map<Character, BlockIngredient> sharedBlockMap;
 
     MultiblockDefinition(ResourceLocation id, Map<Character, BlockIngredient> blockMap,
                          List<List<String>> layers, RotationMode rotationMode,
@@ -98,6 +116,7 @@ public final class MultiblockDefinition {
                          boolean wallSharingEnabled,
                          Map<Character, WallSharingMode> symbolWallSharingOverrides,
                          boolean ghostOverlayDebug,
+                         int ghostOverlayDurationSeconds,
                          ResourceLocation modelId,
                          ResourceLocation iconItem,
                          String nameTranslationKey,
@@ -110,7 +129,11 @@ public final class MultiblockDefinition {
                          boolean autoPlaceOverlay,
                          Set<AllowedRotation> allowedRotations,
                          Map<Character, List<TierSpec>> tierSpecs,
-                         String formedProperty) {
+                         String formedProperty,
+                         String variantName,
+                         List<MultiblockDefinition> variantDefinitions,
+                         List<VariantSpec> rawVariantSpecs,
+                         Map<Character, BlockIngredient> sharedBlockMap) {
         this.id = id;
         this.blockMap = Map.copyOf(blockMap);
         this.layers = layers.stream().map(List::copyOf).collect(Collectors.toUnmodifiableList());
@@ -141,6 +164,7 @@ public final class MultiblockDefinition {
         this.wallSharingEnabled = wallSharingEnabled;
         this.symbolWallSharingOverrides = Map.copyOf(symbolWallSharingOverrides);
         this.ghostOverlayDebug = ghostOverlayDebug;
+        this.ghostOverlayDurationSeconds = ghostOverlayDurationSeconds;
         this.modelId = modelId;
         this.iconItem = iconItem;
         this.nameTranslationKey = nameTranslationKey;
@@ -155,6 +179,10 @@ public final class MultiblockDefinition {
         this.tierSpecs = tierSpecs.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, e -> List.copyOf(e.getValue())));
         this.formedProperty = formedProperty;
+        this.variantName = variantName;
+        this.variantDefinitions = List.copyOf(variantDefinitions);
+        this.rawVariantSpecs = List.copyOf(rawVariantSpecs);
+        this.sharedBlockMap = Map.copyOf(sharedBlockMap);
     }
 
     /**
@@ -206,6 +234,18 @@ public final class MultiblockDefinition {
     public boolean isWallSharingEnabled() { return wallSharingEnabled; }
     public Map<Character, WallSharingMode> getSymbolWallSharingOverrides() { return symbolWallSharingOverrides; }
     public boolean isGhostOverlayDebug() { return ghostOverlayDebug; }
+
+    /**
+     * Per-definition override of {@code CommonConfig#GHOST_OVERLAY_DURATION_SECONDS}, set via
+     * {@code MultiblockBuilder#ghostOverlayDuration(int)}/{@code #ghostOverlayPersistent()}. Empty
+     * (the default) means "use the config value" - unaffected, so every definition that never calls
+     * either builder method keeps today's behavior exactly. A negative value (only ever -1, from
+     * {@code ghostOverlayPersistent()}) means the overlay never auto-expires - see
+     * {@link net.astronomy.multilib.event.OverlayRequestHandler} for how this is resolved.
+     */
+    public OptionalInt getGhostOverlayDurationSeconds() {
+        return ghostOverlayDurationSeconds == 0 ? OptionalInt.empty() : OptionalInt.of(ghostOverlayDurationSeconds);
+    }
     public Optional<ResourceLocation> getModelId() { return Optional.ofNullable(modelId); }
     public boolean hasModel() { return modelId != null; }
     public Optional<ResourceLocation> getIconItem() { return Optional.ofNullable(iconItem); }
@@ -227,6 +267,42 @@ public final class MultiblockDefinition {
      */
     public Optional<String> getFormedProperty() { return Optional.ofNullable(formedProperty); }
     public boolean hasFormedProperty() { return formedProperty != null; }
+
+    /** "default" for a definition built without {@code .variant(...)}; the declaring variant's own name otherwise. */
+    public String getVariantName() { return variantName; }
+
+    /**
+     * Derived sibling definitions (F12 step A): one per {@code .variant(...)} call after the first,
+     * each sharing every behavioral field of this definition (callbacks, formation mode, rotation
+     * config, core/activation symbols, priority, formedProperty, tier specs, validator, ...) but with
+     * its own layers/keys. Empty for a legacy definition and for every derived definition itself. A
+     * derived definition is never registered under its own id in {@code MultiblockRegistry} - it's
+     * only reachable through the parent that declared it.
+     */
+    public List<MultiblockDefinition> getVariantDefinitions() { return variantDefinitions; }
+
+    /** This definition followed by every {@link #getVariantDefinitions()}, parent-first. */
+    public List<MultiblockDefinition> getAllVariants() {
+        List<MultiblockDefinition> all = new ArrayList<>(variantDefinitions.size() + 1);
+        all.add(this);
+        all.addAll(variantDefinitions);
+        return List.copyOf(all);
+    }
+
+    /** Looks up this definition or one of its {@link #getVariantDefinitions()} by variant name. */
+    public Optional<MultiblockDefinition> getVariant(String name) {
+        if (variantName.equals(name)) return Optional.of(this);
+        for (MultiblockDefinition variant : variantDefinitions) {
+            if (variant.variantName.equals(name)) return Optional.of(variant);
+        }
+        return Optional.empty();
+    }
+
+    /** Raw {@code .variant(...)} declarations for {@link #toBuilder()} fidelity - see {@link VariantSpec}. Empty unless this is a parent built with {@code .variant(...)}. */
+    List<VariantSpec> getRawVariantSpecs() { return rawVariantSpecs; }
+
+    /** The shared/top-level keys declared before any {@code .variant(...)} call - see {@link VariantSpec}. Empty unless {@link #getRawVariantSpecs()} is non-empty. */
+    Map<Character, BlockIngredient> getSharedBlockMap() { return sharedBlockMap; }
 
     public WallSharingMode getWallSharingMode(char symbol) {
         if (symbol == coreSymbol || symbol == activationSymbol) {
@@ -298,6 +374,14 @@ public final class MultiblockDefinition {
         return false;
     }
 
+    /**
+     * On a parent with variants, this is the UNION of candidate blocks across every variant (this
+     * definition's own, plus every {@link #getVariantDefinitions()}'s) - {@code MultiblockRegistry}
+     * indexes candidate blocks once, at register time, only for the parent (derived definitions are
+     * never registered on their own), so a block that only appears in a later variant must still be
+     * indexed here or it would never trigger matching at all. A derived definition (called directly,
+     * e.g. while trying candidates in order) still reports only its own, single-variant set.
+     */
     public Set<Block> getCandidateBlocks() {
         Set<Block> result = new HashSet<>();
         for (BlockIngredient ingredient : blockMap.values()) {
@@ -305,6 +389,9 @@ public final class MultiblockDefinition {
         }
         if (patternProvider != null) {
             // PatternProvider-based definitions register no candidate blocks; always-checked path.
+        }
+        for (MultiblockDefinition variant : variantDefinitions) {
+            result.addAll(variant.getCandidateBlocks());
         }
         return result;
     }

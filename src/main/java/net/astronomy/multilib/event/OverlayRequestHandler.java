@@ -41,6 +41,9 @@ public class OverlayRequestHandler {
     private static final int REFRESH_INTERVAL_TICKS = 10;
     private static int tickCounter = 0;
 
+    /** Sentinel tick count for a "never expires" overlay (see {@link #resolveDurationTicks}) - see that method's javadoc for why this isn't simply {@link Long#MAX_VALUE}. */
+    private static final long PERSISTENT_DURATION_TICKS = Long.MAX_VALUE / 2;
+
     /**
      * @param activationGameTime the level's game time (in ticks, see {@link ServerLevel#getGameTime()})
      *                           when this overlay session was first opened; never updated on
@@ -179,13 +182,18 @@ public class OverlayRequestHandler {
             ServerLevel level = player.serverLevel();
             BlockPos corePos = entry.getValue().corePos();
 
+            // Resolved before the expiry check below (rather than after, as before) since the
+            // per-definition duration override (see resolveDurationTicks) needs the definition to know
+            // whether this specific structure opted out of the config's default duration.
+            MultiblockDefinition tickDefinition = findDefinitionAt(level, corePos);
+
             // Session duration expired - stop refreshing so the server stops sending packets and the
             // client-side timeout can fire. This is the primary mechanism: the client's own fallback
             // timeout (GhostOverlayState.isActive) would also fire eventually, but only after the
             // server has already stopped sending updates (which reset the client timer each time).
             // Measured in game ticks (not wall-clock time) so pausing the integrated server (single
             // player) freezes the countdown instead of letting it expire while the game is paused.
-            long durationTicks = CommonConfig.GHOST_OVERLAY_DURATION_SECONDS.get() * 20L;
+            long durationTicks = resolveDurationTicks(tickDefinition);
             if (level.getGameTime() - entry.getValue().activationGameTime() > durationTicks) {
                 PLAYER_STATES.remove(entry.getKey());
                 PacketDistributor.sendToPlayer(player, new OverlayDataPacket(List.of(), 0, -1, false, 0));
@@ -200,11 +208,34 @@ public class OverlayRequestHandler {
                 continue;
             }
 
-            MultiblockDefinition definition = findDefinitionAt(level, corePos);
-            int totalLayers = definition != null ? definition.getLayerCount() : 1;
-            sendOverlayUpdate(player, level, corePos, definition, entry.getValue().currentMode(), totalLayers,
+            int totalLayers = tickDefinition != null ? tickDefinition.getLayerCount() : 1;
+            sendOverlayUpdate(player, level, corePos, tickDefinition, entry.getValue().currentMode(), totalLayers,
                     entry.getValue().axis(), entry.getValue().rotation(), entry.getValue().activationGameTime());
         }
+    }
+
+    /**
+     * The duration (in ticks) an overlay session for {@code definition} stays active before
+     * {@link #onLevelTick} auto-disables it. Definitions never calling
+     * {@code MultiblockBuilder#ghostOverlayDuration(int)}/{@code #ghostOverlayPersistent()} (the vast
+     * majority) fall through to {@link CommonConfig#GHOST_OVERLAY_DURATION_SECONDS} exactly as before -
+     * this override only ever narrows behavior for definitions that explicitly opt in.
+     * <p>
+     * "Persistent" (from {@code ghostOverlayPersistent()}, stored as -1 seconds) resolves to a very
+     * large but finite tick count rather than {@link Long#MAX_VALUE} - the expiry check subtracts
+     * {@code activationGameTime} from the current game time, and keeping generous headroom (still
+     * millions of years of ticks) avoids any risk of overflow in that subtraction on a very
+     * long-running world, unlike a value already sitting at the type's own maximum.
+     */
+    private static long resolveDurationTicks(MultiblockDefinition definition) {
+        if (definition != null) {
+            java.util.OptionalInt custom = definition.getGhostOverlayDurationSeconds();
+            if (custom.isPresent()) {
+                int seconds = custom.getAsInt();
+                return seconds < 0 ? PERSISTENT_DURATION_TICKS : seconds * 20L;
+            }
+        }
+        return CommonConfig.GHOST_OVERLAY_DURATION_SECONDS.get() * 20L;
     }
 
     /**
@@ -252,9 +283,14 @@ public class OverlayRequestHandler {
         boolean debugTiming = CommonConfig.DEV_MODE.get() && definition != null && definition.isGhostOverlayDebug();
         // Ticks (not wall-clock) so the displayed countdown freezes along with the rest of the timer
         // while the integrated server is paused (see activationGameTime's javadoc above).
-        long durationTicks = CommonConfig.GHOST_OVERLAY_DURATION_SECONDS.get() * 20L;
+        long durationTicks = resolveDurationTicks(definition);
         long elapsedTicks = level.getGameTime() - activationGameTime;
-        int remainingSeconds = (int) Math.max(0, Math.ceil((durationTicks - elapsedTicks) / 20.0));
+        // -1 is the client's "never expires" sentinel (see GhostOverlayState's debug print) - skips
+        // the ceil() math entirely for a persistent overlay rather than reporting some enormous but
+        // technically-finite number of "remaining seconds" that would never mean anything to a dev.
+        int remainingSeconds = durationTicks == PERSISTENT_DURATION_TICKS
+                ? -1
+                : (int) Math.max(0, Math.ceil((durationTicks - elapsedTicks) / 20.0));
         PacketDistributor.sendToPlayer(player, new OverlayDataPacket(ghostData, totalLayers, mode, debugTiming, remainingSeconds));
     }
 
