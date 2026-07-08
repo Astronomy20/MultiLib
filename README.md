@@ -25,7 +25,6 @@ Building a multiblock structure by hand usually means reimplementing the same ha
 
 ```java
 MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
-        .name("my_altar")
         .layer("PPP", " P ", " G ")
         .layer("POP", " P ", " G ")
         .key('P', BlockIngredient.of(Blocks.STONE_BRICKS))

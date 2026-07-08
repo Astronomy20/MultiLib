@@ -73,7 +73,6 @@ public final class MultiblockBuilder {
     private boolean autoPlaceOverlay = false;
     private ResourceLocation modelId = null;
     private ResourceLocation iconItem = null;
-    private String nameTranslationKey = null;
     private final Set<Character> uniqueSymbols = new HashSet<>();
     private final Set<Character> surfaceOnlySymbols = new HashSet<>();
     private final Set<Character> frameOnlySymbols = new HashSet<>();
@@ -161,13 +160,6 @@ public final class MultiblockBuilder {
         b.autoPlaceOverlay = def.isAutoPlaceOverlay();
         b.modelId = def.getModelId().orElse(null);
         b.iconItem = def.getIconItem().orElse(null);
-        // MultiblockDefinition stores the fully-resolved key ("multiblock.<ns>.<name>"), but
-        // MultiblockBuilder.name(...) takes the bare name and re-derives that same prefix at build()
-        // time. Strip it back off so re-building doesn't double-prefix it.
-        def.getNameTranslationKey().ifPresent(resolved -> {
-            String prefix = "multiblock." + def.getId().getNamespace() + ".";
-            b.nameTranslationKey = resolved.startsWith(prefix) ? resolved.substring(prefix.length()) : resolved;
-        });
         b.uniqueSymbols.addAll(def.getUniqueSymbols());
         b.surfaceOnlySymbols.addAll(def.getSurfaceOnlySymbols());
         b.frameOnlySymbols.addAll(def.getFrameOnlySymbols());
@@ -563,19 +555,6 @@ public final class MultiblockBuilder {
     }
 
     /**
-     * Display name for this multiblock (e.g. JEI's recipe-page title). Pass only the bare name
-     * key - e.g. {@code "example_multiblock"} - and the full translation key
-     * {@code "multiblock.<namespace>.<name>"} is derived automatically at build time, following the
-     * same convention as {@code block.<namespace>.<path>} for blocks. Both
-     * {@code "multiblock.<ns>.<name>"} and {@code "block.<ns>.<name>"} should be defined in the
-     * lang file. If unset, the core/activation block's own name is used as a fallback.
-     */
-    public MultiblockBuilder name(String name) {
-        this.nameTranslationKey = name;
-        return this;
-    }
-
-    /**
      * Symbols whose matched positions are NOT auto-hidden when {@link #model(ResourceLocation)} is set.
      * The core is always kept visible; use this for IO ports or other interactive blocks that should
      * remain visible while the structure is formed.
@@ -712,17 +691,10 @@ public final class MultiblockBuilder {
         if (layers.isEmpty() && variantSpecs.isEmpty() && patternProvider == null && !shapeless) {
             throw new IllegalStateException("MultiblockDefinition must have at least one layer, a PatternProvider, or be shapeless");
         }
-        // Not a toggleable feature - every multiblock without a .name(...) translation key always
-        // gets this warning, so the fallback to the core/activation block's own display name (see
-        // MultiblockRecipeCategory.multiblockName) is a visible, intentional choice rather than a
-        // silently missing translation that's easy to mistake for a bug.
-        String resolvedNameKey = nameTranslationKey != null && !nameTranslationKey.isBlank()
-                ? "multiblock." + id.getNamespace() + "." + nameTranslationKey
-                : null;
-        if (resolvedNameKey == null) {
-            MultiLib.LOGGER.warn("[MultiLib] Multiblock '{}' has no display name set via .name(...) - "
-                    + "falling back to the core/activation block's own name in JEI/REI/EMI.", id);
-        }
+        // Display name key follows the same convention as block.<namespace>.<path> for blocks -
+        // derived straight from the mandatory id, so every multiblock always has one with no separate
+        // opt-in call needed. Define "multiblock.<ns>.<path>" in the lang file for the JEI/REI/EMI title.
+        String resolvedNameKey = "multiblock." + id.getNamespace() + "." + id.getPath();
         BuildResult result = buildDefinitionInternal(resolvedNameKey);
         if (result.valid()) {
             MultiblockRegistry.register(result.definition());
@@ -746,13 +718,7 @@ public final class MultiblockBuilder {
         if (layers.isEmpty() && variantSpecs.isEmpty() && patternProvider == null && !shapeless) {
             throw new IllegalStateException("MultiblockDefinition must have at least one layer, a PatternProvider, or be shapeless");
         }
-        String resolvedNameKey = nameTranslationKey != null && !nameTranslationKey.isBlank()
-                ? "multiblock." + id.getNamespace() + "." + nameTranslationKey
-                : null;
-        if (resolvedNameKey == null) {
-            MultiLib.LOGGER.warn("[MultiLib] Multiblock '{}' has no display name set via .name(...) - "
-                    + "falling back to the core/activation block's own name in JEI/REI/EMI.", id);
-        }
+        String resolvedNameKey = "multiblock." + id.getNamespace() + "." + id.getPath();
         BuildResult result = buildDefinitionInternal(resolvedNameKey);
         if (!result.valid()) {
             MultiLib.LOGGER.error("[MultiLib] Multiblock '{}' was NOT built due to the validation error(s) above. Fix the definition and reload.", id);

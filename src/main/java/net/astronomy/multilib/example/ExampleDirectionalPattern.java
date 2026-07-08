@@ -23,7 +23,6 @@ import net.minecraft.world.level.block.Blocks;
 public class ExampleDirectionalPattern {
     public static void registerAll() {
         MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("multilib", "example_directional"))
-                .name("example_directional")
                 .layer(
                         " G ",
                         "IOD",

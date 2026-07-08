@@ -161,11 +161,6 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
                 .ifPresent(builder::formationMode);
         }
 
-        // name: bare key (e.g. "my_structure") → full translation key "multiblock.<namespace>.<name>"
-        if (obj.has("name")) {
-            builder.name(obj.get("name").getAsString());
-        }
-
         // priority
         if (obj.has("priority")) {
             builder.priority(obj.get("priority").getAsInt());
