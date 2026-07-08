@@ -49,6 +49,9 @@ Matches every `BlockState` unconditionally (including air). `getCandidateBlocks(
 ### `BlockIngredient.ability(BlockCapability<?, Direction> capability, Block previewBlock)`
 Matches any block whose block entity exposes `capability` on at least one side, checked at match-time via `level.getCapability(...)` — e.g. "any block exposing energy storage", from any mod, with no shared tag convention needed. `previewBlock` is used only for previews (there's no single block for a capability — pick a canonical example). This is the one ingredient that overrides the context-aware `matches(ServerLevel, BlockPos, BlockState)` overload, since it needs a `Level`/`BlockPos`.
 
+### `BlockIngredient.parse(String spec)`
+Parses a single **block id** (`"minecraft:iron_block"`) or, with a `#` prefix, a **block tag** (`"#c:storage_blocks/iron"`) — the same two forms the JSON datapack format takes as separate `block`/`tag` fields, collapsed into one string since that's the natural shape for a scripting call site. Delegates to `of(...)` or `tag(...)` accordingly. Backs [`MultiblockBuilder.key(char, String)`](MultiblockBuilder.md#keychar-symbol-string-blockortagid) so KubeJS scripts get the same tag/block coverage Java and JSON already have. Throws `IllegalArgumentException` if the id is malformed or (for a plain block id) unregistered.
+
 ## Choosing an ingredient type
 
 | Need | Use |

@@ -77,7 +77,6 @@ Top-level fields (all optional except `layers`+`keys` or `pattern`):
   "core": "O",
   "rotations": "horizontal",
   "formation_mode": "automatic_and_wrench",
-  "name": "my_structure",
   "priority": 0,
   "require_air_in_empty_positions": false,
   "wall_sharing": true,
@@ -144,6 +143,8 @@ Non-core symbols can share a block with an adjacent structure, but this is **opt
 
 `.autoPlace()` enables Ctrl+Right-click auto-building: clicking an unformed core with the modifier held scans each fixed-grid cell, and for every missing cell whose expected block the player holds, places it — consuming one item (free in creative). It then attempts formation, so a stocked player completes a structure in one click. An action-bar message reports blocks placed and still missing.
 
+The modifier key defaults to Left Ctrl and isn't a Controls-menu keybind; a consuming mod can rebind it via [`MultiLibClientAPI.setAutoPlaceModifierKey(...)`](api-reference/MultiLibClientAPI.md#auto-place-modifier-key). Its repeat speed is tunable in [config](Configuration.md#commonconfig-configmultilibcommontoml) (`autoPlaceSpeedHeldItem`/`autoPlaceSpeedEmptyHand`).
+
 ## Ghost overlay
 
 Independent of auto-place: interacting with an unformed **core** shows a client-side ghost overlay — translucent renders at every missing/mismatched position, refreshed every 10 ticks, auto-expiring after a configurable duration. Clicking a horizontal face cycles the previewed yaw; clicking again toggles single-layer vs. whole-structure view. `.ghostOverlayDebug()` adds a per-frame render-time chat line (dev only).
@@ -180,7 +181,7 @@ A "wrench" is any `Item` implementing `IMultiblockWrench` (`useOn(UseOnContext)`
 | GuideME | Placeholder — no stable registration API yet; `GuideMEHelper.logInfo(...)` logs availability, register pages via GuideME's own JSON | `compat.guideme` |
 | FTB Quests | Auto-registered (if loaded) — a "Multiblock" quest task ([below](#ftb-quests-compatibility)) | `compat.ftbquests` |
 
-For recipe browsers, `.icon(itemId)` and `.name(...)` control presentation ([Visuals](api-reference/MultiblockBuilder.md#visuals-recipe-browsers)).
+For recipe browsers, `.icon(itemId)` sets the icon; the title auto-derives from `multiblock.<namespace>.<path>` ([Visuals](api-reference/MultiblockBuilder.md#visuals-recipe-browsers)).
 
 ## FTB Quests compatibility
 

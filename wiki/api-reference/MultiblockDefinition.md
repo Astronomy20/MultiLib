@@ -81,7 +81,7 @@ The immutable, built representation of a structure. You never construct this dir
 | `getModelId()` / `hasModel()` | Master-Dummy model id, if set |
 | `getKeepVisibleSymbols()` | Symbols excluded from auto-hiding |
 | `getIconItem()` | JEI/REI/EMI icon item id |
-| `getNameTranslationKey()` | Resolved `multiblock.<namespace>.<name>` key, or empty if `.name(...)` was never called |
+| `getNameTranslationKey()` | Resolved `multiblock.<namespace>.<path>` key, auto-derived from the id |
 | `isGhostOverlayDebug()` | Dev-only render-time debug flag |
 | `isAutoPlace()` | Whether Ctrl+Right-click auto-placement is enabled |
 

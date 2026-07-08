@@ -89,6 +89,8 @@ A "wrench" is any `Item` implementing `IMultiblockWrench`. **MultiLib ships no w
 
 If validation fails, registration is skipped and an error is logged; `.build()` still returns the object, but it's never matched. Use `.buildWithoutRegistering()` to skip the registry entirely (e.g. tests).
 
+When the same block is a valid core/activation symbol for **more than one** definition, higher `priority(...)` wins by default; a per-position override can pin a specific definition to a specific spot — see [Ambiguity & Preferences](api-reference/Ambiguity-And-Preferences.md).
+
 ## Activation flow
 
 1. A block is placed (`BlockEvent.EntityPlaceEvent`, server side).

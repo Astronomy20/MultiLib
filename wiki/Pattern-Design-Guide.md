@@ -74,7 +74,7 @@ If the core has its own facing (a player-placed furnace-like block), pin the pre
 
 ## Visual polish
 
-`.icon(...)` and `.name(...)` for recipe browsers; `.model(...)` + `.keepVisible(...)` for a [Master-Dummy](Advanced-Features.md#master-dummy-model) single-block look; `.ghostOverlayDebug()` while iterating (remove before shipping).
+`.icon(...)` for recipe browsers (the title auto-derives from the id); `.model(...)` + `.keepVisible(...)` for a [Master-Dummy](Advanced-Features.md#master-dummy-model) single-block look; `.ghostOverlayDebug()` while iterating (remove before shipping).
 
 ## See also
 

@@ -33,7 +33,6 @@ Register once during mod setup, after the blocks you reference exist — typical
 ```java
 public static void registerAll() {
     MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
-            .name("my_altar")
             .layer("PPP", " P ", " G ")
             .layer("POP", " P ", " G ")
             .key('P', BlockIngredient.of(Blocks.STONE_BRICKS))

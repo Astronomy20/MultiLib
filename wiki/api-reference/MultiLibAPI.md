@@ -122,9 +122,31 @@ public static MultiblockState registerMultiblockState(ResourceLocation id, Strin
 
 Passthrough to [`MultiblockStateRegistry`](Multiblock-States-And-Progress.md#multiblockstateregistry) - the single point from which mod developers register custom states beyond the four built into [`StandardMultiblockState`](Multiblock-States-And-Progress.md#standardmultiblockstate). Must be called before MultiLib freezes the registry (`FMLLoadCompleteEvent`) - register during your mod's constructor or `FMLCommonSetupEvent`.
 
+## Ambiguous-block preferences
+
+For when the same block is a valid core/activation symbol for more than one definition — see [Ambiguity & Preferences](Ambiguity-And-Preferences.md) for the full picture. All three are validated passthroughs to `MultiblockPreferenceTracker`; MultiLib ships no forced UI, so drive them from your own tool/command/GUI.
+
+### `setPreferredDefinition(ServerLevel level, BlockPos pos, ResourceLocation definitionId)`
+
+```java
+public static boolean setPreferredDefinition(ServerLevel level, BlockPos pos, ResourceLocation definitionId)
+```
+
+Binds `pos` to `definitionId` so that definition wins there specifically when the block is ambiguous. Returns `false` (a no-op) unless `definitionId` is presently a valid core/activation candidate for the block at `pos`; `true` when stored. Stale bindings aren't cleaned eagerly — resolution falls back to priority order on its own.
+
+### `getPreferredDefinition(ServerLevel level, BlockPos pos)` / `clearPreferredDefinition(ServerLevel level, BlockPos pos)`
+
+```java
+public static Optional<ResourceLocation> getPreferredDefinition(ServerLevel level, BlockPos pos)
+public static void clearPreferredDefinition(ServerLevel level, BlockPos pos)
+```
+
+Reads the binding at `pos` (empty if none), or removes it (no-op if none).
+
 ## See also
 
 - [MultiblockBuilder](MultiblockBuilder.md)
 - [BlockDefinition](BlockDefinition.md)
 - [Multiblock States & Progress Tracking](Multiblock-States-And-Progress.md)
+- [Ambiguity & Preferences](Ambiguity-And-Preferences.md)
 - [Getting Started](../Getting-Started.md)

@@ -11,7 +11,7 @@ Set `devMode = true` in `config/multilib/common.toml` (default `false`). While o
 - Break dev blocks before disabling `devMode`, or their saved positions load as missing blocks.
 - `devMode` isn't synced. On a dedicated server, client and server must match, or NeoForge rejects the connection.
 
-When enabled, the **Multiblock Dev Block** and **Dev Wrench** appear in the Tools & Utilities creative tab.
+When enabled, the **Multiblock Dev Block**, **Dev Wrench**, and **[Preference Wrench](api-reference/Ambiguity-And-Preferences.md#preference-wrench-dev-mode)** appear in the Tools & Utilities creative tab. (The preference wrench is a separate tool for picking which definition an ambiguous block resolves to, not part of the scan/export flow below.)
 
 ## The dev block
 
@@ -105,5 +105,7 @@ All under `CommonConfig` (`config/multilib/common.toml`):
 ## See also
 
 - [Core Concepts](Core-Concepts.md)
+- [Configuration](Configuration.md) — the full `devMode`/`devtool*` option list plus the runtime knobs
+- [Ambiguity & Preferences](api-reference/Ambiguity-And-Preferences.md) — the preference wrench
 - [Advanced Features § JSON/datapack definitions](Advanced-Features.md#jsondatapack-definitions)
 - [KubeJS Integration](KubeJS-Integration.md)

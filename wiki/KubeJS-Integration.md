@@ -21,7 +21,6 @@ Because setup runs from `FMLCommonSetupEvent` and these events don't fire until 
 ```js
 MultiblockEvents.create(event => {
     event.multiblock('examplemod:my_altar')
-        .name('my_altar')
         .layer('PPP', ' P ', ' G ')
         .layer('POP', ' P ', ' G ')
         .key('P', 'minecraft:stone_bricks')

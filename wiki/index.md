@@ -17,12 +17,13 @@
 - **Data-driven** — JSON/datapack definitions and KubeJS scripting.
 - **Recipe browsers** — JEI, REI, EMI, Patchouli, GuideME, FTB Quests.
 - **Machine toolkit** — energy/fluid/item buffer components, port/hatch base classes, a process engine, redstone/comparator/ownership helpers, `/multilib` commands, tier stat maps, and Jade/The One Probe hover-info. All opt-in and mechanism-only.
+- **Ambiguity handling** — a per-position [preferred-definition](api-reference/Ambiguity-And-Preferences.md) override when one block is a valid core for several structures.
+- **Configurable** — [runtime config](Configuration.md) for preview/auto-place feel, recipe-browser icon, and the dev-tool suite.
 
 ## Quick example
 
 ```java
 MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
-        .name("my_altar")
         .layer("PPP", " P ", " G ")
         .layer("POP", " P ", " G ")
         .key('P', BlockIngredient.of(Blocks.STONE_BRICKS))
@@ -42,6 +43,8 @@ Registered once at mod setup, this detects the structure in every allowed rotati
 - **New here?** [Getting Started](Getting-Started.md), then [Core Concepts](Core-Concepts.md).
 - **Designing a structure?** [Pattern Design Guide](Pattern-Design-Guide.md) and [Advanced Features](Advanced-Features.md).
 - **Full API:** [API Reference](api-reference/MultiLibAPI.md).
+- **Tuning behavior?** [Configuration](Configuration.md).
+- **Authoring in-game?** [Dev Tools](Dev-Tools.md).
 - **Porting old code?** [Migrating from PatternBuilder](Migrating-From-PatternBuilder.md).
 - **Stuck?** [FAQ & Troubleshooting](FAQ-Troubleshooting.md).
 

@@ -19,6 +19,9 @@ The single attribute for declaring layers. Appends one horizontal (Y) slice. **F
 ### `key(char symbol, Block block)`
 Shorthand for `key(symbol, BlockIngredient.of(block))`.
 
+### `key(char symbol, String blockOrTagId)`
+String form: a block id (`"minecraft:iron_block"`) or, with a `#` prefix, a block tag (`"#c:storage_blocks/iron"`), parsed via [`BlockIngredient.parse(...)`](BlockIngredient.md#blockingredientparsestring-spec). The same two forms JSON and KubeJS take, without needing a Java `Block`/`TagKey` reference — mainly for scripted call sites. Throws `IllegalArgumentException` on a malformed or (for a plain block id) unregistered id.
+
 ### `key(char symbol, BlockIngredient ingredient)`
 Binds a symbol to an ingredient. Symbols are global across all layers.
 
@@ -191,8 +194,7 @@ Symbols whose positions stay visible (not auto-hidden) when `.model(...)` is set
 ### `icon(ResourceLocation itemId)`
 Item shown as this structure's icon in JEI/REI/EMI.
 
-### `name(String name)`
-Display name key. Pass only the bare name (e.g. `"my_altar"`) - the full translation key `multiblock.<namespace>.<name>` is derived automatically. If unset, a warning is logged and the core/activation block's own name is used as a fallback in recipe browsers.
+Every definition's display name (JEI/REI/EMI title) resolves automatically from `multiblock.<namespace>.<path>`, following the same convention as `block.<namespace>.<path>` for blocks - define that key in your lang file. There's no separate call needed; the key is derived straight from the mandatory id.
 
 ### `ghostOverlayDebug()`
 Dev-only: while enabled, players see a chat debug line with the ghost overlay's render time whenever it's drawn for this structure. Not meant to ship enabled.
@@ -218,7 +220,6 @@ Same validation and construction, but never touches `MultiblockRegistry`. Use fo
 
 ```java
 MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "furnace_array"))
-        .name("furnace_array")
         .layer("BBB", "BOB", "BBB")
         .key('B', BlockIngredient.tag(BlockTags.LOGS))
         .key('O', BlockIngredient.of(Blocks.FURNACE))

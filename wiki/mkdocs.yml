@@ -6,6 +6,8 @@ site_dir: ../site
 
 theme:
   name: material
+  logo: multilib_icon.png
+  favicon: multilib_icon.png
   palette:
     - scheme: slate
       primary: indigo
@@ -29,14 +31,17 @@ nav:
       - Directional Cores Guide: Directional-Cores-Guide.md
       - Advanced Features: Advanced-Features.md
       - Dev Tools: Dev-Tools.md
+      - Configuration: Configuration.md
       - KubeJS Integration: KubeJS-Integration.md
   - API Reference:
       - Core:
           - MultiLibAPI: api-reference/MultiLibAPI.md
+          - MultiLibClientAPI: api-reference/MultiLibClientAPI.md
           - MultiblockBuilder: api-reference/MultiblockBuilder.md
           - MultiblockDefinition: api-reference/MultiblockDefinition.md
           - BlockIngredient: api-reference/BlockIngredient.md
           - BlockDefinition: api-reference/BlockDefinition.md
+          - Ambiguity & Preferences: api-reference/Ambiguity-And-Preferences.md
       - Lifecycle & tracking:
           - Callbacks & Events: api-reference/Callbacks-And-Events.md
           - MultiblockInstance & Registry: api-reference/MultiblockInstance-And-Registry.md
