@@ -295,9 +295,12 @@ public class ShapedMatcher implements IPatternMatcher {
             FreeBlockSpec spec = entry.getValue();
             int count = symbolPos.getOrDefault(key, Set.of()).size();
             if (count < spec.min() || count > spec.max()) {
-                // Remove freeBlock positions to signal failure via the returned map
-                symbolPos.remove(key);
-                allPos.removeAll(symbolPos.getOrDefault(key, Set.of()));
+                // Remove freeBlock positions to signal failure via the returned map. Capture the
+                // removed set BEFORE dropping the map entry - the previous order removed the entry
+                // first and then removeAll'd against the now-empty lookup, leaving every rejected
+                // freeBlock position stranded in allPos.
+                Set<BlockPos> removed = symbolPos.remove(key);
+                if (removed != null) allPos.removeAll(removed);
             }
         }
     }
