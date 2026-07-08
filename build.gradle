@@ -38,6 +38,8 @@ repositories {
     maven { name = "CurseMaven"; url = "https://cursemaven.com" }
     // The One Probe (compat/top) publishes its own Maven repo directly.
     maven { name = "K4U";        url = "https://maven.k-4u.nl" }
+    // Only for unit-test dependencies (JUnit) - no mod/runtime dependency comes from here.
+    mavenCentral()
 }
 
 base {
@@ -233,6 +235,18 @@ dependencies {
     // dependency-light jar exposing just mcjty.theoneprobe.api) at version 1.21_neo-12.0.8-7, the
     // latest NeoForge build for Minecraft 1.21/1.21.1 at the time this was pinned.
     compileOnly "mcjty.theoneprobe:theoneprobe:1.21_neo-12.0.8-7:api"
+
+    // Unit tests (src/test/java): plain JUnit 5 over the pure-logic parts of the library (rotation
+    // math, transform composition, comparator scaling, process-engine state machine, NBT roundtrips).
+    // These run on the JVM without booting Minecraft - anything registry-bound belongs in a gametest
+    // instead.
+    testImplementation platform("org.junit:junit-bom:5.10.2")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
