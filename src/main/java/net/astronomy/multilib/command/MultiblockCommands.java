@@ -131,6 +131,15 @@ public final class MultiblockCommands {
                 dims.getX(), dims.getY(), dims.getZ(), def.getLayerCount()), false);
         src.sendSuccess(() -> Component.translatable("command.multilib.info.candidates", def.getCandidateBlocks().size()), false);
         src.sendSuccess(() -> Component.translatable("command.multilib.info.priority", def.getPriority()), false);
+        // Only meaningful for definitions built through variant(...) - the legacy single-shape
+        // path reports the implicit "default" name, which isn't worth a line.
+        if (def.getAllVariants().size() > 1) {
+            String variantNames = def.getAllVariants().stream()
+                    .map(MultiblockDefinition::getVariantName)
+                    .reduce((a, b) -> a + ", " + b).orElse("");
+            src.sendSuccess(() -> Component.translatable("command.multilib.info.variants",
+                    def.getAllVariants().size(), variantNames), false);
+        }
         return 1;
     }
 

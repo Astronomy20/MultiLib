@@ -2,6 +2,7 @@ package net.astronomy.multilib.api.tool;
 
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.api.instance.MultiblockInstance;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * What happened when a registered wrench (see {@link IMultiblockWrench}/
@@ -34,4 +35,14 @@ public sealed interface WrenchResult {
      * summary in the first case, a generic message in the second.
      */
     record FormationFailed(MultiblockDefinition definition, String reason) implements WrenchResult {}
+
+    /**
+     * F12 step B: wrenching an already-formed structure whose definition declares more than one
+     * pattern variant re-matches it in place; if the match still succeeds but under a DIFFERENT
+     * variant than the one currently recorded, the instance is upgraded in place (same UUID, contents/
+     * controller state preserved - see {@code WrenchInteractionHandler}) instead of reporting
+     * {@link AlreadyFormed}. Re-matching to the SAME variant, or failing to match at all, still reports
+     * {@link AlreadyFormed} exactly as before.
+     */
+    record VariantChanged(ResourceLocation definitionId, String fromVariant, String toVariant) implements WrenchResult {}
 }

@@ -61,7 +61,9 @@ public class MultiblockCategory implements DisplayCategory<MultiblockDisplay> {
     private static final Map<ResourceLocation, MultiblockPreviewPanel.ViewState> STATES = new HashMap<>();
 
     static MultiblockPreviewPanel.ViewState state(MultiblockDefinition def) {
-        return STATES.computeIfAbsent(def.getId(), k -> MultiblockPreviewPanel.newViewState(def));
+        // Keyed per variant, not per id - variant definitions share the parent's id, and a single
+        // shared state would make every variant page fight over one preview rotation/layer state.
+        return STATES.computeIfAbsent(MultiblockPreviewPanel.viewStateKey(def), k -> MultiblockPreviewPanel.newViewState(def));
     }
 
     /** Resets every definition's view state to defaults; called when the REI recipe-view screen closes. */

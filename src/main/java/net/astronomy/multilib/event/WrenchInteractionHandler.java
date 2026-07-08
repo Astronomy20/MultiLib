@@ -1,10 +1,12 @@
 package net.astronomy.multilib.event;
 
 import net.astronomy.multilib.MultiLib;
+import net.astronomy.multilib.api.blockentity.IMultiblockPart;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.api.event.WrenchInteractionEvent;
 import net.astronomy.multilib.api.instance.MultiblockInstance;
 import net.astronomy.multilib.api.tool.WrenchResult;
+import net.astronomy.multilib.core.matching.MatchData;
 import net.astronomy.multilib.core.matching.MatchResult;
 import net.astronomy.multilib.core.matching.PatternMatcher;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
@@ -84,7 +86,18 @@ public class WrenchInteractionHandler {
                     .filter(instance -> instance.getDefinitionId().equals(definition.getId()))
                     .findFirst();
             if (ownInstance.isPresent()) {
-                return new WrenchResult.AlreadyFormed(ownInstance.get());
+                MultiblockInstance existing = ownInstance.get();
+                // Cheap guard: a legacy definition's getAllVariants() is just [definition], so a
+                // structure with no declared variants pays nothing beyond this size() check - it always
+                // falls straight through to the untouched AlreadyFormed path below.
+                if (definition.getAllVariants().size() > 1) {
+                    MatchResult reMatch = PatternMatcher.matches(level, pos, definition);
+                    if (reMatch instanceof MatchResult.Success success
+                            && !success.data().variantName().equals(existing.getVariant())) {
+                        return upgradeVariant(level, tracker, definition, existing, success.data());
+                    }
+                }
+                return new WrenchResult.AlreadyFormed(existing);
             }
 
             // Check the pattern before formationMode, not after: the wrench must stay useful as a
@@ -121,5 +134,61 @@ public class WrenchInteractionHandler {
             return new WrenchResult.FormationFailed(definition, "a validator rejected the formation attempt");
         }
         return bestFailure != null ? bestFailure : new WrenchResult.NotAMultiblock();
+    }
+
+    /**
+     * F12 step B: swaps an already-formed instance to a different variant of the SAME definition, in
+     * place, reusing the existing UUID so anything keyed off it (ports, external references) keeps
+     * working across the swap. Deliberately does not go through {@code BlockBreakHandler.handleBreak}
+     * or {@code BlockActivationHandler}'s formation path: this is an upgrade of an already-standing
+     * structure, not a teardown/rebuild, so {@code MultiblockBrokenEvent}/{@code MultiblockFormedEvent}
+     * and the broken/formed callbacks are intentionally never fired - firing them would wipe controller/
+     * contents state that formed-once semantics already assume survives, and would double-record a
+     * formation that (from the player's perspective) never actually broke.
+     * <p>
+     * Only the per-part join/leave hooks are reconciled, and only for the positions that actually
+     * changed between the two variants: newly-covered positions get {@code onJoinedStructure}, positions
+     * the new variant no longer covers get {@code onLeftStructure} - positions common to both variants
+     * are left untouched.
+     */
+    private static WrenchResult upgradeVariant(ServerLevel level, WorldMultiblockTracker tracker,
+                                               MultiblockDefinition definition, MultiblockInstance oldInstance,
+                                               MatchData newMatchData) {
+        String fromVariant = oldInstance.getVariant();
+        String toVariant = newMatchData.variantName();
+
+        tracker.unregister(oldInstance.getId());
+        MultiblockInstance newInstance = new MultiblockInstance(oldInstance.getId(), definition.getId(),
+                newMatchData.origin(), newMatchData.transform(), newMatchData, oldInstance.getFormedBy());
+        tracker.register(newInstance, definition);
+
+        Set<BlockPos> oldPositions = oldInstance.getPositions();
+        Set<BlockPos> newPositions = newInstance.getPositions();
+        // formedProperty follows the same membership delta as the part hooks below: formation set it
+        // to true on the old variant's members (BlockActivationHandler#handleFormation), and nothing
+        // else would ever flip it for blocks that joined/left during an in-place upgrade - the full
+        // formed/broken paths deliberately don't run here.
+        String formedProperty = definition.getFormedProperty().orElse(null);
+
+        for (BlockPos p : newPositions) {
+            if (oldPositions.contains(p)) continue;
+            if (formedProperty != null) {
+                BlockActivationHandler.setFormedPropertyIfPresent(level, p, formedProperty, true);
+            }
+            if (level.getBlockEntity(p) instanceof IMultiblockPart part) {
+                part.getMultiblockComponent().onJoinedStructure(newInstance);
+            }
+        }
+        for (BlockPos p : oldPositions) {
+            if (newPositions.contains(p)) continue;
+            if (formedProperty != null) {
+                BlockActivationHandler.setFormedPropertyIfPresent(level, p, formedProperty, false);
+            }
+            if (level.getBlockEntity(p) instanceof IMultiblockPart part) {
+                part.getMultiblockComponent().onLeftStructure();
+            }
+        }
+
+        return new WrenchResult.VariantChanged(definition.getId(), fromVariant, toVariant);
     }
 }

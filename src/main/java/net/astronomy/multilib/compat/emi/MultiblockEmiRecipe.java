@@ -40,7 +40,9 @@ public class MultiblockEmiRecipe implements EmiRecipe {
     private static final Map<ResourceLocation, MultiblockPreviewPanel.ViewState> STATES = new HashMap<>();
 
     private static MultiblockPreviewPanel.ViewState state(MultiblockDefinition def) {
-        return STATES.computeIfAbsent(def.getId(), k -> MultiblockPreviewPanel.newViewState(def));
+        // Keyed per variant, not per id - variant definitions share the parent's id, and a single
+        // shared state would make every variant page fight over one preview rotation/layer state.
+        return STATES.computeIfAbsent(MultiblockPreviewPanel.viewStateKey(def), k -> MultiblockPreviewPanel.newViewState(def));
     }
 
     private final MultiblockRecipeDisplay data;
@@ -58,7 +60,10 @@ public class MultiblockEmiRecipe implements EmiRecipe {
     public ResourceLocation getId() {
         // EMI requires synthetic recipes (not in the vanilla recipe manager) to have their path
         // prefixed with '/' - without it EMI logs "Recipe X not present in recipe manager" errors.
-        return ResourceLocation.fromNamespaceAndPath("multilib", "/" + data.definition().getId().getPath());
+        // The per-variant key keeps ids unique when one definition registers a recipe per variant
+        // (variants share the parent's id - see MultiblockPreviewPanel#viewStateKey).
+        return ResourceLocation.fromNamespaceAndPath("multilib",
+                "/" + MultiblockPreviewPanel.viewStateKey(data.definition()).getPath());
     }
 
     @Override

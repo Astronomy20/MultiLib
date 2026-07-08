@@ -24,5 +24,12 @@ public final class FormedStatusProvider implements MultiblockHudProvider {
                 .orElseGet(() -> Component.literal(ctx.definition().getId().toString()));
         out.accept(new HudEntry.Text(name));
         out.accept(new HudEntry.Text(Component.translatable("multilib.hud.formed")));
+        // Matches the recipe viewers' title-suffix convention (MultiblockPreviewPanel#multiblockName):
+        // any explicitly declared variant name shows, the legacy implicit "default" never does.
+        String variant = ctx.instance().getVariant();
+        if (!"default".equals(variant)) {
+            out.accept(new HudEntry.KeyValue(
+                    Component.translatable("multilib.hud.variant"), Component.literal(variant)));
+        }
     }
 }

@@ -42,6 +42,9 @@ public class WrenchFeedbackHandler {
                     player.sendSystemMessage(Component.translatable("multilib.wrench.formed_success"));
             case WrenchResult.FormationFailed failed -> player.sendSystemMessage(Component.translatable(
                     "multilib.wrench.failed", failed.reason()));
+            case WrenchResult.VariantChanged changed -> player.sendSystemMessage(Component.translatable(
+                    "multilib.wrench.variant_changed", changed.definitionId().toString(),
+                    changed.fromVariant(), changed.toVariant()));
         }
     }
 

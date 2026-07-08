@@ -29,7 +29,7 @@ public class MultiblockWrenchKubeEvent implements KubeEvent {
         return event.getPos();
     }
 
-    /** One of: {@code "not_a_multiblock"}, {@code "already_formed"}, {@code "mode_disallows_wrench"}, {@code "formed"}, {@code "formation_failed"}. */
+    /** One of: {@code "not_a_multiblock"}, {@code "already_formed"}, {@code "mode_disallows_wrench"}, {@code "formed"}, {@code "formation_failed"}, {@code "variant_changed"}. */
     public String getStatus() {
         return switch (event.getResult()) {
             case WrenchResult.NotAMultiblock ignored -> "not_a_multiblock";
@@ -37,6 +37,7 @@ public class MultiblockWrenchKubeEvent implements KubeEvent {
             case WrenchResult.ModeDisallowsWrench ignored -> "mode_disallows_wrench";
             case WrenchResult.Formed ignored -> "formed";
             case WrenchResult.FormationFailed ignored -> "formation_failed";
+            case WrenchResult.VariantChanged ignored -> "variant_changed";
         };
     }
 
@@ -48,6 +49,7 @@ public class MultiblockWrenchKubeEvent implements KubeEvent {
             case WrenchResult.ModeDisallowsWrench mode -> mode.definition().getId();
             case WrenchResult.Formed formed -> formed.definition().getId();
             case WrenchResult.FormationFailed failed -> failed.definition().getId();
+            case WrenchResult.VariantChanged changed -> changed.definitionId();
             case WrenchResult.NotAMultiblock ignored -> null;
         };
     }
@@ -56,5 +58,17 @@ public class MultiblockWrenchKubeEvent implements KubeEvent {
     @Nullable
     public String getFailureReason() {
         return event.getResult() instanceof WrenchResult.FormationFailed failed ? failed.reason() : null;
+    }
+
+    /** Only non-null when {@link #getStatus()} is {@code "variant_changed"} - the variant the instance was previously matched as. */
+    @Nullable
+    public String getFromVariant() {
+        return event.getResult() instanceof WrenchResult.VariantChanged changed ? changed.fromVariant() : null;
+    }
+
+    /** Only non-null when {@link #getStatus()} is {@code "variant_changed"} - the variant it was just upgraded to. */
+    @Nullable
+    public String getToVariant() {
+        return event.getResult() instanceof WrenchResult.VariantChanged changed ? changed.toVariant() : null;
     }
 }

@@ -34,11 +34,13 @@ public class MultiblockEmiPlugin implements EmiPlugin {
         // each recipe a real per-definition output (see MultiblockEmiRecipe#getOutputs), so EMI's
         // standard "Recipes" lookup on an item already filters correctly without a workstation.
         Map<ResourceLocation, MultiblockEmiRecipe> byDefinitionId = new HashMap<>();
-        MultiblockRegistry.getAllDefinitions().forEach(def -> {
-            MultiblockEmiRecipe recipe = new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(def));
+        // One recipe per variant - see MultiblockJeiPlugin#registerRecipes for the same convention.
+        // putIfAbsent keeps RecipeViewerLink pointed at the parent (first/primary) variant's page.
+        MultiblockRegistry.getAllDefinitions().forEach(def -> def.getAllVariants().forEach(variant -> {
+            MultiblockEmiRecipe recipe = new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(variant));
             registry.addRecipe(recipe);
-            byDefinitionId.put(def.getId(), recipe);
-        });
+            byDefinitionId.putIfAbsent(def.getId(), recipe);
+        }));
 
         // Lets other MultiLib compat modules (e.g. compat/ftbquests) open this exact multiblock's
         // recipe page without depending on EMI directly. Opens the recipe instance directly

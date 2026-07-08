@@ -39,12 +39,18 @@ public class MultiblockJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
+        // One recipe page per variant: getAllVariants() is [self] for legacy definitions and
+        // parent-first for multi-variant ones, each variant being a full definition the display
+        // renders as-is.
         List<MultiblockRecipeDisplay> recipes = MultiblockRegistry.getAllDefinitions().stream()
+                .flatMap(def -> def.getAllVariants().stream())
                 .map(MultiblockRecipeDisplay::of)
                 .toList();
         registration.addRecipes(MultiblockRecipeCategory.RECIPE_TYPE, recipes);
         byDefinitionId.clear();
-        recipes.forEach(r -> byDefinitionId.put(r.definition().getId(), r));
+        // putIfAbsent: variants share the parent's id, and RecipeViewerLink's "open this
+        // multiblock's page" should land on the parent (first/primary) variant.
+        recipes.forEach(r -> byDefinitionId.putIfAbsent(r.definition().getId(), r));
     }
 
     /**

@@ -10,12 +10,14 @@
   "multiblock.multilib.example_directional": "Example Directional Multiblock",
   "multiblock.multilib.example_json": "Example JSON Multiblock",
   "multiblock.kubejs.example_kubejs": "Example KubeJS Multiblock",
+  "multiblock.multilib.example_variants": "Example Variants Multiblock",
   "multilib.guide.tooltip": "Examples of MultiLib's multiblock structures",
 
   "multilib.wrench.formed": "Structure %s is formed (state: %s)",
   "multilib.wrench.formed_success": "Structure formed successfully!",
   "multilib.wrench.failed": "Formation failed: %s",
   "multilib.wrench.mode_disallows_wrench": "This structure's formation mode does not allow wrench-triggered formation",
+  "multilib.wrench.variant_changed": "Structure %s upgraded from variant '%s' to '%s'",
 
   "multilib.overlay.enabled": "Ghost overlay: full render",
   "multilib.overlay.layer": "Ghost overlay: layer %d",
@@ -98,6 +100,9 @@
   "multilib.hud.paused": "Paused",
   "multilib.hud.idle": "Idle",
   "multilib.hud.missing_blocks": "%s of %s blocks",
+  "multilib.hud.variant": "Variant",
+
+  "command.multilib.info.variants": "  Variants: %s (%s)",
 
   "config.jade.plugin_multilib.hud_tooltip": "Multiblock HUD"
 }

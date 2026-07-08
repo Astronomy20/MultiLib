@@ -169,6 +169,17 @@ public final class MultiblockProgressAPI {
     // Works for any registered definition, not just autoPlace()-enabled ones - this API isn't tied to
     // the auto-place feature, unlike AutoPlaceRequestHandler.findAutoPlaceDefinitionAt.
     private static MultiblockDefinition findDefinitionAt(ServerLevel level, BlockPos pos) {
+        // A formed instance knows exactly which variant it matched - compare against THAT geometry,
+        // not the parent's primary one, or every non-primary variant instance would report phantom
+        // mismatches/missing blocks (the variant definitions are full definitions, so the rest of
+        // this class works on them unchanged). Only unformed positions fall through to the
+        // core-block candidate scan below, where the primary geometry is the only sensible target.
+        for (var instance : net.astronomy.multilib.core.tracking.WorldMultiblockTracker.get(level).getInstancesAt(pos)) {
+            MultiblockDefinition parent = MultiblockRegistry.get(instance.getDefinitionId()).orElse(null);
+            if (parent == null) continue;
+            MultiblockDefinition variant = parent.getVariant(instance.getVariant()).orElse(parent);
+            if (variant.matchesCore(level.getBlockState(pos))) return variant;
+        }
         BlockState state = level.getBlockState(pos);
         for (MultiblockDefinition def : MultiblockRegistry.getCandidatesFor(state.getBlock())) {
             if (def.matchesCore(state)) return def;

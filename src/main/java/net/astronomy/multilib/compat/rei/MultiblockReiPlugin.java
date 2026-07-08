@@ -76,8 +76,10 @@ public class MultiblockReiPlugin implements REIClientPlugin {
 
     @Override
     public void registerDisplays(DisplayRegistry registry) {
+        // One display per variant - see MultiblockJeiPlugin#registerRecipes for the same convention.
         MultiblockRegistry.getAllDefinitions().forEach(def ->
-                registry.add(new MultiblockDisplay(MultiblockRecipeDisplay.of(def)))
+                def.getAllVariants().forEach(variant ->
+                        registry.add(new MultiblockDisplay(MultiblockRecipeDisplay.of(variant))))
         );
     }
 }

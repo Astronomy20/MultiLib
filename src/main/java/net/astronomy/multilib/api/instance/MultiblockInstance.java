@@ -28,6 +28,8 @@ public final class MultiblockInstance {
     private final Set<BlockPos> positions;
     private final Map<Character, Set<BlockPos>> symbolPositions;
     private final Optional<UUID> formedBy;
+    /** F12 step B: which of the definition's {@code getAllVariants()} actually matched - "default" for a legacy definition/save. Derived from the {@link MatchData} passed to the constructor, never a separate call-site argument, so no existing caller needs to change. */
+    private final String variant;
 
     public MultiblockInstance(UUID id, ResourceLocation definitionId, BlockPos origin,
                               TransformData transform, MatchData matchData) {
@@ -47,6 +49,7 @@ public final class MultiblockInstance {
                         e -> Set.copyOf(e.getValue())
                 ));
         this.formedBy = formedBy;
+        this.variant = matchData.variantName();
     }
 
     public UUID getId() { return id; }
@@ -57,6 +60,8 @@ public final class MultiblockInstance {
     public Set<BlockPos> getPositions() { return positions; }
     public Set<BlockPos> getPositionsFor(char symbol) { return symbolPositions.getOrDefault(symbol, Set.of()); }
     public Optional<UUID> getFormedBy() { return formedBy; }
+    /** Which of the definition's {@code getAllVariants()} this instance actually matched - "default" for a legacy definition/save with no variants declared. */
+    public String getVariant() { return variant; }
 
     public Optional<BlockPos> getCorePos() {
         return MultiblockRegistry.get(definitionId)
@@ -85,6 +90,7 @@ public final class MultiblockInstance {
         tag.put("symbolPositions", symbolTag);
 
         formedBy.ifPresent(uuid -> tag.put("formedBy", NbtUtils.createUUID(uuid)));
+        tag.putString("variant", variant);
 
         return tag;
     }
@@ -132,13 +138,18 @@ public final class MultiblockInstance {
             symbolPositions.put(symbol, Collections.unmodifiableSet(symPosSet));
         }
 
+        // Missing/empty "variant" (pre-F12 saves) must load as "default" rather than fail - never gate
+        // loading an existing save on a key that didn't exist when it was written.
+        String variantName = tag.getString("variant");
+        if (variantName.isEmpty()) variantName = "default";
+
         MatchData matchData = new MatchData(
                 origin,
                 transform,
                 Collections.unmodifiableSet(positions),
                 symbolPositions.entrySet().stream()
                         .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue))
-        );
+        ).withVariant(variantName);
 
         Optional<UUID> formedBy = Optional.empty();
         if (tag.contains("formedBy", Tag.TAG_INT_ARRAY)) {

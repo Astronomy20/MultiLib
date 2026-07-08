@@ -69,25 +69,8 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
 
         // layers (shaped)
         if (obj.has("layers")) {
-            JsonArray layersArr = obj.getAsJsonArray("layers");
-            if (!layersArr.isEmpty()) {
-                JsonElement firstElem = layersArr.get(0);
-                if (firstElem.isJsonArray()) {
-                    for (JsonElement layerElem : layersArr) {
-                        JsonArray layerArr = layerElem.getAsJsonArray();
-                        String[] rows = new String[layerArr.size()];
-                        for (int i = 0; i < rows.length; i++) {
-                            rows[i] = layerArr.get(i).getAsString();
-                        }
-                        builder.layer(rows);
-                    }
-                } else {
-                    String[] rows = new String[layersArr.size()];
-                    for (int i = 0; i < layersArr.size(); i++) {
-                        rows[i] = layersArr.get(i).getAsString();
-                    }
-                    builder.layer(rows);
-                }
+            for (String[] rows : parseLayers(obj.getAsJsonArray("layers"))) {
+                builder.layer(rows);
             }
         }
 
@@ -100,6 +83,57 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
                 MultiblockCodecs.BLOCK_INGREDIENT_OBJECT.parse(ops, entry.getValue())
                     .resultOrPartial(err -> LOGGER.warn("[MultiLib] Bad ingredient for symbol '{}': {}", symbol, err))
                     .ifPresent(ing -> builder.key(symbol, ing));
+            }
+        }
+
+        // variants: alternative geometries under the same id - each entry maps 1:1 onto
+        // MultiblockBuilder#variant (the first entry becomes the primary geometry, later ones become
+        // derived definitions tried in declaration order). Top-level "keys" stays the shared key map;
+        // a variant's own "keys" adds/overrides for that variant only. Mutually exclusive with a
+        // top-level "layers" field - the builder would throw too, but this earlier check gives the
+        // datapack author a JSON-flavored message instead of the builder's own wording.
+        if (obj.has("variants")) {
+            if (obj.has("layers")) {
+                throw new IllegalArgumentException(
+                        "cannot declare both 'layers' and 'variants' - move all geometry into 'variants'");
+            }
+            JsonArray variantsArr = obj.getAsJsonArray("variants");
+            if (variantsArr.isEmpty()) {
+                throw new IllegalArgumentException("'variants' must contain at least one entry");
+            }
+            for (JsonElement variantElem : variantsArr) {
+                if (!variantElem.isJsonObject()) {
+                    throw new IllegalArgumentException("each 'variants' entry must be a JSON object");
+                }
+                JsonObject variantObj = variantElem.getAsJsonObject();
+                if (!variantObj.has("name")) {
+                    throw new IllegalArgumentException("a 'variants' entry is missing its 'name'");
+                }
+                String variantName = variantObj.get("name").getAsString();
+                if (!variantObj.has("layers")) {
+                    throw new IllegalArgumentException("variant '" + variantName + "' is missing its 'layers'");
+                }
+                java.util.List<String[]> variantLayers = parseLayers(variantObj.getAsJsonArray("layers"));
+                if (variantLayers.isEmpty()) {
+                    throw new IllegalArgumentException("variant '" + variantName + "' has empty 'layers'");
+                }
+                builder.variant(variantName, v -> {
+                    for (String[] rows : variantLayers) {
+                        v.layer(rows);
+                    }
+                    if (variantObj.has("keys")) {
+                        JsonObject variantKeys = variantObj.getAsJsonObject("keys");
+                        for (Map.Entry<String, JsonElement> kEntry : variantKeys.entrySet()) {
+                            if (kEntry.getKey().length() != 1) continue;
+                            char symbol = kEntry.getKey().charAt(0);
+                            MultiblockCodecs.BLOCK_INGREDIENT_OBJECT.parse(ops, kEntry.getValue())
+                                .resultOrPartial(err -> LOGGER.warn(
+                                        "[MultiLib] Bad ingredient for variant '{}' symbol '{}': {}",
+                                        variantName, symbol, err))
+                                .ifPresent(ing -> v.key(symbol, ing));
+                        }
+                    }
+                });
             }
         }
 
@@ -262,5 +296,32 @@ public class MultiblockJsonLoader extends SimpleJsonResourceReloadListener {
             LOGGER.warn("[MultiLib] Invalid definition {}: {}", id, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * The shared "layers" shape, used identically by the top-level field and each "variants" entry:
+     * an array of arrays of row strings (multiple layers), or - shorthand for a single-layer
+     * structure - a flat array of row strings.
+     */
+    private static java.util.List<String[]> parseLayers(JsonArray layersArr) {
+        java.util.List<String[]> layers = new java.util.ArrayList<>();
+        if (layersArr.isEmpty()) return layers;
+        if (layersArr.get(0).isJsonArray()) {
+            for (JsonElement layerElem : layersArr) {
+                JsonArray layerArr = layerElem.getAsJsonArray();
+                String[] rows = new String[layerArr.size()];
+                for (int i = 0; i < rows.length; i++) {
+                    rows[i] = layerArr.get(i).getAsString();
+                }
+                layers.add(rows);
+            }
+        } else {
+            String[] rows = new String[layersArr.size()];
+            for (int i = 0; i < layersArr.size(); i++) {
+                rows[i] = layersArr.get(i).getAsString();
+            }
+            layers.add(rows);
+        }
+        return layers;
     }
 }

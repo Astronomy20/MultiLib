@@ -67,7 +67,9 @@ public class MultiblockRecipeCategory implements IRecipeCategory<MultiblockRecip
     }
 
     private MultiblockPreviewPanel.ViewState state(MultiblockDefinition def) {
-        return states.computeIfAbsent(def.getId(), k -> MultiblockPreviewPanel.newViewState(def));
+        // Keyed per variant, not per id - variant definitions share the parent's id, and a single
+        // shared state would make every variant page fight over one preview rotation/layer state.
+        return states.computeIfAbsent(MultiblockPreviewPanel.viewStateKey(def), k -> MultiblockPreviewPanel.newViewState(def));
     }
 
     // ── IRecipeCategory boilerplate ───────────────────────────────────────────

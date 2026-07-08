@@ -793,6 +793,17 @@ public final class MultiblockPreviewPanel {
 
     /** The multiblock's "name", for the title row - the core/activation block's own display name. */
     public static String multiblockName(MultiblockDefinition def) {
+        String base = baseMultiblockName(def);
+        // Variant definitions all share the parent's id/name - the variant name is the only thing
+        // telling their recipe pages apart, so it's appended to the title. "default" is the legacy
+        // no-variants marker and stays suffix-free.
+        if (!"default".equals(def.getVariantName())) {
+            return base + " (" + def.getVariantName() + ")";
+        }
+        return base;
+    }
+
+    private static String baseMultiblockName(MultiblockDefinition def) {
         if (def.getNameTranslationKey().isPresent()) {
             return Component.translatable(def.getNameTranslationKey().get()).getString();
         }
@@ -807,5 +818,18 @@ public final class MultiblockPreviewPanel {
             }
         }
         return def.getId().toString();
+    }
+
+    /**
+     * A per-variant key for the viewers' ViewState maps (JEI/REI/EMI all cache the 3D preview's
+     * rotation/layer state per recipe page). Variant definitions share the parent's {@code getId()},
+     * so keying by id alone would make every variant page of one structure share - and fight over -
+     * a single preview state. The variant name is sanitized into the id's path (ResourceLocation
+     * paths only allow {@code [a-z0-9/._-]}).
+     */
+    public static net.minecraft.resources.ResourceLocation viewStateKey(MultiblockDefinition def) {
+        if ("default".equals(def.getVariantName())) return def.getId();
+        String sanitized = def.getVariantName().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9/._-]", "_");
+        return def.getId().withSuffix("/variant/" + sanitized);
     }
 }
