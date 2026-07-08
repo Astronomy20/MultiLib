@@ -32,7 +32,7 @@ public final class MissingBlocksProvider {
         if (p.totalRequired() <= 0) return List.of();
 
         float fraction = (float) p.placedCount() / p.totalRequired();
-        Component label = Component.literal(p.placedCount() + " of " + p.totalRequired() + " blocks");
+        Component label = Component.translatable("multilib.hud.missing_blocks", p.placedCount(), p.totalRequired());
         return List.of(new HudEntry.Progress(fraction, label));
     }
 }

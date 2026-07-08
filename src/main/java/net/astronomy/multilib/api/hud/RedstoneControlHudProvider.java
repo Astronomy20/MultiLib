@@ -25,6 +25,6 @@ public final class RedstoneControlHudProvider implements MultiblockHudProvider {
         RedstoneControlComponent redstone = source.getHudRedstoneControl();
         if (redstone == null) return;
 
-        out.accept(new HudEntry.KeyValue(Component.literal("Redstone"), Component.literal(redstone.getMode().name())));
+        out.accept(new HudEntry.KeyValue(Component.translatable("multilib.hud.redstone"), Component.literal(redstone.getMode().name())));
     }
 }

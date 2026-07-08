@@ -34,7 +34,7 @@ public final class OwnershipHudProvider implements MultiblockHudProvider {
         if (owner.isEmpty()) return;
 
         String name = resolveName(ctx, owner.get());
-        out.accept(new HudEntry.KeyValue(Component.literal("Owner"), Component.literal(name)));
+        out.accept(new HudEntry.KeyValue(Component.translatable("multilib.hud.owner"), Component.literal(name)));
     }
 
     private static String resolveName(HudContext ctx, UUID owner) {

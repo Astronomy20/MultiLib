@@ -29,8 +29,9 @@ public final class EnergyHudProvider implements MultiblockHudProvider {
         IEnergyStorage energy = Capabilities.EnergyStorage.BLOCK.getCapability(ctx.level(), corePos, state, be, null);
         if (energy == null) return;
 
-        Component key = Component.literal("Energy");
-        Component value = Component.literal(energy.getEnergyStored() + " / " + energy.getMaxEnergyStored() + " FE");
+        Component key = Component.translatable("multilib.hud.energy");
+        Component value = Component.translatable("multilib.hud.energy_value",
+                energy.getEnergyStored(), energy.getMaxEnergyStored());
         out.accept(new HudEntry.KeyValue(key, value));
     }
 }

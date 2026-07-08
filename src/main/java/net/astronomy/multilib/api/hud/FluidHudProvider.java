@@ -32,11 +32,13 @@ public final class FluidHudProvider implements MultiblockHudProvider {
         int tanks = handler.getTanks();
         for (int i = 0; i < tanks; i++) {
             FluidStack stack = handler.getFluidInTank(i);
-            Component key = Component.literal(tanks == 1 ? "Fluid" : "Tank " + (i + 1));
+            Component key = tanks == 1
+                    ? Component.translatable("multilib.hud.fluid")
+                    : Component.translatable("multilib.hud.tank_n", i + 1);
             Component value = stack.isEmpty()
-                    ? Component.literal("Empty")
-                    : Component.literal(stack.getAmount() + " / " + handler.getTankCapacity(i) + " mB ")
-                            .append(stack.getHoverName());
+                    ? Component.translatable("multilib.hud.empty")
+                    : Component.translatable("multilib.hud.fluid_value",
+                            stack.getAmount(), handler.getTankCapacity(i), stack.getHoverName());
             out.accept(new HudEntry.KeyValue(key, value));
         }
     }

@@ -21,7 +21,7 @@ public final class TierHudProvider implements MultiblockHudProvider {
     public void appendHudEntries(HudContext ctx, Consumer<HudEntry> out) {
         MultiblockTierResolution resolution = MultiblockTier.get(ctx.level(), ctx.instance(), ctx.definition());
         for (Map.Entry<Character, TierLevel> entry : resolution.tierBySymbol().entrySet()) {
-            Component key = Component.literal("Tier (" + entry.getKey() + ")");
+            Component key = Component.translatable("multilib.hud.tier", String.valueOf(entry.getKey()));
             Component value = Component.literal(entry.getValue().name());
             out.accept(new HudEntry.KeyValue(key, value));
         }

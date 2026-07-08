@@ -26,9 +26,9 @@ public final class ProcessHudProvider implements MultiblockHudProvider {
 
         source.getHudProcessor().ifPresent(processor -> {
             Component label = switch (processor.getState()) {
-                case RUNNING -> Component.literal("Processing");
-                case PAUSED -> Component.literal("Paused");
-                case IDLE -> Component.literal("Idle");
+                case RUNNING -> Component.translatable("multilib.hud.processing");
+                case PAUSED -> Component.translatable("multilib.hud.paused");
+                case IDLE -> Component.translatable("multilib.hud.idle");
             };
             out.accept(new HudEntry.Progress(processor.getProgressFraction(), label));
         });

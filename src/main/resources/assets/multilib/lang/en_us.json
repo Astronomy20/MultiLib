@@ -82,5 +82,22 @@
   "command.multilib.form.success": "Formed a multiblock at %s, %s, %s.",
   "command.multilib.form.no_match": "No candidate multiblock definition matched at %s, %s, %s.",
   "command.multilib.unform.none": "No multiblock instance is tracked at %s, %s, %s.",
-  "command.multilib.unform.success": "Unformed %s instance(s) at %s, %s, %s."
+  "command.multilib.unform.success": "Unformed %s instance(s) at %s, %s, %s.",
+
+  "multilib.hud.formed": "Formed",
+  "multilib.hud.energy": "Energy",
+  "multilib.hud.energy_value": "%s / %s FE",
+  "multilib.hud.fluid": "Fluid",
+  "multilib.hud.tank_n": "Tank %s",
+  "multilib.hud.empty": "Empty",
+  "multilib.hud.fluid_value": "%s / %s mB %s",
+  "multilib.hud.owner": "Owner",
+  "multilib.hud.redstone": "Redstone",
+  "multilib.hud.tier": "Tier (%s)",
+  "multilib.hud.processing": "Processing",
+  "multilib.hud.paused": "Paused",
+  "multilib.hud.idle": "Idle",
+  "multilib.hud.missing_blocks": "%s of %s blocks",
+
+  "config.jade.plugin_multilib.hud_tooltip": "Multiblock HUD"
 }

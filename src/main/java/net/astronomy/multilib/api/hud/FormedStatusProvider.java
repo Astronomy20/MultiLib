@@ -23,6 +23,6 @@ public final class FormedStatusProvider implements MultiblockHudProvider {
                 .<Component>map(Component::translatable)
                 .orElseGet(() -> Component.literal(ctx.definition().getId().toString()));
         out.accept(new HudEntry.Text(name));
-        out.accept(new HudEntry.Text(Component.literal("Formed")));
+        out.accept(new HudEntry.Text(Component.translatable("multilib.hud.formed")));
     }
 }
