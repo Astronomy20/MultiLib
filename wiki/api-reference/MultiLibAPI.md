@@ -47,7 +47,7 @@ MultiLibAPI.block(MyBlocks.CONTROLLER_BLOCK).mainFace().build();
 public static void registerWrenchItem(Item item)
 ```
 
-Registers `item` as a wrench without it implementing `IMultiblockWrench`: `WrenchInteractionHandler` will treat right-clicking any multiblock's activation/core block with it exactly like an `IMultiblockWrench` implementation would - a formation attempt, nothing else. Backed by `WrenchItemRegistry`. No chat message or other feedback is sent by the library; surfacing anything to the player is entirely up to the mod using this - listen for [`WrenchInteractionEvent`](Callbacks-And-Events.md#wrenchinteractionevent) if you want it. Meant for data-driven/scripted items (e.g. KubeJS) that can't implement a custom Java interface; a hand-written `Item` subclass should just implement `IMultiblockWrench` instead.
+Registers `item` as a wrench without implementing `IMultiblockWrench` — right-clicking a structure's activation/core block with it attempts formation, exactly like the interface would. No feedback is sent; listen for [`WrenchInteractionEvent`](Callbacks-And-Events.md#wrenchinteractionevent) if you want it. For scripted/data-driven items (KubeJS) that can't implement a Java interface; a hand-written `Item` should just implement `IMultiblockWrench`.
 
 ---
 
@@ -67,9 +67,9 @@ Looks up a registered [`MultiblockDefinition`](MultiblockDefinition.md) by id.
 public static Optional<MultiblockDefinition> redefine(ResourceLocation id, Consumer<MultiblockBuilder> mutator)
 ```
 
-Patches an already-registered definition (Java, JSON, or previously KubeJS-defined) in place: snapshots it into a [`MultiblockBuilder`](MultiblockBuilder.md) via `MultiblockDefinition.toBuilder()`, lets `mutator` adjust it with the same fluent methods used to declare one from scratch, rebuilds it, and swaps it into the registry. Returns `Optional.empty()` without calling `mutator` if nothing is registered under `id`; also returns `Optional.empty()` (leaving the original definition registered and untouched) if the rebuilt definition fails validation.
+Patches a registered definition (Java, JSON, or KubeJS) in place: snapshots it via `toBuilder()`, lets `mutator` adjust it, rebuilds, and swaps it in. Returns `Optional.empty()` (without calling `mutator`) if nothing is registered under `id`, or if the rebuild fails validation (leaving the original untouched).
 
-Deliberately named differently from `define(...)`: that one fails loudly on a duplicate id (protects against accidental overwrites), this one exists specifically to overwrite. If `mutator` renames the definition via `.id(...)`, only the *original* `id` is removed from the registry - the rebuilt definition registers under its new id instead.
+Named apart from `define(...)`, which fails loudly on a duplicate id; this one exists to overwrite. If `mutator` renames via `.id(...)`, only the original `id` is removed.
 
 ---
 
@@ -90,7 +90,7 @@ public static void setWallSharingMode(Block block, WallSharingMode mode)
 public static Optional<WallSharingMode> getRegisteredWallSharingMode(Block block)
 ```
 
-Registers (or looks up) a default wall-sharing mode for a block across *all* structures that use it as a non-core/non-activation symbol, without needing `IWallSharable` or a per-structure `.key(symbol, ingredient, mode)` override. Consulted by `MultiblockDefinition.getWallSharingMode(char)` as one step in the override priority chain - see [Advanced Features § Wall sharing](../Advanced-Features.md#wall-sharing).
+Registers (or looks up) a default wall-sharing mode for a block across *all* structures using it as a non-core symbol, without `IWallSharable` or a per-structure override. One step in the priority chain — see [Wall sharing](../Advanced-Features.md#wall-sharing).
 
 ## Progression & custom states
 

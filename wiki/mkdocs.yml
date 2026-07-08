@@ -22,31 +22,38 @@ extra:
 nav:
   - Home: index.md
   - Getting Started: Getting-Started.md
-  - Core Concepts: Core-Concepts.md
-  - Pattern Design Guide: Pattern-Design-Guide.md
-  - Rotation & Matching: Rotation-And-Matching.md
-  - Directional Cores Guide: Directional-Cores-Guide.md
-  - Advanced Features: Advanced-Features.md
-  - KubeJS Integration: KubeJS-Integration.md
-  - Dev Tools: Dev-Tools.md
+  - Guides:
+      - Core Concepts: Core-Concepts.md
+      - Pattern Design Guide: Pattern-Design-Guide.md
+      - Rotation & Matching: Rotation-And-Matching.md
+      - Directional Cores Guide: Directional-Cores-Guide.md
+      - Advanced Features: Advanced-Features.md
+      - Dev Tools: Dev-Tools.md
+      - KubeJS Integration: KubeJS-Integration.md
   - API Reference:
-      - MultiLibAPI: api-reference/MultiLibAPI.md
-      - MultiblockBuilder: api-reference/MultiblockBuilder.md
-      - MultiblockDefinition: api-reference/MultiblockDefinition.md
-      - BlockIngredient: api-reference/BlockIngredient.md
-      - Callbacks & Events: api-reference/Callbacks-And-Events.md
-      - MultiblockInstance & Registry: api-reference/MultiblockInstance-And-Registry.md
-      - Block Entity Abstractions: api-reference/BlockEntity-Abstractions.md
-      - BlockDefinition: api-reference/BlockDefinition.md
-      - Multiblock States & Progress: api-reference/Multiblock-States-And-Progress.md
-      - Multiblock Composition: api-reference/MultiblockComposition.md
-      - Multiblock Ability: api-reference/MultiblockAbility.md
-      - Multiblock Tier: api-reference/MultiblockTier.md
-      - Capability Components: api-reference/Components.md
-      - Ports (Hatches): api-reference/Ports.md
-      - Process Engine: api-reference/Process-Engine.md
-      - Control & Commands: api-reference/Control-And-Commands.md
-      - HUD Providers: api-reference/HUD-Providers.md
-      - RotationUtils: api-reference/RotationUtils.md
-  - FAQ & Troubleshooting: FAQ-Troubleshooting.md
-  - Migrating from PatternBuilder: Migrating-From-PatternBuilder.md
+      - Core:
+          - MultiLibAPI: api-reference/MultiLibAPI.md
+          - MultiblockBuilder: api-reference/MultiblockBuilder.md
+          - MultiblockDefinition: api-reference/MultiblockDefinition.md
+          - BlockIngredient: api-reference/BlockIngredient.md
+          - BlockDefinition: api-reference/BlockDefinition.md
+      - Lifecycle & tracking:
+          - Callbacks & Events: api-reference/Callbacks-And-Events.md
+          - MultiblockInstance & Registry: api-reference/MultiblockInstance-And-Registry.md
+          - Block Entity Abstractions: api-reference/BlockEntity-Abstractions.md
+          - Multiblock States & Progress: api-reference/Multiblock-States-And-Progress.md
+      - Introspection:
+          - Multiblock Composition: api-reference/MultiblockComposition.md
+          - Multiblock Ability: api-reference/MultiblockAbility.md
+          - Multiblock Tier: api-reference/MultiblockTier.md
+      - Machine toolkit:
+          - Capability Components: api-reference/Components.md
+          - Ports (Hatches): api-reference/Ports.md
+          - Process Engine: api-reference/Process-Engine.md
+          - Control & Commands: api-reference/Control-And-Commands.md
+          - HUD Providers: api-reference/HUD-Providers.md
+      - Utilities:
+          - RotationUtils: api-reference/RotationUtils.md
+  - Help:
+      - FAQ & Troubleshooting: FAQ-Troubleshooting.md
+      - Migrating from PatternBuilder: Migrating-From-PatternBuilder.md

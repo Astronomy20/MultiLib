@@ -2,44 +2,39 @@
 
 # Advanced Features
 
-Secondary systems beyond the basic shaped-pattern-plus-callbacks flow covered in [Core Concepts](Core-Concepts.md) and the [Pattern Design Guide](Pattern-Design-Guide.md). Every heading below is linked from elsewhere in the wiki - this page is the landing spot for those `#anchor` links.
+Systems beyond the shaped-pattern-plus-callbacks flow of [Core Concepts](Core-Concepts.md). Every heading here is linked from elsewhere in the wiki.
 
 ## Shapeless structures
 
-`.shapeless()` switches a definition from a fixed layer grid to a **flood-fill** match, handled by `ShapelessMatcher`. Instead of comparing a grid at a computed origin, the matcher flood-fills outward from the placed block (6-directional, stopping at air) up to `.maxSize(x, y, z)` (default `64,64,64` - this also bounds the flood-fill radius), then validates the resulting blob:
+`.shapeless()` switches from a fixed grid to a **flood-fill** match (`ShapelessMatcher`): it fills outward from the placed block (6-directional, stopping at air) up to `.maxSize(x, y, z)` (default `64,64,64`), then validates the blob.
 
 ```java
 MultiLibAPI.define(id)
         .shapeless()
-        .minSize(3, 3, 3)
-        .maxSize(9, 9, 9)
+        .minSize(3, 3, 3).maxSize(9, 9, 9)
         .shell(BlockIngredient.of(Blocks.IRON_BLOCK))
         .interior(BlockIngredient.any())
         .require(BlockIngredient.of(Blocks.DIAMOND_BLOCK), 1, 4)
-        .core('O') // still needs a core/activation symbol bound via .key(...) somewhere the flood-fill can reach
+        .core('O') // still needs a core symbol reachable by the flood-fill
         .build();
 ```
 
-Shapeless structures don't rotate - there's no fixed grid to rotate, so `MultiblockInstance.getTransform()` always reports `TransformData(0, false, "NONE")` for them.
-
-### Shell / interior matching
-
-See [Shell/interior matching](#shellinterior-matching) below - the same mechanism used here.
+Shapeless structures don't rotate — `getTransform()` always reports `TransformData(0, false, "NONE")`.
 
 ## Shell/interior matching
 
-For shapeless structures, MultiLib classifies every flood-filled block as **shell** (touches the bounding box's boundary on at least one axis) or **interior** (doesn't):
+MultiLib classifies each flood-filled block as **shell** (touches the bounding box on ≥1 axis) or **interior** (doesn't):
 
-- `.shell(ingredient)` - required ingredient for every shell block, unless a face-specific override applies.
-- `.shellFace(Direction, ingredient)` - per-face override (e.g. a different top face than the four walls).
-- `.interior(ingredient)` - required ingredient for every strictly-interior block.
-- `.require(ingredient, min, max)` - a count constraint checked across the **whole** flood-filled region (shell + interior together), e.g. "between 1 and 4 diamond blocks somewhere inside."
+- `.shell(ingredient)` — required for every shell block, unless a face override applies.
+- `.shellFace(Direction, ingredient)` — per-face override (e.g. a different top).
+- `.interior(ingredient)` — required for every strictly-interior block.
+- `.require(ingredient, min, max)` — count constraint across the whole region (shell + interior).
 
-All of these are shapeless-only - they have no effect on shaped (`.layer(...)`) definitions.
+Shapeless-only; no effect on shaped definitions.
 
 ## Procedural patterns (`PatternProvider`)
 
-Instead of `.layer(...)`, `.pattern(PatternProvider)` lets a structure's shape be computed rather than typed out:
+`.pattern(PatternProvider)` computes a shape instead of typing it out:
 
 ```java
 @FunctionalInterface
@@ -49,26 +44,26 @@ public interface PatternProvider {
 }
 ```
 
-`getIngredientAt` returns `null` for "no block here" (equivalent to a space in a textual layer); `getSize()` gives the provider's own bounding box, which you can override with `.boundingBox(x, y, z)` on the builder. `FunctionalMatcher` searches procedural patterns with the exact same rotation/orientation machinery as `ShapedMatcher` (it calls `ShapedMatcher.applyTransform(...)` directly) - see the [Rotation & Matching Deep Dive](Rotation-And-Matching.md).
+`getIngredientAt` returns `null` for an empty cell; `getSize()` is the provider's bounding box, overridable with `.boundingBox(x, y, z)`. `FunctionalMatcher` searches these with the same rotation machinery as shaped patterns ([details](Rotation-And-Matching.md)).
 
 Built-in providers (`net.astronomy.multilib.api.pattern.providers`):
 
 | Provider | Shape |
 |---|---|
 | `SphereProvider(radius, ingredient)` | Solid sphere |
-| `HollowSphereProvider(radius, ingredient)` | Sphere shell only (a thin one-block-thick shell) |
+| `HollowSphereProvider(radius, ingredient)` | One-block-thick sphere shell |
 | `CylinderProvider(radius, height, ingredient)` | Solid cylinder along Y |
-| `HollowCubeProvider(width, height, depth, shell, interior)` | Cube with a required shell ingredient and an optional interior ingredient (`interior == null` means the inside is unconstrained) |
-| `PyramidProvider(baseSize, ingredient)` | Stepped pyramid, `baseSize` layers tall, each layer's footprint shrinking by 2 per Y step |
-| `LayeredPatternProvider(layers, blockMap)` | Wraps a textual layer grid as a `PatternProvider` - what `.layer(...)` uses internally; useful if you want to combine a hand-authored shape with `.boundingBox(...)` overrides |
+| `HollowCubeProvider(width, height, depth, shell, interior)` | Cube with a shell and optional interior (`null` = unconstrained) |
+| `PyramidProvider(baseSize, ingredient)` | Stepped pyramid, shrinking 2 per Y step |
+| `LayeredPatternProvider(layers, blockMap)` | Wraps a text grid as a provider — what `.layer(...)` uses internally |
 
-Write your own by implementing `PatternProvider` directly for shapes not covered above (an ellipsoid, a procedurally-generated maze, etc.) - it's a single-method functional interface.
+Implement `PatternProvider` yourself for anything else (ellipsoid, maze, …) — it's a single-method interface.
 
 ## JSON/datapack definitions
 
-Structures can be defined entirely in datapacks under `data/<namespace>/multiblocks/<name>.json`, loaded by `MultiblockJsonLoader` (a `SimpleJsonResourceReloadListener`) and swapped cleanly on `/reload` via `MultiblockRegistry.registerJson`/`clearJsonDefinitions` - without touching any Java-registered definitions.
+Structures can live in datapacks under `data/<namespace>/multiblocks/<name>.json`, loaded by `MultiblockJsonLoader` and reloaded cleanly on `/reload` without touching Java definitions.
 
-Recognized top-level fields (all optional except `layers`+`keys` or `pattern`):
+Top-level fields (all optional except `layers`+`keys` or `pattern`):
 
 ```json
 {
@@ -100,118 +95,108 @@ Recognized top-level fields (all optional except `layers`+`keys` or `pattern`):
 }
 ```
 
-`keys` entries accept either a bare block id string (shorthand for `{"block": ...}`) or a full ingredient object:
+`keys` entries accept a bare block id string or a full ingredient object:
 
-| Ingredient JSON shape | Equivalent `BlockIngredient` |
+| JSON | `BlockIngredient` |
 |---|---|
-| `"minecraft:stone"` or `{"block": "minecraft:stone"}` | `BlockIngredient.of(...)` |
-| `{"block": "...", "properties": {...}}` | `BlockIngredient.ofState(...)` - ⚠️ property parsing is a stub today; a JSON key with `properties` set logs a warning and falls back to plain `of(...)` behavior (see `MultiblockCodecs.BLOCK_INGREDIENT_OBJECT`) |
-| `{"tag": "examplemod:some_tag"}` | `BlockIngredient.tag(...)` |
-| `{"any_of": [...ingredient objects...]}` | `BlockIngredient.anyOf(...)` |
-| `{"any": true}` | `BlockIngredient.any()` |
-| `{"type": "...", ...}` | A custom ingredient registered via `MultiblockSerializers.registerIngredient(...)` |
+| `"minecraft:stone"` or `{"block": "minecraft:stone"}` | `.of(...)` |
+| `{"block": "...", "properties": {...}}` | `.ofState(...)` — ⚠️ property parsing is a stub; a `properties` key logs a warning and falls back to `of(...)` |
+| `{"tag": "examplemod:some_tag"}` | `.tag(...)` |
+| `{"any_of": [...]}` | `.anyOf(...)` |
+| `{"any": true}` | `.any()` |
+| `{"type": "...", ...}` | A custom ingredient via `MultiblockSerializers.registerIngredient(...)` |
 
-`pattern.type` supports the five built-in providers above (`multilib:sphere`, `multilib:cylinder`, `multilib:hollow_sphere`, `multilib:hollow_cube`, `multilib:pyramid`) plus any custom `PatternProviderSerializer` registered via `MultiblockSerializers.registerProvider(...)`.
+`pattern.type` supports the five built-in providers (`multilib:sphere`/`cylinder`/`hollow_sphere`/`hollow_cube`/`pyramid`) plus any custom `PatternProviderSerializer`.
 
-Not currently expressible in JSON (Java-only): callbacks beyond the two built-in sound hooks (`onFormed`/`onBroken` with arbitrary logic), `.validator(...)`, `.onTick(...)`/`.onAmbient(...)`, `.freeBlock(...)`, `.optionalLayer(...)`, geometry constraints (`.unique(...)`/`.surfaceOnly(...)`/etc.), and `.model(...)`/`.keepVisible(...)` (Master-Dummy). Use a Java-registered definition instead if you need these.
+An optional `"variants"` array declares [several geometries under one id](api-reference/MultiblockBuilder.md#variants) — mutually exclusive with a top-level `"layers"` (the loader rejects both). Each entry has a `"name"`, its own `"layers"`, and an optional `"keys"` overriding the shared top-level keys for that variant. Entries are tried in order:
+
+```json
+{
+  "keys": { "I": "minecraft:iron_block", "L": "minecraft:lapis_block" },
+  "core": "L",
+  "variants": [
+    { "name": "tall", "layers": [["III"], ["ILI"]] },
+    { "name": "compact", "layers": ["ILI"] }
+  ]
+}
+```
+
+Java-only (not expressible in JSON): arbitrary `onFormed`/`onBroken` logic (beyond the sound hooks), `.validator(...)`, `.onTick(...)`/`.onAmbient(...)`, `.freeBlock(...)`, `.optionalLayer(...)`, geometry constraints, `.model(...)`/`.keepVisible(...)`.
 
 ## Master-Dummy model
 
-`.model(ResourceLocation modelId)` + `.keepVisible(char... symbols)` gives a formed structure a single-block appearance: once formed, every part block becomes invisible (via a `MODEL_HIDDEN` blockstate property added by `AbstractMultiblockPartBlock`/`AbstractMultiblockControllerBlock`) except the core and any symbols listed in `.keepVisible(...)` - the core renders `modelId`'s default-state model in its place. Physics and hitboxes are unaffected; this is purely a render-time illusion.
+`.model(ResourceLocation)` + `.keepVisible(char...)` gives a formed structure a single-block look: on formation, every part block hides (a `MODEL_HIDDEN` property) except the core and kept-visible symbols, and the core renders `modelId` in their place. Hitboxes are unaffected — purely visual.
 
-Requirements:
-- The core's `Block` must extend `AbstractMultiblockControllerBlock`; part blocks must extend `AbstractMultiblockPartBlock`.
-- Hiding/unhiding is wired automatically through `AbstractMultiblockControllerBE.onStructureFormed`/`onStructureBroken` - you don't call `setModelHidden(...)` yourself in normal use.
-
-See [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md) for the base classes.
+Requirements: the core extends `AbstractMultiblockControllerBlock`, parts extend `AbstractMultiblockPartBlock`. Hiding/unhiding is automatic via `onStructureFormed`/`onStructureBroken`. See [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md).
 
 ## Wall sharing
 
-Non-core/non-activation symbols can optionally "share" a block with an adjacent structure's matching symbol - two neighboring instances of the same (or different) structures reusing a shared wall rather than each requiring its own dedicated blocks - but this is **opt-in, not the default**. `MultiblockDefinition.getWallSharingMode(char symbol)` resolves this per symbol through a priority chain, highest first:
+Non-core symbols can share a block with an adjacent structure, but this is **opt-in**. `getWallSharingMode(char)` resolves per symbol, highest priority first:
 
-1. **Symbol-level override** - `.key(symbol, ingredient, WallSharingMode mode)` or `.noWallSharing(symbols...)` on the builder.
-2. **Block-level registration** - a `BlockIngredient`/block implementing `IWallSharable.getDefaultWallSharingMode()`, or a `BlockDefinition.getWallSharingOverride()` set via `MultiLibAPI.block(block).wallSharing(enabled)`.
-3. **Definition-level default** - `.wallSharing(boolean)` on the builder, itself `false` unless set.
-4. **Fallback** - for ordinary symbols, `ENABLED` only if the definition-level default from step 3 was set to `true`; otherwise `DISABLED`. The core/activation symbol always falls back to **`DISABLED`** regardless of the definition-level default, unless explicitly overridden by one of the steps above (a structure's "main" block never shares a wall unless you say so explicitly).
+1. **Symbol-level** — `.key(symbol, ingredient, mode)` or `.noWallSharing(...)`.
+2. **Block-level** — `IWallSharable.getDefaultWallSharingMode()` or `MultiLibAPI.block(block).wallSharing(...)`.
+3. **Definition-level** — `.wallSharing(boolean)`, `false` unless set.
+4. **Fallback** — ordinary symbols follow the definition default; the core/activation symbol always defaults to `DISABLED` unless explicitly overridden.
 
-`WallSharingMode` has three values: `ENABLED`, `DISABLED`, `INHERIT` (defers to the next link in the chain).
+`WallSharingMode`: `ENABLED`, `DISABLED`, `INHERIT` (defers to the next link).
 
 ## Auto-place
 
-`.autoPlace()` opts a definition into Ctrl+Right-click auto-placement: clicking the (unformed) core with the modifier held scans every fixed-grid pattern position (free-block positions are skipped), and for each missing (air) cell whose expected block the player is holding, places it - consuming one item per placement, or placing for free in creative. After placing, it immediately attempts formation (`BlockActivationHandler.triggerFormationAt`) so a fully-stocked player can complete a structure in one click. The player is notified via an action-bar message of how many blocks were placed and how many are still missing (for lack of matching items in inventory).
+`.autoPlace()` enables Ctrl+Right-click auto-building: clicking an unformed core with the modifier held scans each fixed-grid cell, and for every missing cell whose expected block the player holds, places it — consuming one item (free in creative). It then attempts formation, so a stocked player completes a structure in one click. An action-bar message reports blocks placed and still missing.
 
 ## Ghost overlay
 
-Independent of `.autoPlace()`, right-clicking (a configured key/interaction on) the **core** of an unformed structure shows a client-side ghost overlay: translucent renders at every still-missing or mismatched position, refreshed live every 10 ticks while open, auto-expiring after a configurable duration (`CommonConfig`). Clicking a horizontal face of the core cycles which yaw orientation (0°/90°/180°/270°) is previewed; clicking again cycles through showing one layer at a time vs. the whole structure. `.ghostOverlayDebug()` on the builder adds a chat line reporting the overlay's render time each frame - a dev tool, not meant to ship enabled.
+Independent of auto-place: interacting with an unformed **core** shows a client-side ghost overlay — translucent renders at every missing/mismatched position, refreshed every 10 ticks, auto-expiring after a configurable duration. Clicking a horizontal face cycles the previewed yaw; clicking again toggles single-layer vs. whole-structure view. `.ghostOverlayDebug()` adds a per-frame render-time chat line (dev only).
 
-If the core's `BlockDefinition` has `.mainFace()` set (see the [Directional Cores Guide](Directional-Cores-Guide.md)), the preview orientation is pinned to the core's actual placed facing instead of the player's look direction or clicked face.
+With `.mainFace()` on the core's `BlockDefinition` ([Directional Cores Guide](Directional-Cores-Guide.md)), the preview pins to the core's actual facing instead of the player's.
 
 ## IO ports
 
-`MultiLibAPI.block(block).ioPort().build()` marks a block as an IO port: item/fluid/energy `BlockCapability` requests on it are transparently forwarded to the controller block entity of whichever multiblock instance currently contains it (`IOPortCapabilityHandler`, registered against NeoForge's `RegisterCapabilitiesEvent`). This lets you place a small, visually distinct "input/output" block anywhere in a large structure and have it act as a proxy for the actual controller's inventory/energy/fluid handlers, without writing the capability-forwarding logic yourself.
+`MultiLibAPI.block(block).ioPort().build()` marks a block whose item/fluid/energy capability requests are forwarded to the controller of whichever instance contains it (`IOPortCapabilityHandler`). A small "input/output" block anywhere in a structure then proxies the controller's handlers, with no forwarding code of your own. For a port with its own block entity, see [Ports](api-reference/Ports.md).
 
 ## Built-in machine toolkit
 
-Beyond structure detection, MultiLib ships the building blocks a processing machine typically needs, each documented in its own reference page:
+The building blocks a processing machine needs, each with its own reference page:
 
-- [Capability components](api-reference/Components.md) - energy/fluid/item buffers for controller block entities, with change hooks, NBT persistence, and one-line capability registration; plus `ContentCache` for Mekanism-style content survival across unform/reform.
-- [Ports (hatches)](api-reference/Ports.md) - `AbstractPortBlockEntity`/`AbstractPortBlock` base classes for dedicated port blocks with their own block entity. This complements the simpler `ioPort()` flag above: `ioPort()` forwards capabilities from any plain block MultiLib tracks, while the port base classes give the port its own BE (persistent controller link, custom behavior, typed controller access).
-- [Process engine](api-reference/Process-Engine.md) - a reusable job state machine (progress, one-shot input consumption/output production, pause conditions) driven from your tick callback.
-- [Control helpers & admin commands](api-reference/Control-And-Commands.md) - redstone control modes, comparator scaling, ownership, and the `/multilib` command tree.
-- [HUD providers](api-reference/HUD-Providers.md) - hover-info on Jade/The One Probe from a single viewer-agnostic provider API, with built-in providers for formed status, progress, tiers, and buffers.
+- [Capability components](api-reference/Components.md) — energy/fluid/item buffers with change hooks, NBT, and one-line registration; plus `ContentCache` for content survival across unform/reform.
+- [Ports (hatches)](api-reference/Ports.md) — base classes for port blocks with their own block entity (persistent controller link, typed access); the richer counterpart to `ioPort()` above.
+- [Process engine](api-reference/Process-Engine.md) — a job state machine (progress, one-shot input/output, pause conditions) driven from your tick callback.
+- [Control helpers & commands](api-reference/Control-And-Commands.md) — redstone modes, comparator scaling, ownership, `/multilib`.
+- [HUD providers](api-reference/HUD-Providers.md) — Jade/The One Probe hover-info from one viewer-agnostic API.
+- [Pattern variants](api-reference/MultiblockBuilder.md#variants) — several geometries under one id, with in-place wrench upgrades.
 
-All of it is mechanism-only and opt-in: nothing sends chat messages, plays sounds, or blocks players unless your mod explicitly does.
+All opt-in and mechanism-only — nothing is player-facing unless your mod makes it so.
 
 ## Wrench tool
 
-A "wrench" is any `Item` implementing the marker interface `IMultiblockWrench` (single method: `useOn(UseOnContext)`, since it extends the normal item-use contract). **MultiLib ships no wrench item of its own** - implement the interface on your own tool. `ExampleWrenchItem` (`net.astronomy.multilib.example`) is a full reference implementation covering:
-
-- Reporting "not part of any registered multiblock" when the clicked block matches nothing.
-- Reporting the formed instance's current `MultiblockState` id if the structure is already formed.
-- Attempting formation (respecting `FormationMode.allowsWrench()`) if not yet formed, and reporting the `MatchFailureReport` summary if the attempt still fails.
-
-Only structures whose `FormationMode` allows wrench-triggering (`WRENCH` or `AUTOMATIC_AND_WRENCH`) actually form this way - see [Core Concepts § Formation modes](Core-Concepts.md#formation-modes).
+A "wrench" is any `Item` implementing `IMultiblockWrench` (`useOn(UseOnContext)`). **MultiLib ships none** — implement it on your own tool. `ExampleWrenchItem` is a reference that reports "not a multiblock", the formed `MultiblockState`, or attempts formation (respecting `FormationMode.allowsWrench()`) and reports the failure summary otherwise. Only `WRENCH`/`AUTOMATIC_AND_WRENCH` structures form this way ([formation modes](Core-Concepts.md#formation-modes)).
 
 ## JEI / REI / EMI / Patchouli / GuideME / FTB Quests compatibility
 
 | Integration | Status | Package |
 |---|---|---|
-| JEI | Auto-registered via `@JeiPlugin` - every registered `MultiblockDefinition` becomes a recipe-browser entry automatically, no per-structure wiring needed | `compat.jei` |
-| REI | Equivalent auto-registered plugin | `compat.rei` |
-| EMI | Equivalent auto-registered plugin | `compat.emi` |
-| Patchouli | Manual: call `PatchouliMultiblockHelper.register(definition)` yourself during common setup - converts a shaped `MultiblockDefinition` into Patchouli's `IMultiblock` format (only shaped definitions are supported; shapeless/`PatternProvider`-backed definitions return `null` and are skipped) | `compat.patchouli` |
-| GuideME | Placeholder only - GuideME doesn't expose a stable programmatic registration API yet. `GuideMEHelper.logInfo(definition)` just logs availability; register your GuideME pages via GuideME's own datapack JSON format, referencing the definition's `ResourceLocation` | `compat.guideme` |
-| FTB Quests | Auto-registered (if FTB Quests is loaded) - adds a "Multiblock" quest task type. See [FTB Quests compatibility](#ftb-quests-compatibility) below | `compat.ftbquests` |
+| JEI / REI / EMI | Auto-registered — every definition becomes a recipe-browser entry, no per-structure wiring | `compat.jei`/`rei`/`emi` |
+| Patchouli | Manual: `PatchouliMultiblockHelper.register(definition)` during setup (shaped only; shapeless/procedural return `null`) | `compat.patchouli` |
+| GuideME | Placeholder — no stable registration API yet; `GuideMEHelper.logInfo(...)` logs availability, register pages via GuideME's own JSON | `compat.guideme` |
+| FTB Quests | Auto-registered (if loaded) — a "Multiblock" quest task ([below](#ftb-quests-compatibility)) | `compat.ftbquests` |
 
-For JEI/REI/EMI, `.icon(itemId)` and `.name(...)` control the recipe-browser presentation (icon item and display name) - see [MultiblockBuilder § Visuals & recipe browsers](api-reference/MultiblockBuilder.md#visuals-recipe-browsers).
+For recipe browsers, `.icon(itemId)` and `.name(...)` control presentation ([Visuals](api-reference/MultiblockBuilder.md#visuals-recipe-browsers)).
 
 ## FTB Quests compatibility
 
-If FTB Quests is loaded, MultiLib registers a `multiblock` quest task type (`FtbQuestsCompat`, gated behind reflection so the base mod never hard-depends on FTB Quests classes). A quest author picks a registered `MultiblockDefinition` and, optionally, a required [`MultiblockState`](api-reference/Multiblock-States-And-Progress.md) from a searchable dropdown in the task's config UI; leaving the state as "Any" completes the task on formation alone.
+When FTB Quests is loaded, MultiLib registers a `multiblock` task type (reflection-gated, so no hard dependency). An author picks a definition and optionally a required [`MultiblockState`](api-reference/Multiblock-States-And-Progress.md); "Any" completes on formation alone.
 
-Completion is **push-only, never polled**:
+Completion is **push-only**: the task listens to `MultiblockFormedEvent`/`MultiblockStateChangedEvent` and submits when a matching event fires. It deliberately doesn't consult the persistent "ever reached" record (which would let a quest re-complete on reset or credit a since-broken structure). A `requiredState` needs a real controller — JSON-only multiblocks never fire the state event, so use "Any" for those. Clicking the task opens the recipe viewer, not a manual complete.
 
-- The task subscribes to `MultiblockFormedEvent` and `MultiblockStateChangedEvent` (via `MultiblockQuestEventListener`) and submits itself the instant a matching event fires for the right player, definition, and (if set) state.
-- It does **not** use [`MultiblockProgressionTracker`](api-reference/Multiblock-States-And-Progress.md#multiblockprogressiontracker)'s persistent "ever reached" record for its completion check - a permanently-standing historical record would let a quest re-complete instantly on reset, or "complete" a task for a structure that's since been broken. The live-event approach avoids both.
-- A task with a `requiredState` set can only ever be satisfied by a multiblock that has a real `AbstractMultiblockControllerBE` controller (JSON-only multiblocks with no controller never fire `MultiblockStateChangedEvent`, so pick "Any" for those).
+## Progress tracking
 
-Clicking the task in the quest screen opens the recipe viewer (JEI/REI/EMI, whichever is installed) on that structure instead of manually completing it - there's no "click to complete" behavior for this task type.
-
-## Progress tracking for in-progress structures
-
-[`MultiblockProgressAPI.compute(level, corePos)`](api-reference/Multiblock-States-And-Progress.md#multiblockprogressapi) reports how complete a **not-yet-formed** shaped (`.layer(...)`) structure is - total blocks required, which positions are still missing/mismatched, and a per-block-type "shopping list" - so you can build your own progress UI without reimplementing pattern matching. It's read-only and complements, rather than replaces, the [ghost overlay](#ghost-overlay) above.
+[`MultiblockProgressAPI.compute(level, corePos)`](api-reference/Multiblock-States-And-Progress.md#multiblockprogressapi) reports how complete a not-yet-formed shaped structure is — total required, missing/mismatched positions, and a per-block "shopping list" — for building your own progress UI. Read-only; complements the [ghost overlay](#ghost-overlay).
 
 ## KubeJS scripting
 
-Structures can also be created and modified entirely from KubeJS scripts - a `MultiblockEvents.create`/`modify` event group, plus wrench-interaction events and a couple of script-friendly helpers. See the dedicated [KubeJS Integration](KubeJS-Integration.md) page for the full event lifecycle and examples.
+Structures can be created and modified from KubeJS scripts. See [KubeJS Integration](KubeJS-Integration.md).
 
 ## See also
 
-- [Core Concepts](Core-Concepts.md)
-- [Pattern Design Guide](Pattern-Design-Guide.md)
-- [Directional Cores Guide](Directional-Cores-Guide.md)
-- [KubeJS Integration](KubeJS-Integration.md)
-- [MultiblockBuilder reference](api-reference/MultiblockBuilder.md)
-- [BlockDefinition reference](api-reference/BlockDefinition.md)
-- [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md)
-- [Multiblock States & Progress Tracking](api-reference/Multiblock-States-And-Progress.md)
+- [Core Concepts](Core-Concepts.md), [Pattern Design Guide](Pattern-Design-Guide.md), [Directional Cores Guide](Directional-Cores-Guide.md), [KubeJS Integration](KubeJS-Integration.md)
+- [MultiblockBuilder](api-reference/MultiblockBuilder.md), [BlockDefinition](api-reference/BlockDefinition.md), [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md), [Multiblock States & Progress](api-reference/Multiblock-States-And-Progress.md)

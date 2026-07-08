@@ -6,9 +6,9 @@ Package: `net.astronomy.multilib.api.block`
 
 Block-level multiblock metadata - properties of a `Block` itself, independent of any single `MultiblockDefinition`. Accessed via `MultiLibAPI.block(block)`.
 
-## Why this exists separately from `MultiblockDefinition`
+## Why separate from `MultiblockDefinition`
 
-A structure's `MultiblockBuilder` describes one specific pattern. Some facts, though, are really about the *block*, not any one pattern using it: "this block is always the core of multiblock X," "this block always has its own facing," "this block should preserve its inventory when a multiblock is dismantled." `BlockDefinitionBuilder` captures those once, on the block, so every structure that reuses the block benefits automatically.
+Some facts are about the *block*, not any one pattern using it — "always the core of multiblock X," "has its own facing," "preserves its inventory when dismantled." `BlockDefinitionBuilder` captures those once, so every structure reusing the block benefits.
 
 ## `BlockDefinitionBuilder`
 

@@ -74,7 +74,7 @@ public record MultiblockBrokenContext(MultiblockContext base, BlockPos removedPo
 }
 ```
 
-`removedPos` is the specific block that triggered the break; `reason` distinguishes a normal player break from other paths (periodic-validation-detected removal reports `UNKNOWN`; explosions/replacement are not currently distinguished by any built-in caller beyond the enum's existence - check your NeoForge event source if you need to set these yourself).
+`removedPos` is the block that triggered the break; `reason` distinguishes a player break from other paths (periodic-validation removal reports `UNKNOWN`; `EXPLOSION`/`REPLACED` exist in the enum but aren't set by any built-in caller yet).
 
 ## `MultiblockTickCallback`
 
@@ -190,7 +190,7 @@ public class WrenchInteractionEvent extends Event {
 }
 ```
 
-**Not cancellable.** Fired every time a registered wrench (see `IMultiblockWrench`/[`MultiLibAPI.registerWrenchItem(Item)`](MultiLibAPI.md#registerwrenchitemitem-item)) is used on a block - **including** when nothing happens because the clicked block isn't part of any multiblock. MultiLib's own chat feedback for this (`event.WrenchFeedbackHandler`) is gated behind `CommonConfig.DEV_MODE` and off by default - in line with the library's policy of never hardcoding player-facing behavior - so a mod that wants player-facing wrench feedback regardless of dev mode should listen for this event itself (or use the `MultiblockEvents.wrench(...)` KubeJS event for scripts).
+**Not cancellable.** Fired on every registered-wrench use (see `IMultiblockWrench`/[`registerWrenchItem`](MultiLibAPI.md#registerwrenchitemitem-item)), including no-op clicks on non-multiblock blocks. MultiLib's own chat feedback (`WrenchFeedbackHandler`) is `DEV_MODE`-gated and off by default — a mod wanting player-facing feedback listens here itself (or uses the `MultiblockEvents.wrench(...)` KubeJS event).
 
 `getResult()` returns a `WrenchResult`, a sealed interface with one variant per outcome:
 
@@ -201,14 +201,16 @@ public sealed interface WrenchResult {
     record ModeDisallowsWrench(MultiblockDefinition definition) implements WrenchResult {}
     record Formed(MultiblockDefinition definition) implements WrenchResult {}
     record FormationFailed(MultiblockDefinition definition, String reason) implements WrenchResult {}
+    record VariantChanged(ResourceLocation definitionId, String fromVariant, String toVariant) implements WrenchResult {}
 }
 ```
 
 - `NotAMultiblock` - the clicked block isn't the activation/core block of any registered multiblock.
-- `AlreadyFormed` - a multiblock is already formed at this position, so nothing was attempted.
+- `AlreadyFormed` - a multiblock is already formed at this position, so nothing was attempted (also reported when a re-match under `VariantChanged`'s conditions below resolves to the *same* variant already recorded, or fails to match at all).
 - `ModeDisallowsWrench` - the pattern is actually complete, but this definition's `FormationMode` doesn't allow a wrench to finish it (e.g. `AUTOMATIC`). Only reported once the pattern is confirmed complete - an incomplete structure always reports `FormationFailed` instead, regardless of `FormationMode`, so the wrench stays useful as a "what's missing" diagnostic even on structures that only ever form automatically.
 - `Formed` - formation was attempted and succeeded.
 - `FormationFailed` - the pattern doesn't match (most common), or it did but something else (e.g. a custom validator) rejected the attempt anyway; `reason` is the pattern matcher's failure summary in the first case, a generic message in the second.
+- `VariantChanged` - wrenching an already-formed structure whose definition declares more than one [pattern variant](MultiblockBuilder.md#variants) (see `MultiblockBuilder.variant(...)`) re-matches it in place; if the match still succeeds but under a *different* variant than the one currently recorded, the instance is upgraded in place - same UUID, contents/controller state preserved, no `onFormed`/`onBroken` callbacks fire - instead of reporting `AlreadyFormed`. A definition with only the default (no declared) variant never produces this result.
 
 ### `MultiblockDefinitionsReloadedEvent`
 
@@ -217,9 +219,9 @@ public class MultiblockDefinitionsReloadedEvent extends Event {
 }
 ```
 
-**Not cancellable.** Fired once, on the server, right after JSON-datapack multiblock definitions finish (re)loading - i.e. after `MultiblockJsonLoader` finishes applying a resource reload, including the very first one on server start, and every subsequent `/reload`. At the point this fires, `MultiblockRegistry` holds the full, current set of definitions for this reload cycle: Java-registered ones (registered earlier, at mod setup) plus whatever JSON datapack definitions this reload just (re)loaded.
+**Not cancellable.** Fired once on the server after JSON definitions finish (re)loading — the first server-start load and every `/reload`. At this point `MultiblockRegistry` holds the full set for this cycle: Java definitions (from mod setup) plus the JSON ones just loaded.
 
-Intended for integrations that need to act on the complete registry state per reload rather than per-definition as they're parsed - e.g. re-registering script/dynamic definitions, or patching an existing definition via `MultiLibAPI.redefine(...)`, which requires the target to already be registered. This is what KubeJS's `MultiblockEvents.create(...)`/`modify(...)` hook into - see [KubeJS Integration § When scripts run](../KubeJS-Integration.md#when-scripts-run).
+For integrations acting on the complete registry rather than per-definition — re-registering dynamic definitions, or patching via `MultiLibAPI.redefine(...)` (which needs the target already registered). KubeJS's `create`/`modify` hook into this — see [KubeJS § When scripts run](../KubeJS-Integration.md#when-scripts-run).
 
 ## See also
 

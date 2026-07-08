@@ -1,31 +1,22 @@
 # MultiLib
 
-**MultiLib** is a library mod that lets other mods define and detect multiblock structures - a fixed 3D arrangement of blocks - without writing their own block-by-block matching, state tracking, or recipe-browser integration.
+**MultiLib** lets other mods define and detect multiblock structures — fixed 3D arrangements of blocks — without writing their own matching, state tracking, or recipe-browser integration. Describe a structure once with a fluent builder; MultiLib handles detection in every allowed orientation, persistent instance tracking, a ghost-overlay preview, an auto-place tool, and JEI/REI/EMI/Patchouli integration.
 
-You describe a structure once with a fluent builder, and MultiLib handles detection (in every orientation it allows), persistent instance tracking, a ghost-overlay preview, an auto-place tool, and JEI/REI/EMI/Patchouli integration.
-
-> **Status:** MultiLib is under active development (`v0.0.1`). It's usable today but expect bugs.
-
-> This wiki is also published as a browsable site at **[astronomy20.github.io/MultiLib](https://astronomy20.github.io/MultiLib/)**.
-
-## Why MultiLib
-
-Building a multiblock structure by hand usually means reimplementing the same handful of problems for every mod: scanning neighboring blocks in the right order, handling rotations, persisting which structures are currently formed across a world reload and wiring up a recipe-browser page so players can see the layout. MultiLib solves all of that once, behind a small public API, so mod authors can focus on what their structure *does* rather than how it's detected.
+> **Status:** active development (`v0.0.1`). Usable today, but expect bugs.
+>
+> Also published as a browsable site at **[astronomy20.github.io/MultiLib](https://astronomy20.github.io/MultiLib/)**.
 
 ## Features
 
-- **Fluent builder API** - describe a structure as a stack of text-based layers with symbol keys, no manual coordinate math.
-- **Flexible matching** - shaped, shapeless, and procedural (`PatternProvider`) structures; shell/interior matching; free blocks.
-- **Rotation-aware detection** - horizontal or full 3D rotation modes, plus fixed-facing "directional core" structures.
-- **Stateful controller blocks** - optional base classes for a block-entity-backed core that tracks formed/unformed state and ticks while active.
-- **Callbacks** - `onFormed` / `onBroken` / tick callbacks fire exactly when they should.
-- **Ghost-overlay preview & auto-place** - players can preview a structure in the world before placing it and place the remaining blocks with a single tool.
-- **JSON/datapack definitions** - structures can also be defined data-driven.
-- **Recipe-browser integration** - JEI, REI, EMI, Patchouli and GuideME support out of the box.
-- **Built-in machine toolkit** - energy/fluid/item buffer components with content caching, port/hatch base classes that proxy the controller's capabilities, and a reusable process engine (progress, one-shot input/output, pause conditions).
-- **Control helpers & admin commands** - redstone control modes, comparator output scaling, ownership tracking, `/multilib` commands.
-- **Hover-info (Jade/The One Probe)** - formed status, progress bars, tier/buffer readouts on hover via a viewer-agnostic provider API; only a minimal default line unless the dev opts in.
-- **Tier stat maps & formed-property** - attach numeric stats to tiers and read them back from the formed structure; flip a blockstate property on member blocks on formation.
+- **Fluent builder** — text-based layers with symbol keys, no coordinate math.
+- **Flexible matching** — shaped, shapeless, and procedural (`PatternProvider`) structures; shell/interior; free blocks; [pattern variants](api-reference/MultiblockBuilder.md#variants).
+- **Rotation-aware** — horizontal or full 3D modes, plus fixed-facing directional cores.
+- **Stateful controllers** — base classes for a block-entity core that tracks state and ticks while formed.
+- **Callbacks** — `onFormed`/`onBroken`/tick, fired on a real tracked lifecycle.
+- **Preview & auto-place** — ghost overlay and one-tool completion.
+- **Data-driven** — JSON/datapack definitions and KubeJS scripting.
+- **Recipe browsers** — JEI, REI, EMI, Patchouli, GuideME, FTB Quests.
+- **Machine toolkit** — energy/fluid/item buffer components, port/hatch base classes, a process engine, redstone/comparator/ownership helpers, `/multilib` commands, tier stat maps, and Jade/The One Probe hover-info. All opt-in and mechanism-only.
 
 ## Quick example
 
@@ -40,38 +31,24 @@ MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar
         .core('O')
         .formationMode(FormationMode.AUTOMATIC_AND_WRENCH)
         .rotations(RotationMode.HORIZONTAL)
-        .onFormed(ctx -> {
-            // runs once the structure is detected in the world
-        })
+        .onFormed(ctx -> { /* runs once detected */ })
         .build();
 ```
 
-Registered once during mod setup, this is enough for MultiLib to detect the structure in every allowed rotation whenever the core block is placed, track it persistently, and preview/auto-place it for players.
+Registered once at mod setup, this detects the structure in every allowed rotation whenever the core is placed, tracks it persistently, and previews/auto-places it for players.
 
-See the [Getting Started guide](Getting-Started.md) for the full walkthrough, including the mod-entry-point wiring.
+## Where to start
 
-## Documentation
-
-The full API reference and guides live in the [wiki](index.md):
-
-- [Getting Started](Getting-Started.md) - add MultiLib as a dependency and register your first multiblock.
-- [Core Concepts](Core-Concepts.md) - definitions, symbols, ingredients, the coordinate system, formation modes.
-- [Pattern Design Guide](Pattern-Design-Guide.md) - laying out structures correctly and avoiding common mistakes.
-- [Rotation & Matching Deep Dive](Rotation-And-Matching.md) - how the matchers actually work.
-- [Advanced Features](Advanced-Features.md) - shapeless structures, JSON definitions, ghost overlay, auto-place, JEI/REI/EMI/Patchouli/FTB Quests.
-- [KubeJS Integration](KubeJS-Integration.md) - creating and modifying multiblocks from KubeJS scripts, wrench events, `MultiblockUtils`.
-- [Dev Tools](Dev-Tools.md) - the in-game dev block/wrench for scanning a built structure and exporting it as a Java scaffold, KubeJS script, or datapack JSON.
-- [API Reference](api-reference/MultiLibAPI.md) - full method-by-method reference, including [multiblock states & progress tracking](api-reference/Multiblock-States-And-Progress.md), [structure composition](api-reference/MultiblockComposition.md), [part abilities](api-reference/MultiblockAbility.md), [tiers](api-reference/MultiblockTier.md), [capability components](api-reference/Components.md), [ports](api-reference/Ports.md), the [process engine](api-reference/Process-Engine.md), [control helpers & commands](api-reference/Control-And-Commands.md), and [HUD providers](api-reference/HUD-Providers.md).
-- [FAQ & Troubleshooting](FAQ-Troubleshooting.md)
-
-## Compatibility
-
-Are available integrations for JEI, REI, EMI, Patchouli, GuideME and FTB Quests - see [Advanced Features](Advanced-Features.md#jei-rei-emi-patchouli-guideme-ftb-quests-compatibility). KubeJS is also supported for scripting new/existing multiblocks - see [KubeJS Integration](KubeJS-Integration.md).
+- **New here?** [Getting Started](Getting-Started.md), then [Core Concepts](Core-Concepts.md).
+- **Designing a structure?** [Pattern Design Guide](Pattern-Design-Guide.md) and [Advanced Features](Advanced-Features.md).
+- **Full API:** [API Reference](api-reference/MultiLibAPI.md).
+- **Porting old code?** [Migrating from PatternBuilder](Migrating-From-PatternBuilder.md).
+- **Stuck?** [FAQ & Troubleshooting](FAQ-Troubleshooting.md).
 
 ## Contributing
 
-Issues and pull requests are welcome. If you're proposing a new API shape or any other feature, please open an issue to discuss it.
+Issues and PRs welcome. For a new API shape or feature, please open an issue to discuss first.
 
 ## License
 
-MIT - see the license file for details.
+MIT — see the license file.

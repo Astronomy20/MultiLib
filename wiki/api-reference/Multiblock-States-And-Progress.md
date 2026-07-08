@@ -31,11 +31,11 @@ public final class MultiblockStateRegistry {
 }
 ```
 
-Registering the same `id` twice returns the same instance (`computeIfAbsent`), so it's safe to call `register(...)` from a static field initializer that might run more than once. `nameTranslationKey` is optional - set it if you want the state to show up with a readable name somewhere it's picked from a list (currently: the FTB Quests task's "required state" dropdown, see [FTB Quests compatibility](../Advanced-Features.md#ftb-quests-compatibility)).
+Registering the same `id` twice returns the same instance, so it's safe from a static initializer. `nameTranslationKey` is optional — set it for a readable name where the state is picked from a list (currently the FTB Quests "required state" dropdown).
 
-Registration is only allowed before MultiLib freezes the registry (`FMLLoadCompleteEvent`); register your custom states during your mod's constructor or `FMLCommonSetupEvent`, not lazily at first use, or `register(...)` throws `IllegalStateException`. In practice this means: declare your states as `public static final MultiblockState` fields, same pattern as `StandardMultiblockState` below, and reference the field (or a `touch()`-style no-op) early enough that the class loads before freeze.
+Registration must happen before the registry freezes (`FMLLoadCompleteEvent`) — do it in your mod constructor or `FMLCommonSetupEvent`, not lazily, or it throws. Declare states as `public static final MultiblockState` fields (like `StandardMultiblockState`) and load the class early enough.
 
-Prefer `MultiLibAPI.registerMultiblockState(id[, nameTranslationKey])` from outside MultiLib itself - a thin passthrough, see [MultiLibAPI](MultiLibAPI.md).
+From outside MultiLib, prefer `MultiLibAPI.registerMultiblockState(...)`.
 
 ## `StandardMultiblockState`
 
@@ -48,7 +48,7 @@ public final class StandardMultiblockState {
 }
 ```
 
-Four built-in states, all under the `multilib` namespace (`multilib:unformed`, `multilib:idle`, etc.). `AbstractMultiblockControllerBE` uses `UNFORMED`/`IDLE` itself (see below); `RUNNING`/`ERROR` are provided for your own controller to opt into via `setState(...)` but nothing calls them automatically. Note there's no `UNFORMED` → `RUNNING` shortcut enforced anywhere - states are just data, MultiLib doesn't validate transitions between them.
+Four built-in states under the `multilib` namespace. `AbstractMultiblockControllerBE` uses `UNFORMED`/`IDLE` itself; `RUNNING`/`ERROR` are yours to set via `setState(...)`, nothing sets them automatically. States are just data — MultiLib doesn't validate transitions.
 
 ## Controller state lifecycle
 
@@ -85,11 +85,11 @@ public class MultiblockProgressionTracker extends SavedData {
 }
 ```
 
-Long-term "has this player ever reached this state on this definition, and when" memory (per-player, per-definition, per-state → last-reached tick). Unlike [`WorldMultiblockTracker`](MultiblockInstance-And-Registry.md#worldmultiblocktracker), which only tracks *currently-formed* instances, this record **survives** the underlying instance being broken and reformed. It's always stored on the overworld's `SavedData` regardless of which dimension the multiblock actually formed in, since progression is conceptually per-player, not per-dimension.
+Long-term "has this player ever reached this state, and when" memory (per-player/definition/state → last tick). Unlike [`WorldMultiblockTracker`](MultiblockInstance-And-Registry.md#worldmultiblocktracker) (only currently-formed instances), this **survives** the instance being broken and reformed. Always stored on the overworld's `SavedData` regardless of dimension — progression is per-player, not per-dimension.
 
-Passing `null` as `stateId` to `hasReached(...)` checks "has this player ever reached *any* state for this definition" (i.e. ever formed it at least once), rather than one specific state.
+`stateId = null` in `hasReached(...)` checks "ever reached *any* state" (i.e. formed at least once).
 
-Prefer `MultiLibAPI.hasReachedMultiblockState(...)` / `recordMultiblockStateReached(...)` from outside MultiLib itself - see [MultiLibAPI](MultiLibAPI.md#progression-custom-states). Note the built-in [FTB Quests compatibility](../Advanced-Features.md#ftb-quests-compatibility) deliberately does **not** use this tracker for its own completion check - see that section for why.
+From outside MultiLib, prefer `MultiLibAPI.hasReachedMultiblockState(...)`/`recordMultiblockStateReached(...)`. The [FTB Quests](../Advanced-Features.md#ftb-quests-compatibility) integration deliberately doesn't use this tracker for completion.
 
 ## `MultiblockProgressAPI`
 
@@ -99,11 +99,11 @@ public final class MultiblockProgressAPI {
 }
 ```
 
-Read-only: reports how complete an **in-progress** (not-yet-formed) structure is, so a consuming mod can render its own progress UI (a progress bar, a "you still need N of block X" shopping list, etc.) without reimplementing pattern matching. Never places, breaks, or otherwise changes anything.
+Read-only: reports how complete an **in-progress** structure is, for building your own progress UI without reimplementing matching. Changes nothing.
 
-**Scope limitation:** only structures declared with `.layer(...)` (shaped, backed by `ShapedMatcher`) are supported - the same scope `.autoPlace()` already covers. A definition built with `.pattern(PatternProvider)` or `.shapeless()` makes `compute(...)` return `Optional.empty()`.
+**Scope:** shaped (`.layer(...)`) structures only — `.pattern(...)`/`.shapeless()` return `Optional.empty()`.
 
-Orientation for an incomplete structure is detected from whatever's already placed around the core (`StructureOrientation.detectFromPlacedBlocks`); if literally nothing is placed yet besides a bare core, it falls back to the identity orientation (`"Y"`, rotation `0`) - safe because with zero other blocks placed, every orientation needs the same block *types* in the same *quantities*, just at different world positions, so the totals are identical either way (only which positions get flagged "missing" would differ).
+Orientation is detected from blocks already placed around the core (`StructureOrientation.detectFromPlacedBlocks`), falling back to identity (`"Y"`, rotation `0`) when only the bare core exists — safe because with nothing else placed, every orientation needs the same block types and counts, only differing in which positions are flagged missing.
 
 ```java
 Optional<StructureProgress> progress = MultiblockProgressAPI.compute(serverLevel, corePos);
@@ -139,7 +139,7 @@ One pattern position that isn't correctly filled yet - either still air, or occu
 public static Optional<StructureValidationReport> computeDetailed(ServerLevel level, BlockPos corePos);
 ```
 
-Like `compute(...)`, but also reports placed-but-wrong positions (not just missing ones) - the same per-position MISSING/WRONG/WRONG_STATE classification the ghost overlay already computes, exposed here as a public, reusable report instead of being stuck inside that event handler. Same scope limitation as `compute(...)`: only `.layer(...)`-declared (shaped) structures are supported, and orientation for an incomplete structure falls back the same way when nothing's placed yet.
+Like `compute(...)`, but also reports placed-but-wrong positions — the same MISSING/WRONG/WRONG_STATE classification the ghost overlay computes, as a reusable report. Same shaped-only scope and orientation fallback as `compute(...)`.
 
 ```java
 public record StructureValidationReport(boolean formed, List<MissingBlock> missing, List<StructureMismatch> mismatches) {
@@ -154,9 +154,7 @@ Superset of `StructureProgress`: not just what's missing, but also what's placed
 public record StructureMismatch(BlockPos pos, char symbol, BlockIngredient expected, BlockState actual, boolean wrongState) {}
 ```
 
-A placed block that doesn't satisfy the pattern at its position - as opposed to a `MissingBlock` (nothing placed there at all). `wrongState` tells apart "right block, wrong blockstate property" (e.g. facing) from "an entirely different block", determined via [`BlockIngredient#matchesBlockType`](BlockIngredient.md): if the ingredient's candidate blocks contain the placed block's type, it's a `WRONG_STATE` case (right block, wrong orientation/property); otherwise it's a plain `WRONG` (an entirely different block).
-
-This mirrors the `GhostBlockData.Status` enum (`net.astronomy.multilib.network`) used by the client-side ghost overlay, which gained the same `WRONG_STATE` value alongside the pre-existing `MISSING`/`WRONG`/`CORE`/`PLACEABLE` - so a position with the right block but the wrong facing renders distinctly from one with a completely wrong block, instead of both being lumped into a generic "wrong" highlight.
+A placed block that doesn't satisfy the pattern (vs. `MissingBlock`, nothing placed). `wrongState` distinguishes "right block, wrong property" from "different block", via [`BlockIngredient#matchesBlockType`](BlockIngredient.md): if the candidate blocks contain the placed type it's `WRONG_STATE`, else `WRONG`. Mirrors the ghost overlay's `GhostBlockData.Status`, so a wrong-facing block renders distinctly from a completely wrong one.
 
 ## See also
 

@@ -2,88 +2,81 @@
 
 # Pattern Design Guide
 
-Practical guidance for laying out a shaped pattern with `MultiblockBuilder`. Read [Core Concepts](Core-Concepts.md) first for the underlying model (symbols, `BlockIngredient`, layers, core/activation) - this page is about *design decisions* once you know the primitives.
+Design decisions for laying out a shaped pattern. Read [Core Concepts](Core-Concepts.md) first for the primitives (symbols, `BlockIngredient`, layers, core/activation); this page is about using them well.
 
-## Sketch on paper (or in a comment) first
+## Sketch it top-down first
 
-Before writing any `.layer(...)` calls, draw your structure top-down, one grid per Y level, **top level first** (⚠️ remember: the *first* `.layer(...)` call is the top of the structure, the *last* is the bottom - the reverse of the old `PatternBuilder` API). For each level, rows go from lowest Z (first string) to highest Z (last string), and characters go from lowest X (leftmost) to highest X (rightmost).
-
-`ExamplePattern` in the source tree lays out a small altar-like structure this way:
+Draw one grid per Y level, **top level first** — the first `.layer(...)` call is the top, the last is the bottom (reverse of the old `PatternBuilder`). Within a level, rows go lowest-Z to highest-Z, characters go lowest-X to highest-X. Reading a `.layer(...)` block top-to-bottom as printed matches drawing the structure from the front:
 
 ```java
-.layer("PPP",   // top layer (relY = 0)
+.layer("PPP",   // top    (relY = 0)
        " P ",
        " G ")
-.layer("POP",   // bottom layer (relY = -1) - 'O' is the core
+.layer("POP",   // bottom (relY = -1), 'O' is the core
        " P ",
        " G ")
 ```
 
-Reading this top-to-bottom as printed *is* reading it top level first, row-by-row within each level - which conveniently matches how you'd naturally draw the structure looking at it from the front with the top level above the bottom level on the page.
+## Choose core and activation deliberately
 
-## Pick your core and activation symbols deliberately
+- One obvious controller? Make it the **core** with `.core(char)`. This also sets **activation** to the same symbol, so placing the controller last both triggers the check and anchors the ghost overlay, wrench, and controller state.
+- Split them only when the trigger block genuinely isn't the block that represents the structure (e.g. trigger on any body block, track state on a separate controller).
+- The core needn't be placed last: `setValidationInterval(...)` on a controller lets a complete structure be discovered periodically ([activation flow](Core-Concepts.md#activation-flow)).
 
-- If your structure has one obvious controller block (a block entity with a menu, a "master" block), make it the **core** with `.core(char)`. This also sets **activation** to the same symbol unless you call `.activation(char)` separately - so in the common case, placing the controller last both triggers the check and gives you a stable anchor for the ghost overlay, wrench diagnostics, and (if used) `AbstractMultiblockControllerBE` state.
-- Split core and activation only when the "block whose placement should trigger a check" genuinely isn't the "block that represents the structure." For example, if you want the structure to try forming whenever *any* body block is placed, but still track state on a separate controller elsewhere in the pattern.
-- The core doesn't have to be placed last in practice - `setValidationInterval(...)` on an `AbstractMultiblockControllerBE` lets an already-complete structure be discovered periodically even if the core was placed first (see [Core Concepts § Activation flow](Core-Concepts.md#activation-flow)).
+## Ingredients per symbol
 
-## Choosing ingredients per symbol
-
-Use the narrowest `BlockIngredient` that still expresses your intent - see the [performance note in the `BlockIngredient` reference](api-reference/BlockIngredient.md#performance-note): a tag/predicate/`any()` used on your **activation or core** symbol makes the whole definition "always-checked" against every block placement in the world, not just placements of specific blocks. Reserve those for body symbols where the cost doesn't apply:
+Use the narrowest ingredient that expresses your intent. A tag/predicate/`any()` on the **activation or core** symbol makes the whole definition always-checked against every placement in the world ([performance note](api-reference/BlockIngredient.md#performance-note)) — reserve those for body symbols:
 
 ```java
-.key('B', BlockIngredient.tag(BlockTags.LOGS))       // body - fine, cheap to check
-.key('O', BlockIngredient.of(ExampleSetup.CONTROLLER_BLOCK)) // core/activation - enumerable, indexed
+.key('B', BlockIngredient.tag(BlockTags.LOGS))                // body — cheap
+.key('O', BlockIngredient.of(ExampleSetup.CONTROLLER_BLOCK))  // core — enumerable, indexed
 ```
 
-Use `BlockIngredient.ofState(...)` when a body block needs a specific facing or property, not just the right `Block` - e.g. matching a furnace that must face a specific way relative to the pattern.
+Use `.ofState(...)` when a body block needs a specific facing or property, not just the right block.
 
 ## Empty cells
 
-The space character (`' '`) means "don't care" and is never treated as a symbol - use it freely for cells that shouldn't constrain matching (like the corners of a 3×3 layer that aren't actually part of the structure). Any stray character in a layer string that was never bound with `.key(...)` is silently treated the same as a space, so double-check your layer strings against your symbol map - there's no validation that catches a typo here.
+Space (`' '`) means "don't care" — use it for cells that shouldn't constrain matching. A stray character never bound with `.key(...)` is treated the same, so check layer strings against your symbol map; typos aren't caught.
 
-If you actually need a cell to require **air** specifically (not "don't care"), that's what `.requireAirInEmptyPositions()` is for - but note it only takes effect for `PatternProvider`-backed/functional definitions; plain shaped layers already only check non-space symbols and won't enforce air on spaces even with this flag set.
+To require **air** specifically, use `.requireAirInEmptyPositions()` — but it only affects `PatternProvider`/functional definitions; shaped layers never constrain spaces.
 
 ## Optional cells and layers
 
-- `.optional(char... symbols)` - lets specific symbols mismatch without failing the whole match. Good for decorative variance (e.g. a symbol that's "usually gold but the structure still works without it").
-- `.optionalLayer(String... rows)` - an entire layer the matcher tries both with and without. Useful for structures with an optional "extra tier" (e.g. a 2-block-tall or 3-block-tall variant of the same base). The matcher tries every combination of included/excluded optional layers, so keep the number of optional layers small - it's combinatorial.
+- `.optional(char... symbols)` — lets a symbol mismatch without failing the match. Good for decorative variance.
+- `.optionalLayer(String... rows)` — a layer tried both with and without (e.g. a taller variant). The matcher tries every include/exclude combination, so keep the count small — it's combinatorial.
 
 ## Free blocks
 
-`.freeBlock(char symbol, BlockIngredient ingredient, int min, int max)` declares a symbol that isn't pinned to a fixed layer position at all: MultiLib scans the pattern's bounding box for any unclaimed cell matching `ingredient` and counts matches toward `min`/`max`. Use this for "decorate with N of these somewhere in the structure" requirements rather than a fixed grid position - e.g. "between 2 and 4 lanterns anywhere in the frame." Restrict to specific candidate cells with the `List<BlockPos> allowedPositions` overload if "anywhere" is too permissive.
+`.freeBlock(char, ingredient, min, max)` declares a symbol not pinned to a fixed cell: MultiLib scans the bounding box for unclaimed cells matching `ingredient` and counts them toward `min`/`max` — e.g. "2–4 lanterns anywhere in the frame." Restrict candidates with the `List<BlockPos> allowedPositions` overload.
 
 ## Geometry constraints
 
-Four constraints are statically validated against your textual layers at `.build()` time (not re-checked per-match at runtime beyond the shape matching itself):
+Validated against your layers at `.build()`:
 
-| Constraint | Requires |
+| Constraint | Requires the symbol to be |
 |---|---|
-| `.unique(char... symbols)` | Symbol occurs exactly once in the whole structure (for `freeBlock` symbols, forces `min=max=1` instead) |
-| `.surfaceOnly(char... symbols)` | On at least one boundary axis (an outer face) |
-| `.frameOnly(char... symbols)` | On at least two boundary axes (an edge/corner) |
-| `.insideOnly(char... symbols)` | Touches no boundary at all |
+| `.unique(char...)` | Present exactly once (for `freeBlock` symbols, forces `min=max=1`) |
+| `.surfaceOnly(char...)` | On an outer face (≥1 boundary axis) |
+| `.frameOnly(char...)` | On an edge/corner (≥2 boundary axes) |
+| `.insideOnly(char...)` | Touching no boundary |
 
-Violations are logged as build-time errors - worth checking your logs after adding these, since a violated constraint doesn't throw, but it does block registration: `.build()` skips calling `MultiblockRegistry.register(...)` and still returns the (unregistered) definition object.
+A violation doesn't throw but blocks registration — `.build()` logs the error, skips `MultiblockRegistry.register(...)`, and returns the unregistered object. Check your logs after adding these.
 
 ## Rotation
 
-Decide early whether your structure is meant to be built facing any horizontal direction (the common case - `RotationMode.HORIZONTAL`, the default), fully free (`RotationMode.ALL`, including tipped/upside-down), or fixed (`RotationMode.NONE`). If you need asymmetric per-axis control (e.g. allow 180° tipping but not 90°), use `.allowRotation(...)` instead - see the [Rotation & Matching Deep Dive](Rotation-And-Matching.md) for how these interact with the matcher's search.
+Decide early: any horizontal facing (`RotationMode.HORIZONTAL`, default), fully free including tipped (`RotationMode.ALL`), or fixed (`RotationMode.NONE`). For per-axis control (e.g. 180° but not 90°), use `.allowRotation(...)` — see [Rotation & Matching](Rotation-And-Matching.md).
 
-If the structure's core has its own meaningful facing (a furnace-like block placed by the player), see the [Directional Cores Guide](Directional-Cores-Guide.md) for pinning the ghost overlay/auto-place preview to that facing via `.mainFace()` - this is independent from whether the *matcher* allows rotation.
+If the core has its own facing (a player-placed furnace-like block), pin the preview to it via `.mainFace()` — see the [Directional Cores Guide](Directional-Cores-Guide.md). This is independent of whether the matcher allows rotation.
 
 ## Wall sharing
 
-Wall sharing is **disabled by default** - non-core/non-activation symbols do *not* share a block with an adjacent structure's matching symbol unless you opt in. Call `.wallSharing(true)` to enable it definition-wide, then use `.noWallSharing(char...)` (or per-symbol overrides / an `IWallSharable` block) if specific symbols still need their own dedicated blocks. See [Advanced Features § Wall sharing](Advanced-Features.md#wall-sharing) for the full priority chain.
+**Disabled by default** — non-core symbols don't share a block with an adjacent structure unless you opt in. `.wallSharing(true)` enables it definition-wide; `.noWallSharing(char...)` re-excludes specific symbols. Full priority chain: [Advanced Features § Wall sharing](Advanced-Features.md#wall-sharing).
 
 ## Visual polish
 
-Once the shape is solid: `.icon(...)` and `.name(...)` for recipe-browser presentation, `.model(...)` + `.keepVisible(...)` if you want a Master-Dummy single-block appearance once formed (see [Advanced Features § Master-Dummy model](Advanced-Features.md#master-dummy-model)), and `.ghostOverlayDebug()` temporarily while iterating on layout (remove before shipping).
+`.icon(...)` and `.name(...)` for recipe browsers; `.model(...)` + `.keepVisible(...)` for a [Master-Dummy](Advanced-Features.md#master-dummy-model) single-block look; `.ghostOverlayDebug()` while iterating (remove before shipping).
 
 ## See also
 
-- [Core Concepts](Core-Concepts.md)
-- [Rotation & Matching Deep Dive](Rotation-And-Matching.md)
-- [Directional Cores Guide](Directional-Cores-Guide.md)
-- [Advanced Features](Advanced-Features.md)
+- [Core Concepts](Core-Concepts.md), [Rotation & Matching](Rotation-And-Matching.md), [Directional Cores Guide](Directional-Cores-Guide.md), [Advanced Features](Advanced-Features.md)
 - [MultiblockBuilder reference](api-reference/MultiblockBuilder.md)

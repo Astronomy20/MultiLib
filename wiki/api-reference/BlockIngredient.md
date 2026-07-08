@@ -47,7 +47,7 @@ Arbitrary logic. `getCandidateBlocks()` returns an empty set - same indexing cav
 Matches every `BlockState` unconditionally (including air). `getCandidateBlocks()` is empty.
 
 ### `BlockIngredient.ability(BlockCapability<?, Direction> capability, Block previewBlock)`
-Matches any block whose block entity currently exposes `capability` on at least one side, checked at match-time (not registration-time) via `level.getCapability(...)` - e.g. "any block that exposes an energy storage capability", regardless of which mod added it. Unlike `tag(...)`, this needs no shared tag convention between MultiLib and every addon that might supply a compatible block: a third-party block nobody tagged still matches as long as it genuinely exposes the capability when queried. `previewBlock` is only used for previews (JEI/REI/EMI, ghost overlay) since there's no single "the" block for a capability - pick whichever concrete block is the canonical example. Because matching needs a `Level`/`BlockPos` in scope, this is the one ingredient type that overrides the context-aware `matches(ServerLevel, BlockPos, BlockState)` overload instead of the plain one.
+Matches any block whose block entity exposes `capability` on at least one side, checked at match-time via `level.getCapability(...)` — e.g. "any block exposing energy storage", from any mod, with no shared tag convention needed. `previewBlock` is used only for previews (there's no single block for a capability — pick a canonical example). This is the one ingredient that overrides the context-aware `matches(ServerLevel, BlockPos, BlockState)` overload, since it needs a `Level`/`BlockPos`.
 
 ## Choosing an ingredient type
 
@@ -69,7 +69,7 @@ public interface IWallSharable {
 }
 ```
 
-An optional interface a `Block` class can implement to declare its own default wall-sharing behavior. It's only consulted as part of the ordinary-symbol wall-sharing priority chain (see [`MultiblockDefinition#getWallSharingMode`](MultiblockDefinition.md)), and only when a symbol's ingredient has **exactly one** candidate block - with multiple candidate blocks there's no single block to ask. No block in this codebase implements it by default; it's an extension point for your own `Block` subclasses. See [Advanced Features § Wall sharing](../Advanced-Features.md#wall-sharing) for the full chain.
+An optional interface a `Block` can implement to declare its default wall-sharing behavior. Consulted in the priority chain (see [`getWallSharingMode`](MultiblockDefinition.md)) only when a symbol's ingredient has **exactly one** candidate block. An extension point for your own blocks — none implement it by default. Full chain: [Wall sharing](../Advanced-Features.md#wall-sharing).
 
 ## Performance note
 

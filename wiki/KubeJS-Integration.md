@@ -2,21 +2,19 @@
 
 # KubeJS Integration
 
-MultiLib exposes a KubeJS event group (`MultiblockEvents`) letting scripters create and modify multiblock definitions from `.js` scripts, without touching Java. This is purely additive - normal KubeJS scripting keeps working unmodified whether or not MultiLib is present.
-
-Optional and reflection-gated: if the `kubejs` mod isn't loaded, none of this activates and MultiLib behaves exactly as it does without KubeJS. If KubeJS *is* loaded but MultiLib was built without `kubejs_version` set in `gradle.properties`, the `compat.kubejs` package is excluded from the source set entirely - `MultiLib` catches the resulting `ClassNotFoundException` and simply skips setup.
+MultiLib exposes a KubeJS event group (`MultiblockEvents`) to create and modify definitions from `.js` scripts. Optional and reflection-gated: without the `kubejs` mod, none of it activates. If KubeJS is present but MultiLib was built without `kubejs_version` in `gradle.properties`, the `compat.kubejs` package is excluded and setup is skipped.
 
 ## When scripts run
 
-Both `MultiblockEvents.create(...)` and `MultiblockEvents.modify(...)` live in **`server_scripts`**, not `startup_scripts` - the same rule that governs JSON datapack multiblocks applies here: they re-fire on every `MultiblockDefinitionsReloadedEvent`, which covers both initial server/datapack load *and* every `/reload`, so iterating on a definition doesn't require restarting the game.
+Both `create` and `modify` live in **`server_scripts`**, not `startup_scripts`. Like JSON multiblocks, they re-fire on every `MultiblockDefinitionsReloadedEvent` — initial load *and* every `/reload` — so iterating doesn't need a restart.
 
-Firing order on each reload, all driven by `KubeJSMultiblockSetup`:
+Order per reload (driven by `KubeJSMultiblockSetup`):
 
-1. `MultiblockEvents.create(event => {...})` - every listener gets a chance to declare a `MultiblockBuilder` via `event.multiblock(id)`.
-2. Every collected builder is built (`buildWithoutRegistering()`) and swapped into the registry via `MultiblockRegistry.replace(id, definition)` - a no-op remove followed by register, so the same script safely re-declares its own multiblock on every reload without an "already registered" error.
-3. `MultiblockEvents.modify(event => {...})` - by this point every Java-, JSON-, and KubeJS-created definition is registered, so `event.modify(id, ...)` can patch any of them regardless of source.
+1. `MultiblockEvents.create` — each listener declares a builder via `event.multiblock(id)`.
+2. Every builder is built and swapped in via `MultiblockRegistry.replace(id, definition)` (remove-then-register), so a script safely re-declares its own multiblock each reload.
+3. `MultiblockEvents.modify` — by now every Java/JSON/KubeJS definition is registered, so `event.modify(id, ...)` can patch any of them.
 
-Because `KubeJSMultiblockSetup.init()` is only invoked from `MultiLib`'s `FMLCommonSetupEvent` (not the earliest registry phase), and `MultiblockEvents.create`/`modify` don't run until the first `MultiblockDefinitionsReloadedEvent` after that, all block/item registries - including ones populated by KubeJS's own `StartupEvents.registry(...)` scripts - are guaranteed already closed. There's no ordering bug where a script's `key(symbol, block)` call resolves to a block that doesn't exist yet.
+Because setup runs from `FMLCommonSetupEvent` and these events don't fire until the first reload after that, all block/item registries — including KubeJS's own `StartupEvents.registry(...)` — are already closed. A script's `key(symbol, block)` never resolves to a not-yet-registered block.
 
 ## Creating a multiblock
 
@@ -32,19 +30,15 @@ MultiblockEvents.create(event => {
         .core('O')
         .formationMode('automatic_and_wrench')
         .rotations('horizontal')
-        .onFormed(ctx => {
-            MultiblockUtils.playSound(ctx, 'minecraft:block.beacon.activate')
-        })
+        .onFormed(ctx => MultiblockUtils.playSound(ctx, 'minecraft:block.beacon.activate'))
 })
 ```
 
-`event.multiblock(id)` returns a normal `MultiblockBuilder` - the same fluent API documented in the [MultiblockBuilder reference](api-reference/MultiblockBuilder.md) is available from JS, so anything expressible in Java (shaped/shapeless/procedural patterns, callbacks, wall sharing, `.model(...)`, etc.) is expressible here too. **Don't call `.build()` yourself** - `KubeJSMultiblockSetup` collects every builder returned from `event.multiblock(...)` and registers each one for you (via `buildWithoutRegistering()` + `MultiblockRegistry.replace(...)`, not the builder's own `build()`/register path) once every `create` listener has run, so re-running the script on `/reload` doesn't throw "already registered".
+`event.multiblock(id)` returns a normal `MultiblockBuilder` — the whole [Java builder API](api-reference/MultiblockBuilder.md) is available from JS. **Don't call `.build()`** — the setup collects each returned builder and registers it for you, so `/reload` never throws "already registered". (The method is `multiblock(...)`, not `create(...)`, to avoid clashing with `StartupEvents.registry`'s own `event.create`.)
 
-The method is named `multiblock(...)` rather than `create(...)` deliberately: the same script file typically also has a `StartupEvents.registry('block', event => event.create(id))` block, where `create` on that event object means something unrelated - reusing the name across two different event objects would be confusing to read later.
+A validation failure is reported to the server log and the KubeJS console with `getLastValidationError()`. Two `create` listeners declaring the same id: the second replaces the first, with a warning.
 
-If a validation failure occurs (e.g. a duplicate core symbol), it's reported both to the server log and to the KubeJS console/script error overlay with the reason from `MultiblockBuilder#getLastValidationError()`. If two different `create` listeners declare the same id in the same reload, the second one silently replaces the first - a warning is logged pointing at the duplicate id.
-
-### Registering a wrench item
+### Registering a wrench
 
 ```js
 MultiblockEvents.create(event => {
@@ -52,31 +46,24 @@ MultiblockEvents.create(event => {
 })
 ```
 
-This is the script-side equivalent of implementing `IMultiblockWrench` on a hand-written `Item` subclass - useful for items created entirely in KubeJS, which can't implement a custom Java interface. See [Advanced Features § Wrench tool](Advanced-Features.md#wrench-tool).
+The script-side equivalent of implementing `IMultiblockWrench` — for items made entirely in KubeJS, which can't implement a Java interface. See [Wrench tool](Advanced-Features.md#wrench-tool).
 
-## Modifying an existing multiblock
+## Modifying a multiblock
 
-`MultiblockEvents.modify` can patch **any** currently-registered definition - Java-registered, JSON-datapack, or previously KubeJS-created - by id:
+`modify` patches **any** registered definition — Java, JSON, or KubeJS — by id:
 
 ```js
 MultiblockEvents.modify(event => {
     event.modify('examplemod:my_altar', builder => {
         builder.key('G', 'minecraft:diamond_block')
-        builder.onBroken(ctx => {
-            MultiblockUtils.summon(ctx, 'minecraft:lightning_bolt')
-        })
+        builder.onBroken(ctx => MultiblockUtils.summon(ctx, 'minecraft:lightning_bolt'))
     })
 })
 ```
 
-`event.modify(id, callback)` returns `true` on success. It fails (returns `false` and logs to the KubeJS console) when:
+`event.modify(id, callback)` returns `true` on success, `false` (logged) when no definition exists under `id` or the rebuild fails validation. It snapshots via `MultiblockBuilder#toBuilder()`, applies your callback, rebuilds, and swaps in place — the original is untouched until the rebuild succeeds.
 
-- No multiblock is registered under `id` yet.
-- The callback's changes fail validation when rebuilt (the console message includes the same `getLastValidationError()` reason as create-time failures).
-
-Internally this snapshots the existing `MultiblockDefinition` via `MultiblockBuilder#toBuilder()`, hands your callback the resulting mutable builder, rebuilds it, and swaps it into `MultiblockRegistry` in place - the original definition (JSON or Java) is unaffected until your callback's rebuild succeeds.
-
-Because everything flows through `toBuilder()`, newer builder features are scriptable for free: `modify` can call [`formedProperty(...)`](api-reference/MultiblockBuilder.md#formed-state-property) and the [tier stat-map overloads / `tierStats(...)`](api-reference/MultiblockBuilder.md#tiers) on an existing definition just like any other builder method.
+Everything flows through `toBuilder()`, so newer builder features are scriptable too: [`formedProperty(...)`](api-reference/MultiblockBuilder.md#formed-state-property), [tier stats](api-reference/MultiblockBuilder.md#tiers), and [variants](api-reference/MultiblockBuilder.md#variants) — e.g. `.variant('tall', v => { v.layer('III'); v.layer('ILI') })` (Rhino converts the arrow function to the `Consumer<VariantBuilder>` parameter).
 
 ## Wrench interaction events
 
@@ -88,28 +75,26 @@ MultiblockEvents.wrench(event => {
 })
 ```
 
-Fires on every wrench interaction (see [Advanced Features § Wrench tool](Advanced-Features.md#wrench-tool)), for **any** wrench item - whether it implements `IMultiblockWrench` in Java or was registered via `event.wrench(item)` above. MultiLib itself never shows the player anything on its own; a script wanting player-facing feedback listens here (see [[feedback-no-hardcoded-player-facing-behavior]] - the library is mechanism-only, UX is left to the mod/script author).
+Fires on every wrench interaction, for any wrench (Java or `event.wrench(...)`-registered). MultiLib shows the player nothing on its own — scripts wanting feedback listen here.
 
-`event.status` is one of: `"not_a_multiblock"`, `"already_formed"`, `"mode_disallows_wrench"`, `"formed"`, `"formation_failed"`. `event.multiblockId` is `null` only when the status is `"not_a_multiblock"`; `event.failureReason` is only non-null when the status is `"formation_failed"`.
+`event.status` ∈ `"not_a_multiblock"`, `"already_formed"`, `"mode_disallows_wrench"`, `"formed"`, `"formation_failed"`, `"variant_changed"`. `event.multiblockId` is null only for `"not_a_multiblock"`; `event.failureReason` is set only for `"formation_failed"`; `event.fromVariant`/`event.toVariant` are set only for `"variant_changed"`.
 
 ## `MultiblockUtils` helpers
 
-A small set of script-friendly helpers, bound globally as `MultiblockUtils` - the JS-facing equivalent of what `MultiblockCodecs` is for the JSON format: translating a raw Java concept (a `SoundEvent`, an `EntityType`) into a plain string id, for use inside `onFormed`/`onBroken` callbacks:
+Script-friendly helpers bound globally as `MultiblockUtils`, translating Java concepts into string ids for use inside callbacks:
 
 | Method | Behavior |
 |---|---|
-| `MultiblockUtils.playSound(ctx, soundId)` / `playSound(ctx, soundId, volume, pitch)` | Plays a sound at the callback context's position (unknown sound id: warns and no-ops) |
-| `MultiblockUtils.summon(ctx, entityId)` | Spawns an entity (e.g. `"minecraft:lightning_bolt"`) at the callback context's position (unknown/disabled entity type: warns and no-ops) |
+| `playSound(ctx, soundId[, volume, pitch])` | Plays a sound at the context position (unknown id: warns, no-ops). |
+| `summon(ctx, entityId)` | Spawns an entity at the context position (unknown/disabled type: warns, no-ops). |
 
-Both take the shared `MultiblockEventContext` that `onFormed`/`onBroken` callbacks receive, rather than one overload per concrete context type - an earlier attempt overloaded on the two concrete context types directly, but Rhino's overload resolution couldn't disambiguate two unrelated types sharing an argument count.
+Both take the shared `MultiblockEventContext` that `onFormed`/`onBroken` receive.
 
 ## Limitations
 
-- No script-facing equivalent yet for defining a completely new `PatternProvider` type from JS - the five built-in providers (sphere, hollow sphere, cylinder, hollow cube, pyramid) are usable via the builder, but a custom shape still requires a Java `PatternProviderSerializer`.
-- `event.modify(...)` can only replace a definition wholesale via a rebuilt builder; there's no way to read individual fields off the existing definition from JS before deciding how to change them beyond what `MultiblockBuilder`'s own getters expose (e.g. `getLastValidationError()`).
+- No script-side way to define a new `PatternProvider` type — the five built-ins are usable, but a custom shape needs a Java `PatternProviderSerializer`.
+- `modify` replaces a definition wholesale via a rebuilt builder; there's no per-field read beyond the builder's own getters.
 
 ## See also
 
-- [Advanced Features](Advanced-Features.md) - JSON/datapack definitions, wrench tool, recipe-browser compatibility.
-- [MultiblockBuilder reference](api-reference/MultiblockBuilder.md)
-- [Callbacks & Events](api-reference/Callbacks-And-Events.md)
+- [Advanced Features](Advanced-Features.md), [MultiblockBuilder](api-reference/MultiblockBuilder.md), [Callbacks & Events](api-reference/Callbacks-And-Events.md)

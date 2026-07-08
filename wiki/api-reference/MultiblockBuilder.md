@@ -87,6 +87,25 @@ Marks the definition as shapeless - matched via flood-fill instead of a fixed gr
 ### `minSize(int x, int y, int z)` / `maxSize(int x, int y, int z)`
 Bounding-box constraints for shapeless structures. `maxSize` also bounds the flood-fill search radius. Defaults: min `(0,0,0)`, max `(64,64,64)`.
 
+## Variants
+
+### `variant(String name, Consumer<VariantBuilder> config)`
+Declares one named geometry variant — an alternate set of layers, with optional variant-local keys (`VariantBuilder.layer(...)` / `.key(...)`) — that forms under the *same id*, sharing every behavioral field (callbacks, formation mode, rotation, core/activation, priority, `formedProperty`, tiers, validator).
+
+**Entirely opt-in.** A normal single-shape definition never calls this — the plain `.layer(...)` path is unchanged. Use `variant(...)` only for "one id, several shapes" (different sizes/orientations of one machine, GregTech-style). A lone variant is legal but pointless.
+
+Once any variant is declared, all geometry must live inside `variant(...)` blocks — mixing a top-level `.layer(...)`, or an empty/duplicate name, throws at build time.
+
+At `build()`, the **first** variant becomes this definition's own geometry (its name → `getVariantName()`); each later one becomes a derived `MultiblockDefinition` (`getVariantDefinitions()`) sharing the parent's id, never separately registered. Shared top-level keys apply to all variants; a variant's own key overrides for that variant only.
+
+> **Declaration order matters.** Matching tries variants in order and stops at the first success. When one geometry is a superset of another, **declare the larger first** — otherwise a large build matches as the small variant and the wrench upgrade never triggers. The first variant is also the primary geometry for the ghost overlay/auto-place. See `multilib:example_variants` in the source for a demo.
+
+For a definition that never calls `variant(...)`, `getVariantName()` is `"default"` — the same object as always, not a separate lookup. Variant names show as a recipe-viewer title suffix only for `variant(...)`-built definitions; the implicit `"default"` never does.
+
+Formed instances report their variant via `MultiblockInstance.getVariant()` (NBT-persisted; old saves load as `"default"`). Wrenching a formed structure that's been rebuilt into a different declared variant upgrades it **in place** — same UUID, contents preserved, no form/break callbacks — see [`WrenchResult.VariantChanged`](Callbacks-And-Events.md#wrenchinteractionevent).
+
+JSON uses a `"variants"` array (exclusive with top-level `"layers"`); KubeJS calls `.variant(...)` on the builder — see [KubeJS Integration](../KubeJS-Integration.md).
+
 ## Shapeless-only shape refinement
 
 ### `shell(BlockIngredient ingredient)`
@@ -215,4 +234,5 @@ MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "furnace_
 - [MultiblockDefinition](MultiblockDefinition.md)
 - [BlockIngredient](BlockIngredient.md)
 - [MultiblockTier](MultiblockTier.md)
+- [Callbacks & Events § WrenchInteractionEvent](Callbacks-And-Events.md#wrenchinteractionevent) - the in-place variant upgrade `variant(...)` enables via the wrench.
 - [Advanced Features](../Advanced-Features.md)
