@@ -25,6 +25,7 @@ public record DevLoadListPacket(BlockPos devBlockPos, List<LoadableMultiblock> e
         ByteBufCodecs.STRING_UTF8, LoadableMultiblock::namespace,
         ByteBufCodecs.STRING_UTF8, LoadableMultiblock::path,
         ByteBufCodecs.STRING_UTF8, LoadableMultiblock::displayName,
+        ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list()), LoadableMultiblock::variantNames,
         LoadableMultiblock::new
     );
 

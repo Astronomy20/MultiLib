@@ -40,6 +40,11 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
     private static final int SMALL_FIELD_WIDTH = 86;
     private static final int SMALL_FIELD_GAP = 7;
 
+    /** Width of the "Variant" box sitting next to Path on the same row - see {@link #init()}. */
+    private static final int VARIANT_FIELD_WIDTH = 90;
+    /** Path's own width once the row is shared with {@link #VARIANT_FIELD_WIDTH} - see {@link #init()}. */
+    private static final int PATH_FIELD_WIDTH = WIDE_FIELD_WIDTH * 2 + ROW_GAP - VARIANT_FIELD_WIDTH - ROW_GAP;
+
     /** Viewport height (px) of the scrollable scanned-block-type list - see {@link #renderBlockList}. */
     private static final int LIST_VIEWPORT_HEIGHT = 44;
 
@@ -56,6 +61,24 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
 
     /** Screen-space hit box of the Load tab's list viewport, for clicking/scrolling; null while the Create tab is shown. */
     private int[] loadListViewport;
+
+    /**
+     * Index into {@link MultiblockDevMenu#getLoadableEntries()} of the top-level entry currently expanded
+     * to show its variant sub-list, or {@code -1} if none is expanded - see {@link #buildLoadRows()}.
+     * Reset whenever the list itself changes shape (a fresh {@link RequestDevLoadListPacket} response)
+     * so a stale index never points at an entry that's shrunk/disappeared.
+     */
+    private int expandedEntryIndex = -1;
+
+    /** Last {@link MultiblockDevMenu#getLoadableEntries()} size {@link #expandedEntryIndex} was validated against - see {@link #renderLoadTab}. */
+    private int lastSeenLoadableEntryCount = -1;
+
+    /**
+     * One row of the Load tab's flattened list: either a top-level {@link LoadableMultiblock} entry
+     * ({@code variantName == null}) or one of its variant sub-rows ({@code variantName} set, only present
+     * while {@link #expandedEntryIndex} points at {@code entryIndex}) - see {@link #buildLoadRows()}.
+     */
+    private record LoadRow(LoadableMultiblock entry, int entryIndex, String variantName) {}
 
     /** Last {@link MultiblockDevMenu#getLoadVersion()} this screen has already applied to its EditBoxes - see {@link #render}. */
     private int lastSeenLoadVersion;
@@ -78,10 +101,13 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
      */
     private final String configuredNamespace = net.astronomy.multilib.CommonConfig.DEVTOOL_NAMESPACE.get();
 
-    /** Y position of the read-only id/translation-key preview line drawn under the path field - see {@link #renderFieldLabels}. */
+    /** Y position of the read-only id preview line drawn under the path field - see {@link #renderFieldLabels}. */
     private int idPreviewY;
+    /** Y position of the read-only translation-key preview line, right below {@link #idPreviewY} - see {@link #renderFieldLabels}. */
+    private int keyPreviewY;
 
     private EditBox pathBox;
+    private EditBox variantBox;
     private EditBox nameBox;
     private EditBox offsetXBox, offsetYBox, offsetZBox;
     private EditBox sizeXBox, sizeYBox, sizeZBox;
@@ -121,9 +147,11 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         this.imageWidth = MARGIN * 2 + WIDE_FIELD_WIDTH * 2 + ROW_GAP;
         // Tightened from the previous 380 (a leftover from when the panel had an extra namespace/path
         // row and an unbounded scan summary) to match what's actually laid out below, so the panel no
-        // longer leaves a stretch of empty space under the export buttons. +LABEL_GAP for the read-only
-        // id/translation-key preview line under the path field (see idPreviewY).
-        this.imageHeight = 328 + LABEL_GAP;
+        // longer leaves a stretch of empty space under the export buttons. +LABEL_GAP * 2 for the two
+        // read-only id/translation-key preview lines under the path field (see idPreviewY/keyPreviewY).
+        // +18 for the extra breathing room between rows added below (init()), concentrated mostly in the
+        // upper identity block (path/variant -> display name -> id/key preview).
+        this.imageHeight = 328 + LABEL_GAP * 2 + 18;
         // This menu has no player inventory slots and no vanilla-style title bar at (8, 6) - both
         // default label positions would otherwise land right on top of the path field (that's
         // exactly what happened before this rework: the block's translated name rendered, nearly
@@ -168,21 +196,26 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
 
         int fieldX = left + MARGIN;
         addFieldLabel(fieldX, y, "path");
+        addFieldLabel(fieldX + PATH_FIELD_WIDTH + ROW_GAP, y, "variant");
         y += LABEL_GAP;
-        this.pathBox = addField(fieldX, y, WIDE_FIELD_WIDTH * 2 + ROW_GAP);
+        this.pathBox = addField(fieldX, y, PATH_FIELD_WIDTH);
+        this.variantBox = addField(fieldX + PATH_FIELD_WIDTH + ROW_GAP, y, VARIANT_FIELD_WIDTH);
         createTabWidgets.add(pathBox);
-        y += FIELD_HEIGHT + ROW_GAP;
-        // Read-only, one line: the id/translation key this multiblock actually resolves to
-        // (namespace:path / multiblock.namespace.path) - namespace is always configuredNamespace, fixed,
-        // never a GUI field of its own (see configuredNamespace's own javadoc).
-        this.idPreviewY = y;
-        y += LABEL_GAP;
+        createTabWidgets.add(variantBox);
+        y += FIELD_HEIGHT + ROW_GAP + 4;
 
         addFieldLabel(fieldX, y, "displayName");
         y += LABEL_GAP;
         this.nameBox = addField(fieldX, y, WIDE_FIELD_WIDTH * 2 + ROW_GAP);
         createTabWidgets.add(nameBox);
-        y += FIELD_HEIGHT + ROW_GAP + 2;
+        y += FIELD_HEIGHT + ROW_GAP + 4;
+        // Read-only, two lines: the id, then (right below it) the translation key this multiblock
+        // actually resolves to - namespace is always configuredNamespace, fixed, never a GUI field of
+        // its own (see configuredNamespace's own javadoc).
+        this.idPreviewY = y;
+        y += LABEL_GAP + 2;
+        this.keyPreviewY = y;
+        y += LABEL_GAP + 6;
 
         addFieldLabel(fieldX, y, "offsetX");
         addFieldLabel(fieldX + SMALL_FIELD_WIDTH + SMALL_FIELD_GAP, y, "offsetY");
@@ -194,7 +227,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         createTabWidgets.add(offsetXBox);
         createTabWidgets.add(offsetYBox);
         createTabWidgets.add(offsetZBox);
-        y += FIELD_HEIGHT + ROW_GAP;
+        y += FIELD_HEIGHT + ROW_GAP + 2;
 
         addFieldLabel(fieldX, y, "sizeX");
         addFieldLabel(fieldX + SMALL_FIELD_WIDTH + SMALL_FIELD_GAP, y, "sizeY");
@@ -206,7 +239,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         createTabWidgets.add(sizeXBox);
         createTabWidgets.add(sizeYBox);
         createTabWidgets.add(sizeZBox);
-        y += FIELD_HEIGHT + ROW_GAP + 4;
+        y += FIELD_HEIGHT + ROW_GAP + 6;
 
         if (previous != null) {
             restoreValues(previous);
@@ -313,7 +346,8 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         return new String[] {
                 pathBox.getValue(), nameBox.getValue(),
                 offsetXBox.getValue(), offsetYBox.getValue(), offsetZBox.getValue(),
-                sizeXBox.getValue(), sizeYBox.getValue(), sizeZBox.getValue()
+                sizeXBox.getValue(), sizeYBox.getValue(), sizeZBox.getValue(),
+                variantBox.getValue()
         };
     }
 
@@ -326,6 +360,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         sizeXBox.setValue(values[5]);
         sizeYBox.setValue(values[6]);
         sizeZBox.setValue(values[7]);
+        variantBox.setValue(values[8]);
     }
 
     /**
@@ -343,6 +378,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
             return;
         }
         this.pathBox.setValue(be.getPath());
+        this.variantBox.setValue(be.getVariantName());
         this.nameBox.setValue(be.getDisplayName());
         this.offsetXBox.setValue(String.valueOf(be.getOffset().getX()));
         this.offsetYBox.setValue(String.valueOf(be.getOffset().getY()));
@@ -454,7 +490,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
     }
 
     private boolean isMouseOverAnyField(double mouseX, double mouseY) {
-        return pathBox.isMouseOver(mouseX, mouseY) || nameBox.isMouseOver(mouseX, mouseY)
+        return pathBox.isMouseOver(mouseX, mouseY) || variantBox.isMouseOver(mouseX, mouseY) || nameBox.isMouseOver(mouseX, mouseY)
                 || offsetXBox.isMouseOver(mouseX, mouseY) || offsetYBox.isMouseOver(mouseX, mouseY)
                 || offsetZBox.isMouseOver(mouseX, mouseY)
                 || sizeXBox.isMouseOver(mouseX, mouseY) || sizeYBox.isMouseOver(mouseX, mouseY)
@@ -463,6 +499,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
 
     private void clearFieldFocus() {
         pathBox.setFocused(false);
+        variantBox.setFocused(false);
         nameBox.setFocused(false);
         offsetXBox.setFocused(false);
         offsetYBox.setFocused(false);
@@ -480,7 +517,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
     }
 
     private boolean isAnyFieldFocused() {
-        return pathBox.isFocused() || nameBox.isFocused()
+        return pathBox.isFocused() || variantBox.isFocused() || nameBox.isFocused()
                 || offsetXBox.isFocused() || offsetYBox.isFocused() || offsetZBox.isFocused()
                 || sizeXBox.isFocused() || sizeYBox.isFocused() || sizeZBox.isFocused();
     }
@@ -511,7 +548,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         int sizeZ = Math.max(parseIntOrDefault(sizeZBox.getValue(), 1), 1);
         PacketDistributor.sendToServer(new RequestDevSaveFieldsPacket(
                 menu.getDevBlockPos(), offset, sizeX, sizeY, sizeZ,
-                pathBox.getValue(), nameBox.getValue()));
+                pathBox.getValue(), nameBox.getValue(), variantBox.getValue()));
     }
 
     private static int parseIntOrDefault(String s, int fallback) {
@@ -572,10 +609,13 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         // path/displayName back to the server through saveFieldsToServer() - the server already has
         // them (that's exactly what this Load just set via MultiblockDevBlockEntity#loadExisting).
         pathBox.setResponder(null);
+        variantBox.setResponder(null);
         nameBox.setResponder(null);
         pathBox.setValue(menu.getLoadedPath());
+        variantBox.setValue(menu.getLoadedVariantName());
         nameBox.setValue(menu.getLoadedDisplayName());
         pathBox.setResponder(s -> saveFieldsToServer());
+        variantBox.setResponder(s -> saveFieldsToServer());
         nameBox.setResponder(s -> saveFieldsToServer());
 
         // Mirrors the same width/layer-count/depth computation MultiblockDevBlockEntity#placePatternInWorld
@@ -695,8 +735,13 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         int left = (this.width - this.imageWidth) / 2;
         int x = left + MARGIN;
         String path = pathBox.getValue().isBlank() ? "?" : pathBox.getValue();
-        String text = "id: " + configuredNamespace + ":" + path + "  key: multiblock." + configuredNamespace + "." + path;
-        guiGraphics.drawString(this.font, Component.literal(text), x, idPreviewY, 0x808080, false);
+        String idLine = "id: " + configuredNamespace + ":" + path;
+        if (!variantBox.getValue().isBlank()) {
+            idLine += "  variant: " + variantBox.getValue();
+        }
+        String keyLine = "key: multiblock." + configuredNamespace + "." + path;
+        guiGraphics.drawString(this.font, Component.literal(idLine), x, idPreviewY, 0x808080, false);
+        guiGraphics.drawString(this.font, Component.literal(keyLine), x, keyPreviewY, 0x808080, false);
     }
 
     private void renderSummary(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -779,6 +824,26 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
     }
 
     /**
+     * Draws {@code prefix} at a fixed x - never affected by hover-scroll, so an expand arrow/format tag
+     * stays exactly where {@link #handleLoadListClick}'s row-index math expects it and never drifts out
+     * from under the mouse - then {@code text} right after it, hover-scrolled within its own remaining
+     * width (see {@link #scrollOffsetIfHovered}). Uses its own scissor for the scrollable part: the
+     * shared outer list-viewport scissor alone isn't enough here, since it clips at the row's own left
+     * edge ({@code x}), not at {@code prefix}'s right edge - without this, a far-scrolled-left tail could
+     * slide back underneath the fixed prefix instead of being clipped there.
+     */
+    private void drawFixedPrefixThenScrollingText(GuiGraphics guiGraphics, String prefix, String text, int x, int y,
+                                                   int viewportRight, int lineHeight, boolean hovered, int color) {
+        guiGraphics.drawString(this.font, prefix, x, y, color, false);
+        int textX = x + this.font.width(prefix);
+        int textMaxWidth = Math.max(0, viewportRight - textX);
+        int offset = scrollOffsetIfHovered(text, textMaxWidth, hovered);
+        guiGraphics.enableScissor(textX, y, viewportRight, y + lineHeight);
+        guiGraphics.drawString(this.font, text, textX - offset, y, color, false);
+        guiGraphics.disableScissor();
+    }
+
+    /**
      * Renders the scanned symbol -> block-type list in a fixed-height, scrollable viewport (scroll wheel,
      * handled by {@link #mouseScrolled}) instead of truncating with "..." past a hardcoded line count -
      * this keeps the GUI's own size fixed no matter how many distinct block types a scan finds, while
@@ -820,10 +885,36 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
     }
 
     /**
+     * Flattens {@link MultiblockDevMenu#getLoadableEntries()} into one row per top-level entry, plus (for
+     * whichever single entry {@link #expandedEntryIndex} currently points at) one extra row per that
+     * entry's {@link LoadableMultiblock#variantNames()} right after it - shared by both
+     * {@link #renderLoadTab} and {@link #handleLoadListClick} so the two can never disagree about which
+     * row is at which position.
+     */
+    private List<LoadRow> buildLoadRows() {
+        List<LoadableMultiblock> entries = menu.getLoadableEntries();
+        List<LoadRow> rows = new ArrayList<>();
+        for (int i = 0; i < entries.size(); i++) {
+            LoadableMultiblock entry = entries.get(i);
+            rows.add(new LoadRow(entry, i, null));
+            if (i == expandedEntryIndex) {
+                for (String variantName : entry.variantNames()) {
+                    rows.add(new LoadRow(entry, i, variantName));
+                }
+            }
+        }
+        return rows;
+    }
+
+    /**
      * The Load tab's content: a scrollable list of every JSON export found (see
      * {@link net.astronomy.multilib.core.devtool.MultiblockDevExportLoader#list}), one row per
-     * {@code namespace:path - displayName}, click to load it into the Create tab - see
-     * {@link #handleLoadListClick}. Occupies the same body area the Create tab's fields/summary would.
+     * {@code namespace:path - displayName}. An entry with no explicit variants ({@link LoadableMultiblock#variantNames()}
+     * empty) loads directly on click, same as before; one built through {@code .variant(...)} instead
+     * expands an indented sub-list of variant names right below it (click again, or click a different
+     * expandable entry, to collapse it) - clicking one of those loads that specific variant. See
+     * {@link #handleLoadListClick}/{@link #buildLoadRows()}. Occupies the same body area the Create tab's
+     * fields/summary would.
      */
     private void renderLoadTab(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int left = (this.width - this.imageWidth) / 2;
@@ -835,6 +926,12 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         int viewportRight = left + this.imageWidth - MARGIN;
 
         List<LoadableMultiblock> entries = menu.getLoadableEntries();
+        // The list just changed shape (fresh RequestDevLoadListPacket response) - a remembered expanded
+        // index from the previous list would otherwise point at an unrelated entry (or nothing).
+        if (entries.size() != lastSeenLoadableEntryCount) {
+            lastSeenLoadableEntryCount = entries.size();
+            expandedEntryIndex = -1;
+        }
 
         if (!menu.isLastLoadSuccess()) {
             y = drawWrapped(guiGraphics, Component.literal(menu.getLastLoadMessage()), x, y, maxWidth, lineHeight, 0xFF5555);
@@ -847,19 +944,42 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
             return;
         }
 
+        List<LoadRow> rows = buildLoadRows();
         int visibleLines = Math.max(1, LOAD_LIST_VIEWPORT_HEIGHT / lineHeight);
-        int maxScroll = Math.max(0, entries.size() - visibleLines);
+        int maxScroll = Math.max(0, rows.size() - visibleLines);
         loadListScroll = Math.max(0, Math.min(loadListScroll, maxScroll));
 
         guiGraphics.enableScissor(x, y, viewportRight, y + LOAD_LIST_VIEWPORT_HEIGHT);
         int lineY = y;
-        for (int i = loadListScroll; i < entries.size() && lineY < y + LOAD_LIST_VIEWPORT_HEIGHT; i++) {
-            LoadableMultiblock entry = entries.get(i);
+        for (int i = loadListScroll; i < rows.size() && lineY < y + LOAD_LIST_VIEWPORT_HEIGHT; i++) {
+            LoadRow row = rows.get(i);
             boolean hovered = mouseX >= x && mouseX <= viewportRight && mouseY >= lineY && mouseY < lineY + lineHeight;
-            int color = hovered ? 0xFFFFFF : 0xCCCCCC;
-            String line = "[" + entry.format() + "] " + entry.namespace() + ":" + entry.path() + " - " + entry.displayName();
-            int offset = scrollOffsetIfHovered(line, viewportRight - x, hovered);
-            guiGraphics.drawString(this.font, line, x - offset, lineY, color, false);
+            String prefix;
+            String text;
+            int lineX = x;
+            int color;
+            if (row.variantName() != null) {
+                lineX = x + 12;
+                prefix = "- ";
+                text = row.variantName();
+                color = hovered ? 0xFFFFFF : 0xCCCCCC;
+            } else {
+                LoadableMultiblock entry = row.entry();
+                boolean hasVariants = !entry.variantNames().isEmpty();
+                boolean expanded = row.entryIndex() == expandedEntryIndex;
+                String expandMark = hasVariants ? (expanded ? "▾ " : "▸ ") : "";
+                prefix = expandMark + "[" + entry.format() + "] ";
+                // Display name (falling back to the raw translation key text, or the bare path if even
+                // that's missing - see MultiblockDevExportLoader#resolveDisplayName/#readDisplayName)
+                // leads, since it's the human-meaningful part; namespace:path follows as the precise id.
+                text = entry.displayName() + " - " + entry.namespace() + ":" + entry.path()
+                        + (hasVariants ? " (" + entry.variantNames().size() + " variants)" : "");
+                // Cyan only once actually clicked/expanded (its variant sub-list is showing) - not just
+                // for merely having variants, which would color every such row before the developer ever
+                // interacted with it.
+                color = hovered ? 0xFFFFFF : (expanded ? 0x55DDFF : 0xCCCCCC);
+            }
+            drawFixedPrefixThenScrollingText(guiGraphics, prefix, text, lineX, lineY, viewportRight, lineHeight, hovered, color);
             lineY += lineHeight;
         }
         guiGraphics.disableScissor();
@@ -867,7 +987,7 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         if (maxScroll > 0) {
             int trackX = viewportRight + 2;
             guiGraphics.fill(trackX, y, trackX + 2, y + LOAD_LIST_VIEWPORT_HEIGHT, 0xFF303030);
-            int thumbHeight = Math.max(6, LOAD_LIST_VIEWPORT_HEIGHT * visibleLines / entries.size());
+            int thumbHeight = Math.max(6, LOAD_LIST_VIEWPORT_HEIGHT * visibleLines / rows.size());
             int thumbY = y + (LOAD_LIST_VIEWPORT_HEIGHT - thumbHeight) * loadListScroll / maxScroll;
             guiGraphics.fill(trackX, thumbY, trackX + 2, thumbY + thumbHeight, 0xFFAAAAAA);
         }
@@ -875,7 +995,12 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         loadListViewport = new int[] {x, y, viewportRight, y + LOAD_LIST_VIEWPORT_HEIGHT, lineHeight};
     }
 
-    /** Sends a {@link RequestDevLoadPacket} for whichever row (if any) was clicked in the Load tab's list. */
+    /**
+     * Sends a {@link RequestDevLoadPacket} for whichever row was clicked in the Load tab's list - a
+     * variant sub-row loads that specific variant directly; a top-level row with no variants loads
+     * directly too (unchanged from before); a top-level row that DOES have variants instead toggles
+     * {@link #expandedEntryIndex} to show/hide its sub-list, without loading anything.
+     */
     private boolean handleLoadListClick(double mouseX, double mouseY) {
         if (loadListViewport == null
                 || mouseX < loadListViewport[0] || mouseX > loadListViewport[2]
@@ -884,16 +1009,28 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         }
         int lineHeight = loadListViewport[4];
         int index = loadListScroll + (int) ((mouseY - loadListViewport[1]) / lineHeight);
-        List<LoadableMultiblock> entries = menu.getLoadableEntries();
-        if (index < 0 || index >= entries.size()) return false;
+        List<LoadRow> rows = buildLoadRows();
+        if (index < 0 || index >= rows.size()) return false;
 
-        LoadableMultiblock entry = entries.get(index);
+        LoadRow row = rows.get(index);
+        if (row.variantName() != null) {
+            sendLoadRequest(row.entry(), row.variantName());
+            return true;
+        }
+        if (row.entry().variantNames().isEmpty()) {
+            sendLoadRequest(row.entry(), "");
+            return true;
+        }
+        expandedEntryIndex = (expandedEntryIndex == row.entryIndex()) ? -1 : row.entryIndex();
+        return true;
+    }
+
+    private void sendLoadRequest(LoadableMultiblock entry, String variantName) {
         // Both namespace and path passed now: this list includes every currently *registered* multiblock
         // too (hardcoded Java from other mods, JSON datapacks, KubeJS - not just this dev tool's own
         // exports), so the namespace half can no longer be assumed to always be
         // CommonConfig.DEVTOOL_NAMESPACE - see RequestDevLoadPacket's own javadoc.
-        PacketDistributor.sendToServer(new RequestDevLoadPacket(menu.getDevBlockPos(), entry.format(), entry.namespace(), entry.path()));
-        return true;
+        PacketDistributor.sendToServer(new RequestDevLoadPacket(menu.getDevBlockPos(), entry.format(), entry.namespace(), entry.path(), variantName));
     }
 
     @Override

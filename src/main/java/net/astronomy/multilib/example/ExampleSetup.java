@@ -98,6 +98,7 @@ public final class ExampleSetup {
         event.enqueueWork(() -> {
             ExamplePattern.registerAll();
             ExampleDirectionalPattern.registerAll();
+            ExampleVariantsPattern.registerAll();
             // api/hud demo: opt the example structure into an "Energy: X / Y FE" hover line shown
             // by Jade/The One Probe when installed. Providers beyond FormedStatusProvider are
             // always an explicit per-definition opt-in like this.

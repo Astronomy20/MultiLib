@@ -52,6 +52,14 @@ public class MultiblockDevBlockEntity extends BlockEntity {
     private Vec3i size = new Vec3i(0, 0, 0);
     private String path = "";
     private String displayName = "";
+    /**
+     * Optional variant name this scan/export represents (e.g. {@code "tall"}), empty for a plain
+     * single-geometry multiblock. Exporting with this set wraps the generated output in a single
+     * {@code .variant(name, ...)} declaration instead of the legacy top-level {@code .layer(...)} calls
+     * (see {@link MultiblockDevExporter}); loading a specific variant of a multi-variant definition
+     * populates this back from the picked entry (see {@link #loadExisting}).
+     */
+    private String variantName = "";
 
     private @Nullable MultiblockScanResult lastScan;
 
@@ -204,6 +212,14 @@ public class MultiblockDevBlockEntity extends BlockEntity {
         syncToClients();
     }
 
+    public String getVariantName() { return variantName; }
+
+    public void setVariantName(String variantName) {
+        this.variantName = variantName == null ? "" : variantName;
+        setChanged();
+        syncToClients();
+    }
+
     public Optional<MultiblockScanResult> getLastScan() {
         return Optional.ofNullable(lastScan);
     }
@@ -218,9 +234,10 @@ public class MultiblockDevBlockEntity extends BlockEntity {
      * authoritative from this point, and a stale tag from whatever was previously in this dev-block's
      * area would otherwise silently override it.
      */
-    public void loadExisting(String path, String displayName, MultiblockScanResult scan) {
+    public void loadExisting(String path, String displayName, String variantName, MultiblockScanResult scan) {
         this.path = path;
         this.displayName = displayName;
+        this.variantName = variantName == null ? "" : variantName;
         this.lastScan = scan;
         this.tagBlockId = null;
         this.tagIsCore = false;
@@ -614,6 +631,7 @@ public class MultiblockDevBlockEntity extends BlockEntity {
         tag.putInt("sizeZ", size.getZ());
         tag.putString("path", path);
         tag.putString("displayName", displayName);
+        tag.putString("variantName", variantName);
         tag.putBoolean("autoDetectOn", autoDetectOn);
         tag.putBoolean("renderOn", renderOn);
 
@@ -647,6 +665,7 @@ public class MultiblockDevBlockEntity extends BlockEntity {
         this.size = tag.contains("sizeX") ? new Vec3i(sx, sy, sz) : new Vec3i(1, 1, 1);
         this.path = tag.getString("path");
         this.displayName = tag.getString("displayName");
+        this.variantName = tag.getString("variantName");
         this.autoDetectOn = tag.getBoolean("autoDetectOn");
         this.renderOn = tag.getBoolean("renderOn");
 

@@ -20,7 +20,7 @@ import net.minecraft.resources.ResourceLocation;
  * {@code namespace} field, removed for the same reason.
  */
 public record RequestDevSaveFieldsPacket(BlockPos devBlockPos, BlockPos offset, int sizeX, int sizeY, int sizeZ,
-                                          String path, String displayName)
+                                          String path, String displayName, String variantName)
         implements CustomPacketPayload {
 
     public static final Type<RequestDevSaveFieldsPacket> TYPE =
@@ -35,6 +35,7 @@ public record RequestDevSaveFieldsPacket(BlockPos devBlockPos, BlockPos offset, 
             buf.writeVarInt(packet.sizeZ());
             buf.writeUtf(packet.path());
             buf.writeUtf(packet.displayName());
+            buf.writeUtf(packet.variantName());
         },
         buf -> new RequestDevSaveFieldsPacket(
             buf.readBlockPos(),
@@ -42,6 +43,7 @@ public record RequestDevSaveFieldsPacket(BlockPos devBlockPos, BlockPos offset, 
             buf.readVarInt(),
             buf.readVarInt(),
             buf.readVarInt(),
+            buf.readUtf(),
             buf.readUtf(),
             buf.readUtf()
         )

@@ -24,7 +24,7 @@ import java.util.List;
  * {@code MultiblockDevBlockEntity}'s own former {@code namespace} field, removed for the same reason).
  */
 public record DevLoadResultPacket(BlockPos devBlockPos, boolean success, String message,
-                                   String path, String displayName,
+                                   String path, String displayName, String variantName,
                                    MultiblockScanResult scan) implements CustomPacketPayload {
 
     public static final Type<DevLoadResultPacket> TYPE =
@@ -33,12 +33,13 @@ public record DevLoadResultPacket(BlockPos devBlockPos, boolean success, String 
     private static final MultiblockScanResult EMPTY_SCAN =
         new MultiblockScanResult(List.of(), new LinkedHashMap<>(), null, null);
 
-    /** path/displayName bundled into one sub-codec - {@code StreamCodec.composite} tops out at 6 fields, and the top-level packet already needs 4 slots without these two squeezed into one. */
-    private record Identity(String path, String displayName) {}
+    /** path/displayName/variantName bundled into one sub-codec - {@code StreamCodec.composite} tops out at 6 fields, and the top-level packet already needs 4 slots without these three squeezed into one. */
+    private record Identity(String path, String displayName, String variantName) {}
 
     private static final StreamCodec<ByteBuf, Identity> IDENTITY_CODEC = StreamCodec.composite(
         ByteBufCodecs.STRING_UTF8, Identity::path,
         ByteBufCodecs.STRING_UTF8, Identity::displayName,
+        ByteBufCodecs.STRING_UTF8, Identity::variantName,
         Identity::new
     );
 
@@ -46,10 +47,10 @@ public record DevLoadResultPacket(BlockPos devBlockPos, boolean success, String 
         BlockPos.STREAM_CODEC, DevLoadResultPacket::devBlockPos,
         ByteBufCodecs.BOOL, DevLoadResultPacket::success,
         ByteBufCodecs.STRING_UTF8, DevLoadResultPacket::message,
-        IDENTITY_CODEC, p -> new Identity(p.path(), p.displayName()),
+        IDENTITY_CODEC, p -> new Identity(p.path(), p.displayName(), p.variantName()),
         DevScanResultPacket.SCAN_RESULT_CODEC, p -> p.scan() != null ? p.scan() : EMPTY_SCAN,
         (devBlockPos, success, message, identity, scan) ->
-            new DevLoadResultPacket(devBlockPos, success, message, identity.path(), identity.displayName(), scan)
+            new DevLoadResultPacket(devBlockPos, success, message, identity.path(), identity.displayName(), identity.variantName(), scan)
     );
 
     @Override

@@ -237,9 +237,9 @@ public final class MultiblockDevOutputPaths {
      * Adds/overwrites a single {@code key -> value} entry in {@code langFile}, merging with whatever's
      * already there (creating the file fresh if it doesn't exist yet) - so exporting a second multiblock
      * under the same namespace doesn't clobber the first one's lang entry, the way a plain overwrite
-     * would. Writes the player-visible Display Name text a {@code .name(...)} translation key resolves
-     * to, since that call only ever sets the key itself, never the actual text (see
-     * {@code MultiblockDevExporter#resolveDisplayText}).
+     * would. Writes the player-visible Display Name text the definition's auto-derived translation key
+     * resolves to - the key itself is always {@code multiblock.<namespace>.<path>}, never the actual
+     * text (see {@code MultiblockDevExporter#resolveDisplayText}).
      */
     public static void mergeLangEntry(Path langFile, String key, String value) throws IOException {
         JsonObject obj = null;

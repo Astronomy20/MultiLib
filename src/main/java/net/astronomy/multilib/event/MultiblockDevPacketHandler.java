@@ -105,6 +105,7 @@ public final class MultiblockDevPacketHandler {
             be.setSize(newSize);
             be.setPath(packet.path());
             be.setDisplayName(packet.displayName());
+            be.setVariantName(packet.variantName());
 
             // Offset/size may have just changed - refresh the tagging session so it still matches the
             // area the developer is actually looking at (tagging works without ever running Detect).
@@ -262,6 +263,7 @@ public final class MultiblockDevPacketHandler {
             }
             String namespace = CommonConfig.DEVTOOL_NAMESPACE.get();
             String displayName = be.getDisplayName();
+            String variantName = be.getVariantName();
 
             MinecraftServer server = level.getServer();
             Path checkFile = switch (format) {
@@ -272,9 +274,9 @@ public final class MultiblockDevPacketHandler {
             if (needsConfirmation(player, format, packet.force(), checkFile, namespace, path)) return;
 
             switch (format) {
-                case JAVA -> exportJava(player, namespace, path, displayName, scan);
-                case JSON -> exportJson(player, server, namespace, path, displayName, scan);
-                case KUBEJS -> exportKubeJs(player, namespace, path, displayName, scan);
+                case JAVA -> exportJava(player, namespace, path, displayName, variantName, scan);
+                case JSON -> exportJson(player, server, namespace, path, displayName, variantName, scan);
+                case KUBEJS -> exportKubeJs(player, namespace, path, displayName, variantName, scan);
             }
         });
     }
@@ -290,9 +292,9 @@ public final class MultiblockDevPacketHandler {
     }
 
     private static void exportJava(ServerPlayer player, String namespace, String path,
-                                    String displayName, MultiblockScanResult scan) {
+                                    String displayName, String variantName, MultiblockScanResult scan) {
         Path outFile = MultiblockDevOutputPaths.javaOutputFile(path);
-        String text = MultiblockDevExporter.toJavaSource(namespace, path, scan);
+        String text = MultiblockDevExporter.toJavaSource(namespace, path, scan, variantName);
         // Its own separate lang tree, under the Java output dir itself - deliberately NOT the shared
         // devtoolResourcePackRootDir() JSON exports use, so re-exporting the same namespace:path as both
         // formats doesn't clobber whichever one wrote its lang entry last. The Java export is only ever a
@@ -307,9 +309,9 @@ public final class MultiblockDevPacketHandler {
     }
 
     private static void exportKubeJs(ServerPlayer player, String namespace, String path,
-                                      String displayName, MultiblockScanResult scan) {
+                                      String displayName, String variantName, MultiblockScanResult scan) {
         Path outFile = MultiblockDevOutputPaths.kubeJsOutputFile(path);
-        String text = MultiblockDevExporter.toKubeJsScript(namespace, path, scan);
+        String text = MultiblockDevExporter.toKubeJsScript(namespace, path, scan, variantName);
         // KubeJS reads lang/assets from its own single kubejs/assets tree, NOT from
         // server_scripts/<devtoolNamespace> (where the generated script itself lives) - see
         // kubeJsAssetsRootDir's own javadoc.
@@ -318,7 +320,7 @@ public final class MultiblockDevPacketHandler {
                 langFile, langKey(namespace, path), MultiblockDevExporter.resolveDisplayText(path, displayName), null);
     }
 
-    /** {@code multiblock.<namespace>.<path>} - the exact key every export's {@code .name(path)} call resolves to once {@code MultiblockBuilder.build()} prefixes it (see {@code MultiblockDevExporter#toJavaSource}'s own comment). */
+    /** {@code multiblock.<namespace>.<path>} - the key {@code MultiblockBuilder.build()} always auto-derives from the definition's id. */
     private static String langKey(String namespace, String path) {
         return "multiblock." + namespace + "." + path;
     }
@@ -349,9 +351,9 @@ public final class MultiblockDevPacketHandler {
     }
 
     private static void exportJson(ServerPlayer player, MinecraftServer server, String namespace, String path,
-                                    String displayName, MultiblockScanResult scan) {
+                                    String displayName, String variantName, MultiblockScanResult scan) {
         MultiblockDevOutputPaths.JsonOutputResult resolved = MultiblockDevOutputPaths.jsonOutputFile(server, namespace, path);
-        String text = MultiblockDevExporter.toJsonDefinition(namespace, path, scan);
+        String text = MultiblockDevExporter.toJsonDefinition(namespace, path, scan, variantName);
 
         if (!resolved.isDevSource()) {
             try {
@@ -489,7 +491,7 @@ public final class MultiblockDevPacketHandler {
             // first) or one of this dev tool's own file exports (only ever under the fixed
             // CommonConfig.DEVTOOL_NAMESPACE - see MultiblockDevExportLoader#load's own comment).
             var loaded = net.astronomy.multilib.core.devtool.MultiblockDevExportLoader.load(
-                    level.getServer(), packet.format(), packet.namespace(), packet.path());
+                    level.getServer(), packet.format(), packet.namespace(), packet.path(), packet.variantName());
             if (loaded.isEmpty()) {
                 sendLoadFailure(player, devBlockPos, "Could not read '" + packet.namespace() + ":" + packet.path()
                         + "' (" + packet.format() + ") - it may have been deleted or unregistered.");
@@ -501,7 +503,7 @@ public final class MultiblockDevPacketHandler {
             // GUI has no field for it (always CommonConfig.DEVTOOL_NAMESPACE on export, regardless of
             // what namespace the loaded multiblock actually came from - see
             // MultiblockDevExporter/handleExportRequest for where namespace/path get assigned on export).
-            be.loadExisting(lm.path(), lm.displayName(), lm.scan());
+            be.loadExisting(lm.path(), lm.displayName(), lm.variantName(), lm.scan());
             be.placePatternInWorld(lm.scan());
             be.tagFromScan(lm.scan());
             be.setRenderOn(true);
@@ -511,7 +513,7 @@ public final class MultiblockDevPacketHandler {
             // every change. Same effect as pressing the GUI's Detect toggle right after loading.
             be.setAutoDetectOn(true);
             PacketDistributor.sendToPlayer(player, new net.astronomy.multilib.network.DevLoadResultPacket(
-                    devBlockPos, true, "", lm.path(), lm.displayName(), lm.scan()));
+                    devBlockPos, true, "", lm.path(), lm.displayName(), lm.variantName(), lm.scan()));
 
             // Re-applied one tick later: the client only computes the tag glow's outlined positions from
             // its own (client-side) world state at the moment it receives this sync (see
@@ -532,6 +534,6 @@ public final class MultiblockDevPacketHandler {
 
     private static void sendLoadFailure(ServerPlayer player, BlockPos devBlockPos, String message) {
         PacketDistributor.sendToPlayer(player, new net.astronomy.multilib.network.DevLoadResultPacket(
-                devBlockPos, false, message, "", "", emptyScan()));
+                devBlockPos, false, message, "", "", "", emptyScan()));
     }
 }

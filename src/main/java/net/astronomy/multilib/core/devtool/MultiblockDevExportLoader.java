@@ -35,8 +35,8 @@ import java.util.regex.Pattern;
  * structured data); Java/KubeJS are parsed with small line-oriented regexes matching exactly what
  * {@link MultiblockDevExporter#toJavaSource}/{@code #toKubeJsScript} generate - not a general
  * Java/JS parser, just enough to read back the specific {@code .layer(...)}/{@code .key(...)}/
- * {@code .core(...)}/{@code .activation(...)}/{@code .name(...)} calls those two methods emit, one
- * per line, in a fixed and known shape.
+ * {@code .core(...)}/{@code .activation(...)} calls those two methods emit, one per line, in a
+ * fixed and known shape.
  * <p>
  * Deliberately its own parser rather than reusing {@link net.astronomy.multilib.core.json.MultiblockJsonLoader}
  * for the JSON case: that class builds a full {@link net.astronomy.multilib.api.definition.MultiblockDefinition}
@@ -53,11 +53,18 @@ public final class MultiblockDevExportLoader {
 
     public enum SourceFormat { JAVA, JSON, KUBEJS }
 
-    /** One export found under the configured/default output roots, for the Load tab's list. */
-    public record LoadableMultiblock(SourceFormat format, String namespace, String path, String displayName) {}
+    /**
+     * One export found under the configured/default output roots, for the Load tab's list.
+     * {@code variantNames} is empty for a plain single-geometry multiblock (the common case - clicking
+     * loads it directly); non-empty when it was declared with one or more explicit
+     * {@code .variant(...)}/{@code "variants"} entries, in declaration order - the Load tab then expands
+     * a sub-list of these names instead of loading immediately, so the developer picks which one.
+     */
+    public record LoadableMultiblock(SourceFormat format, String namespace, String path, String displayName,
+                                      List<String> variantNames) {}
 
-    /** A loaded export's full identity plus its reconstructed scan data. */
-    public record LoadedMultiblock(String namespace, String path, String displayName, MultiblockScanResult scan) {}
+    /** A loaded export's full identity plus its reconstructed scan data. {@code variantName} is empty unless a specific named variant was requested/found. */
+    public record LoadedMultiblock(String namespace, String path, String displayName, String variantName, MultiblockScanResult scan) {}
 
     // ---- Listing ----
 
@@ -105,14 +112,22 @@ public final class MultiblockDevExportLoader {
                 case JSON -> SourceFormat.JSON;
                 case KUBEJS -> SourceFormat.KUBEJS;
             };
-            result.add(new LoadableMultiblock(format, def.getId().getNamespace(), def.getId().getPath(), resolveDisplayName(def)));
+            // Only a definition actually built through .variant(...) carries a meaningful name list - the
+            // legacy no-variant path's getAllVariants() is always just [this] under the implicit "default"
+            // name, not worth surfacing as a pickable variant. A lone declared variant (no derived
+            // siblings) is still detected here via its own name not being the implicit "default" literal.
+            boolean hasExplicitVariants = !def.getVariantDefinitions().isEmpty() || !"default".equals(def.getVariantName());
+            List<String> variantNames = hasExplicitVariants
+                    ? def.getAllVariants().stream().map(MultiblockDefinition::getVariantName).toList()
+                    : List.of();
+            result.add(new LoadableMultiblock(format, def.getId().getNamespace(), def.getId().getPath(), resolveDisplayName(def), variantNames));
         }
         return result;
     }
 
     /**
      * Best-effort Display Name text for a registered {@link MultiblockDefinition} - resolves its
-     * {@code .name(...)} translation key against whatever mod jar's own bundled
+     * auto-derived translation key against whatever mod jar's own bundled
      * {@code assets/<namespace>/lang/en_us.json} happens to be on the classpath (every mod's resources
      * are on the same classloader at runtime, so this works for hardcoded Java multiblocks from any mod,
      * not just this one), falling back to the raw translation key text, then the bare path, if nothing
@@ -172,7 +187,7 @@ public final class MultiblockDevExportLoader {
                         String[] idParts = splitId(obj.has("id") ? obj.get("id").getAsString() : null, folderNamespace, fileStem);
                         String displayName = readDisplayName(
                                 MultiblockDevOutputPaths.devtoolResourcePackRootDir(), idParts[0], idParts[1]);
-                        result.add(new LoadableMultiblock(SourceFormat.JSON, idParts[0], idParts[1], displayName));
+                        result.add(new LoadableMultiblock(SourceFormat.JSON, idParts[0], idParts[1], displayName, jsonVariantNames(obj)));
                     }
                 } catch (IOException e) {
                     // Skip this namespace's multiblocks on a read failure - other namespaces still list fine.
@@ -181,6 +196,17 @@ public final class MultiblockDevExportLoader {
         } catch (IOException e) {
             // No readable output root yet (nothing exported so far) - an empty list is the correct result.
         }
+    }
+
+    /** Ordered variant names declared in a raw dev-tool/datapack JSON's top-level {@code "variants"} array, or empty if absent. */
+    private static List<String> jsonVariantNames(JsonObject obj) {
+        if (!obj.has("variants") || !obj.get("variants").isJsonArray()) return List.of();
+        List<String> names = new ArrayList<>();
+        for (var variantElem : obj.getAsJsonArray("variants")) {
+            if (!variantElem.isJsonObject() || !variantElem.getAsJsonObject().has("name")) continue;
+            names.add(variantElem.getAsJsonObject().get("name").getAsString());
+        }
+        return names;
     }
 
     /** {@code multiblocksDir/foo/bar.json -> "foo/bar"}. */
@@ -199,7 +225,9 @@ public final class MultiblockDevExportLoader {
                 String[] id = splitId(readMarkerId(lines).orElse(null), null, null);
                 if (id[0] == null) continue; // not one of our own exports (or the marker's missing) - skip silently
                 String displayName = readDisplayName(langRootDir, id[0], id[1]);
-                result.add(new LoadableMultiblock(format, id[0], id[1], displayName));
+                List<String> variantNames = findVariantName(lines, format == SourceFormat.JAVA)
+                        .map(List::of).orElse(List.of());
+                result.add(new LoadableMultiblock(format, id[0], id[1], displayName, variantNames));
             }
         } catch (IOException e) {
             // No readable output root yet - an empty list is the correct result.
@@ -211,9 +239,8 @@ public final class MultiblockDevExportLoader {
      * wrote to (see {@code MultiblockDevOutputPaths#mergeLangEntry}) - falls back to the path when
      * there's no such entry (lang write failed, or the file was hand-edited/deleted since) - path, not
      * namespace, since path is the per-multiblock unique GUI field and namespace is the same fixed value
-     * for every export. The export's own {@code .name(...)}/{@code "name"} value is never used for this:
-     * it's always literally {@code path} now (see {@code MultiblockDevExporter#toJavaSource}'s own
-     * comment), not display text.
+     * for every export. The translation key is always literally {@code multiblock.<namespace>.<path>} -
+     * this is display text only, never part of the key.
      */
     private static String readDisplayName(Path langRootDir, String namespace, String path) {
         Path langFile = MultiblockDevOutputPaths.langFile(langRootDir, namespace);
@@ -234,16 +261,20 @@ public final class MultiblockDevExportLoader {
      * {@code MultiblockDevPacketHandler#handleExportRequest}) - a foreign namespace that isn't currently
      * registered can't be found any other way, so this returns empty for it rather than incorrectly
      * searching this tool's own namespace folder regardless of what was actually asked for.
+     * <p>
+     * {@code requestedVariant} picks which of the target's variants to load (see
+     * {@link LoadableMultiblock#variantNames()}) - blank loads the primary/only geometry. An unknown name
+     * falls back to the primary geometry rather than failing the whole load.
      */
-    public static Optional<LoadedMultiblock> load(MinecraftServer server, SourceFormat format, String namespace, String path) {
-        Optional<LoadedMultiblock> fromRegistry = loadFromRegistry(ResourceLocation.fromNamespaceAndPath(namespace, path));
+    public static Optional<LoadedMultiblock> load(MinecraftServer server, SourceFormat format, String namespace, String path, String requestedVariant) {
+        Optional<LoadedMultiblock> fromRegistry = loadFromRegistry(ResourceLocation.fromNamespaceAndPath(namespace, path), requestedVariant);
         if (fromRegistry.isPresent()) return fromRegistry;
 
         if (!namespace.equals(CommonConfig.DEVTOOL_NAMESPACE.get())) {
             return Optional.empty();
         }
         return switch (format) {
-            case JSON -> loadJson(server, path);
+            case JSON -> loadJson(server, path, requestedVariant);
             case JAVA -> loadScaffold(MultiblockDevOutputPaths.javaOutputFile(path), MultiblockDevOutputPaths.javaRootDir(), format);
             case KUBEJS -> loadScaffold(MultiblockDevOutputPaths.kubeJsOutputFile(path), MultiblockDevOutputPaths.kubeJsAssetsRootDir(), format);
         };
@@ -254,10 +285,15 @@ public final class MultiblockDevExportLoader {
      * in {@link MultiblockRegistry}, if one is currently registered - its layers/symbol-block map/core/
      * activation are already fully known in memory, so unlike every other loading path here, this needs
      * no file I/O at all. Skips shapeless/{@code PatternProvider}-based definitions, same restriction as
-     * {@link #listFromRegistry}.
+     * {@link #listFromRegistry}. {@code requestedVariant} selects which entry of
+     * {@link MultiblockDefinition#getAllVariants()} to read geometry from - each variant is a full
+     * {@link MultiblockDefinition} in its own right, so this just picks the right one via
+     * {@link MultiblockDefinition#getVariant(String)} before extracting exactly as before.
      */
-    private static Optional<LoadedMultiblock> loadFromRegistry(ResourceLocation id) {
-        return MultiblockRegistry.get(id).flatMap(def -> {
+    private static Optional<LoadedMultiblock> loadFromRegistry(ResourceLocation id, String requestedVariant) {
+        return MultiblockRegistry.get(id).flatMap(parent -> {
+            MultiblockDefinition def = (requestedVariant == null || requestedVariant.isBlank())
+                    ? parent : parent.getVariant(requestedVariant).orElse(parent);
             if (def.isShapeless() || def.getPatternProvider().isPresent() || def.getLayers().isEmpty()) {
                 return Optional.empty();
             }
@@ -271,11 +307,12 @@ public final class MultiblockDevExportLoader {
             Character core = def.hasCore() ? def.getCoreSymbol() : null;
             Character activation = def.hasActivation() ? def.getActivationSymbol() : null;
             MultiblockScanResult scan = new MultiblockScanResult(def.getLayers(), symbolToBlock, core, activation);
-            return Optional.of(new LoadedMultiblock(id.getNamespace(), id.getPath(), resolveDisplayName(def), scan));
+            String resolvedVariant = "default".equals(def.getVariantName()) ? "" : def.getVariantName();
+            return Optional.of(new LoadedMultiblock(id.getNamespace(), id.getPath(), resolveDisplayName(parent), resolvedVariant, scan));
         });
     }
 
-    private static Optional<LoadedMultiblock> loadJson(MinecraftServer server, String path) {
+    private static Optional<LoadedMultiblock> loadJson(MinecraftServer server, String path, String requestedVariant) {
         String namespace = CommonConfig.DEVTOOL_NAMESPACE.get();
         Path file = MultiblockDevOutputPaths.jsonRootDir(server).resolve("data")
                 .resolve(namespace).resolve("multiblocks").resolve(path + ".json");
@@ -283,7 +320,31 @@ public final class MultiblockDevExportLoader {
         if (obj == null) return Optional.empty();
 
         List<List<String>> layers = new ArrayList<>();
-        if (obj.has("layers")) {
+        String resolvedVariant = "";
+        if (obj.has("variants") && obj.get("variants").isJsonArray()) {
+            JsonObject variantObj = null;
+            for (var variantElem : obj.getAsJsonArray("variants")) {
+                if (!variantElem.isJsonObject()) continue;
+                JsonObject candidate = variantElem.getAsJsonObject();
+                if (variantObj == null) variantObj = candidate; // first entry = fallback/primary
+                if (requestedVariant != null && !requestedVariant.isBlank()
+                        && candidate.has("name") && requestedVariant.equals(candidate.get("name").getAsString())) {
+                    variantObj = candidate;
+                    break;
+                }
+            }
+            if (variantObj != null) {
+                resolvedVariant = variantObj.has("name") ? variantObj.get("name").getAsString() : "";
+                if (variantObj.has("layers")) {
+                    for (var layerElem : variantObj.getAsJsonArray("layers")) {
+                        JsonArray layerArr = layerElem.getAsJsonArray();
+                        List<String> rows = new ArrayList<>(layerArr.size());
+                        for (var rowElem : layerArr) rows.add(rowElem.getAsString());
+                        layers.add(rows);
+                    }
+                }
+            }
+        } else if (obj.has("layers")) {
             for (var layerElem : obj.getAsJsonArray("layers")) {
                 JsonArray layerArr = layerElem.getAsJsonArray();
                 List<String> rows = new ArrayList<>(layerArr.size());
@@ -313,7 +374,7 @@ public final class MultiblockDevExportLoader {
         String[] id = splitId(obj.has("id") ? obj.get("id").getAsString() : null, namespace, path);
         String displayName = readDisplayName(MultiblockDevOutputPaths.devtoolResourcePackRootDir(), id[0], id[1]);
 
-        return Optional.of(new LoadedMultiblock(id[0], id[1], displayName,
+        return Optional.of(new LoadedMultiblock(id[0], id[1], displayName, resolvedVariant,
                 new MultiblockScanResult(layers, symbolToBlock, core, activation)));
     }
 
@@ -330,6 +391,18 @@ public final class MultiblockDevExportLoader {
             "\\.key\\('(.)',\\s*net\\.astronomy\\.multilib\\.api\\.ingredient\\.BlockIngredient\\.parse\\('([^']+)'\\)\\)");
     private static final Pattern CORE = Pattern.compile("\\.core\\('(.)'\\)");
     private static final Pattern ACTIVATION = Pattern.compile("\\.activation\\('(.)'\\)");
+    private static final Pattern VARIANT_JAVA = Pattern.compile("\\.variant\\(\"([^\"]+)\"");
+    private static final Pattern VARIANT_KUBEJS = Pattern.compile("\\.variant\\('([^']+)'");
+
+    /** The single {@code .variant("name", ...)}/{@code .variant('name', ...)} declaration a dev-tool scaffold export carries, if any - the dev tool only ever exports one geometry at a time, so at most one match is expected. */
+    private static Optional<String> findVariantName(List<String> lines, boolean java) {
+        Pattern pattern = java ? VARIANT_JAVA : VARIANT_KUBEJS;
+        for (String line : lines) {
+            Matcher m = pattern.matcher(line);
+            if (m.find()) return Optional.of(m.group(1));
+        }
+        return Optional.empty();
+    }
 
     private static Optional<LoadedMultiblock> loadScaffold(Path file, Path langRootDir, SourceFormat format) {
         List<String> lines = readLines(file);
@@ -385,7 +458,8 @@ public final class MultiblockDevExportLoader {
             }
         }
 
-        return Optional.of(new LoadedMultiblock(id[0], id[1], displayName,
+        String resolvedVariant = findVariantName(lines, java).orElse("");
+        return Optional.of(new LoadedMultiblock(id[0], id[1], displayName, resolvedVariant,
                 new MultiblockScanResult(layers, symbolToBlock, core, activation)));
     }
 

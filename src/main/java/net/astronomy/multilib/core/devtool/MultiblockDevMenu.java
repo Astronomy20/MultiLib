@@ -51,6 +51,7 @@ public class MultiblockDevMenu extends AbstractContainerMenu {
     private int loadVersion;
     private String loadedPath = "";
     private String loadedDisplayName = "";
+    private String loadedVariantName = "";
     private boolean lastLoadSuccess = true;
     private String lastLoadMessage = "";
 
@@ -90,6 +91,7 @@ public class MultiblockDevMenu extends AbstractContainerMenu {
         if (packet.success()) {
             this.loadedPath = packet.path();
             this.loadedDisplayName = packet.displayName();
+            this.loadedVariantName = packet.variantName();
             this.lastScanSuccess = true;
             this.lastScanMessage = "";
             this.lastScan = packet.scan();
@@ -101,6 +103,7 @@ public class MultiblockDevMenu extends AbstractContainerMenu {
     public int getLoadVersion() { return loadVersion; }
     public String getLoadedPath() { return loadedPath; }
     public String getLoadedDisplayName() { return loadedDisplayName; }
+    public String getLoadedVariantName() { return loadedVariantName; }
     public boolean isLastLoadSuccess() { return lastLoadSuccess; }
     public String getLastLoadMessage() { return lastLoadMessage; }
 

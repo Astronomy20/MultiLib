@@ -39,7 +39,7 @@ public final class MultiblockDevExporter {
         return sb.toString();
     }
 
-    public static String toJavaSource(String namespace, String path, MultiblockScanResult scan) {
+    public static String toJavaSource(String namespace, String path, MultiblockScanResult scan, String variantName) {
         String className = javaClassName(path);
 
         StringBuilder sb = new StringBuilder();
@@ -60,32 +60,36 @@ public final class MultiblockDevExporter {
         sb.append("        MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath(\"")
                 .append(namespace).append("\", \"").append(path).append("\"))\n");
 
+        boolean variant = variantName != null && !variantName.isBlank();
+        String bodyIndent = variant ? "                " : "            ";
+        if (variant) {
+            sb.append("            .variant(\"").append(variantName).append("\", v -> v\n");
+        }
+
         for (List<String> layer : scan.layers()) {
-            sb.append("            .layer(");
+            sb.append(bodyIndent).append(".layer(");
             appendJavaStringArgs(sb, layer);
             sb.append(")\n");
         }
 
         for (Map.Entry<Character, ResourceLocation> entry : scan.symbolToBlock().entrySet()) {
-            sb.append("            .key('").append(entry.getKey()).append("', BuiltInRegistries.BLOCK.get(ResourceLocation.parse(\"")
+            sb.append(bodyIndent).append(".key('").append(entry.getKey()).append("', BuiltInRegistries.BLOCK.get(ResourceLocation.parse(\"")
                     .append(entry.getValue()).append("\")))\n");
+        }
+
+        if (variant) {
+            sb.append("            )\n");
         }
 
         appendCoreOrActivationLineJava(sb, scan);
 
-        // .name(path): MultiblockBuilder.build() hardcodes "multiblock." + id.getNamespace() + "." +
-        // nameTranslationKey verbatim, so passing path here (not a slug of the Display Name) is what
-        // makes the final translation key come out to exactly multiblock.<namespace>.<path> - the Display
-        // Name text itself only ever becomes that key's *value*, written to the lang file separately (see
-        // MultiblockDevPacketHandler's own export methods), never part of the key.
-        sb.append("            .name(\"").append(path).append("\")\n");
         sb.append("            .build();\n");
         sb.append("    }\n");
         sb.append("}\n");
         return sb.toString();
     }
 
-    public static String toKubeJsScript(String namespace, String path, MultiblockScanResult scan) {
+    public static String toKubeJsScript(String namespace, String path, MultiblockScanResult scan, String variantName) {
         StringBuilder sb = new StringBuilder();
         sb.append(MultiblockDevOutputPaths.EXPORT_ID_MARKER_PREFIX).append(namespace).append(':').append(path).append('\n');
         sb.append("// server_scripts/<kubejs folder>/").append(path).append(".js\n");
@@ -93,8 +97,14 @@ public final class MultiblockDevExporter {
         sb.append("MultiblockEvents.create(event => {\n");
         sb.append("    event.multiblock('").append(namespace).append(':').append(path).append("')\n");
 
+        boolean variant = variantName != null && !variantName.isBlank();
+        String bodyIndent = variant ? "            " : "        ";
+        if (variant) {
+            sb.append("        .variant('").append(variantName).append("', v => v\n");
+        }
+
         for (List<String> layer : scan.layers()) {
-            sb.append("        .layer(");
+            sb.append(bodyIndent).append(".layer(");
             appendJsStringArgs(sb, layer);
             sb.append(")\n");
         }
@@ -112,21 +122,22 @@ public final class MultiblockDevExporter {
         // already a registered global KubeJS binding (see MultiLibKubeJSPlugin), so no such reference is
         // needed.
         for (Map.Entry<Character, ResourceLocation> entry : scan.symbolToBlock().entrySet()) {
-            sb.append("        .key('").append(entry.getKey())
+            sb.append(bodyIndent).append(".key('").append(entry.getKey())
                     .append("', MultiblockUtils.block('")
                     .append(entry.getValue()).append("'))\n");
         }
 
+        if (variant) {
+            sb.append("        )\n");
+        }
+
         appendCoreOrActivationLineJs(sb, scan);
 
-        // See toJavaSource's own comment - .name(path) is what makes the key come out to exactly
-        // multiblock.<namespace>.<path>.
-        sb.append("        .name('").append(path).append("')\n");
         sb.append("})\n");
         return sb.toString();
     }
 
-    public static String toJsonDefinition(String namespace, String path, MultiblockScanResult scan) {
+    public static String toJsonDefinition(String namespace, String path, MultiblockScanResult scan, String variantName) {
         JsonObject root = new JsonObject();
         // Not read by the real datapack loader (MultiblockJsonLoader ignores unknown keys) - purely for
         // MultiblockDevOutputPaths#readExistingExportId (path/file-collision detection, JSON has no
@@ -143,7 +154,24 @@ public final class MultiblockDevExporter {
             }
             layersArr.add(layerArr);
         }
-        root.add("layers", layersArr);
+
+        boolean variant = variantName != null && !variantName.isBlank();
+        if (variant) {
+            // Keys/core/activation stay top-level (shared) - see MultiblockJsonLoader#parseDefinition,
+            // which only forbids top-level "layers" alongside "variants", not "keys"/"core"/"activation".
+            // The dev tool only ever exports one geometry at a time, so this is always a lone variant
+            // entry - legal (if pointless standalone) per MultiblockBuilder#variant's own javadoc; the
+            // natural way to hand-assemble a multi-variant definition is exporting each variant under the
+            // same path and merging the "variants" arrays by hand afterward.
+            JsonObject variantObj = new JsonObject();
+            variantObj.addProperty("name", variantName);
+            variantObj.add("layers", layersArr);
+            JsonArray variantsArr = new JsonArray();
+            variantsArr.add(variantObj);
+            root.add("variants", variantsArr);
+        } else {
+            root.add("layers", layersArr);
+        }
 
         JsonObject keys = new JsonObject();
         for (Map.Entry<Character, ResourceLocation> entry : scan.symbolToBlock().entrySet()) {
@@ -162,11 +190,6 @@ public final class MultiblockDevExporter {
         } else if (scan.activationSymbol() != null) {
             root.addProperty("activation", String.valueOf(scan.activationSymbol()));
         }
-
-        // Same reasoning as toJavaSource's .name(path) - the value here (not the Display Name) is what
-        // MultiblockJsonLoader#parseDefinition passes straight into MultiblockBuilder#name, so it has to
-        // be path for the resulting key to be multiblock.<namespace>.<path> too.
-        root.addProperty("name", path);
 
         return new GsonBuilder().setPrettyPrinting().create().toJson(root);
     }
