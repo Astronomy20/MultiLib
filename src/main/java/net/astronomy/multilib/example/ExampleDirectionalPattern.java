@@ -38,7 +38,7 @@ public class ExampleDirectionalPattern {
                 .formationMode(FormationMode.AUTOMATIC_AND_WRENCH)
                 .rotations(RotationMode.HORIZONTAL)
                 .autoPlace().autoPlaceOverlay()
-                .ghostOverlayDebug()
+                // Ghost overlay is on by default (see .ghostOverlay's javadoc) - no call needed here.
                 .build();
 
         // The core's own placed facing (read from its HORIZONTAL_FACING blockstate property) pins the

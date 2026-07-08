@@ -27,9 +27,9 @@ public class CommonConfig {
 
     public static final ModConfigSpec.BooleanValue DEV_MODE = BUILDER
             .comment("Enables debugging-facing feedback: the ghost overlay countdown chat message "
-                    + "(only for structures declared with .ghostOverlayDebug()) and the wrench "
-                    + "state feedback messages (formed/already-formed/failed/etc.). Off by default "
-                    + "since this is developer/debugging output, not meant for regular players.")
+                    + "(shown for every ghost-overlay-enabled structure) and the wrench state "
+                    + "feedback messages (formed/already-formed/failed/etc.). Off by default since "
+                    + "this is developer/debugging output, not meant for regular players.")
             .define("devMode", false);
 
     public static final ModConfigSpec.ConfigValue<String> DEVTOOL_NAMESPACE = BUILDER
