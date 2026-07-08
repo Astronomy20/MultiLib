@@ -2,6 +2,7 @@ package net.astronomy.multilib.event;
 
 import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.core.devtool.MultiblockDevBlockEntity;
+import net.astronomy.multilib.core.devtool.MultiblockDevBlockIndex;
 import net.astronomy.multilib.core.devtool.MultiblockDevRegistry;
 import net.astronomy.multilib.core.devtool.MultiblockDevTagSessionRegistry;
 import net.minecraft.core.BlockPos;
@@ -84,16 +85,10 @@ public class MultiblockDevTagHandler {
         }
 
         BlockPos clickedPos = event.getPos();
-        MultiblockDevTagSessionRegistry.Session session =
-                MultiblockDevTagSessionRegistry.get(player.getUUID()).orElse(null);
-        if (session == null) {
+        MultiblockDevBlockEntity devBlockEntity = resolveDevBlock(level, player, clickedPos);
+        if (devBlockEntity == null) {
             player.sendSystemMessage(Component.literal(
-                    "[MultiLib] No active Multiblock Dev Block session - open its GUI first."));
-            return;
-        }
-        if (!isWithinBox(clickedPos, session.boxMin(), session.boxMax())) {
-            player.sendSystemMessage(Component.literal(
-                    "[MultiLib] That position isn't part of the dev-block's scanned area."));
+                    "[MultiLib] That position isn't inside any Multiblock Dev Block's area - stand its scan area over the block first."));
             return;
         }
 
@@ -107,13 +102,6 @@ public class MultiblockDevTagHandler {
         // suppressing the ghost overlay specifically when the clicked position falls inside the
         // dev-block's active area preview - see GhostOverlayInputHandler.
 
-        BlockEntity be = level.getBlockEntity(session.devBlockPos());
-        if (!(be instanceof MultiblockDevBlockEntity devBlockEntity)) {
-            player.sendSystemMessage(Component.literal(
-                    "[MultiLib] The dev-block for this scan session no longer exists here (broken or replaced) - run Detect again."));
-            return;
-        }
-
         MultiblockDevBlockEntity.TagOutcome outcome = devBlockEntity.tagPosition(clickedPos, stateAtPos);
 
         // The currently-open GUI (if any) shows the core/activation line from its own MultiblockDevMenu
@@ -123,7 +111,7 @@ public class MultiblockDevTagHandler {
         // Detect or GUI reopen, even though the in-world glow (driven separately by the BE's own client
         // sync) updated immediately. Sending this after every tag/untag keeps both in step.
         devBlockEntity.getLastScan().ifPresent(scan -> net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(
-                player, new net.astronomy.multilib.network.DevScanResultPacket(session.devBlockPos(), true, "", scan)));
+                player, new net.astronomy.multilib.network.DevScanResultPacket(devBlockEntity.getBlockPos(), true, "", scan)));
 
         switch (outcome) {
             case TAGGED_CORE -> player.sendSystemMessage(Component.literal(
@@ -138,14 +126,44 @@ public class MultiblockDevTagHandler {
                     "[MultiLib] " + stateAtPos.getBlock().getName().getString() + " isn't part of the last scan - run Detect again first."));
             case POSITION_NOT_IN_AREA -> {
                 MultiLib.LOGGER.warn(
-                        "[MultiLib] MultiblockDevTagHandler: position {} was accepted by the session bounding box "
+                        "[MultiLib] MultiblockDevTagHandler: position {} was accepted by the resolver's area "
                                 + "check but rejected by the block entity's own area check (dev-block at {}) - "
-                                + "session and block entity area are out of sync.",
-                        clickedPos, session.devBlockPos());
+                                + "areas out of sync.",
+                        clickedPos, devBlockEntity.getBlockPos());
                 player.sendSystemMessage(Component.literal(
                         "[MultiLib] Internal error: this position isn't part of the dev-block's area. Reopen its GUI and try again."));
             }
         }
+    }
+
+    /**
+     * Finds the dev-block whose scan area contains {@code clickedPos}. Prefers the player's active tag
+     * session (the block whose GUI they last opened) when it's still valid and covers the click, so a
+     * player working with two overlapping dev-block areas keeps targeting the one they opened. Otherwise
+     * falls back to {@link MultiblockDevBlockIndex} - every loaded dev-block, whether or not this player
+     * has an in-memory session for it. That fallback is the whole point: a dev-block persists its area
+     * across a relog, but the per-player session (cleared on logout, only rebuilt on GUI-open/Detect)
+     * does not, so requiring a session made tagging silently fail after every restart even though the
+     * block visibly still had its data. Returns {@code null} only when no loaded dev-block's area covers
+     * the click.
+     */
+    private static MultiblockDevBlockEntity resolveDevBlock(ServerLevel level, ServerPlayer player, BlockPos clickedPos) {
+        MultiblockDevTagSessionRegistry.Session session =
+                MultiblockDevTagSessionRegistry.get(player.getUUID()).orElse(null);
+        if (session != null && isWithinBox(clickedPos, session.boxMin(), session.boxMax())
+                && level.getBlockEntity(session.devBlockPos()) instanceof MultiblockDevBlockEntity be) {
+            return be;
+        }
+        for (MultiblockDevBlockIndex.Key key : MultiblockDevBlockIndex.getAll()) {
+            if (!key.dimension().equals(level.dimension())) continue;
+            if (!(level.getBlockEntity(key.devBlockPos()) instanceof MultiblockDevBlockEntity be)) {
+                // Self-heals a stale index entry (block gone without setRemoved firing).
+                MultiblockDevBlockIndex.unregister(key.dimension(), key.devBlockPos());
+                continue;
+            }
+            if (be.getAbsoluteBoundingBox().isInside(clickedPos)) return be;
+        }
+        return null;
     }
 
     private static boolean isWithinBox(BlockPos pos, BlockPos min, BlockPos max) {

@@ -51,7 +51,11 @@ public class MultiblockDevListHudRenderer {
             boolean autoDetectOn = mc.level != null
                     && mc.level.getBlockEntity(activePos) instanceof net.astronomy.multilib.core.devtool.MultiblockDevBlockEntity be
                     && be.isAutoDetectOn();
-            lines.add(Component.literal(autoDetectOn ? "No blocks yet" : "Activate Detect").withStyle(ChatFormatting.GRAY));
+            // Same color split as the GUI's own message: red when Detect is actually running and still
+            // finding nothing (worth calling out), plain gray instruction when Detect is simply off.
+            lines.add(autoDetectOn
+                    ? Component.literal(net.astronomy.multilib.core.devtool.MultiblockScanner.EMPTY_AREA_MESSAGE).withStyle(ChatFormatting.RED)
+                    : Component.literal("Turn on Detect").withStyle(ChatFormatting.GRAY));
         } else {
             if (scan.coreSymbol() != null) {
                 lines.add(Component.literal("Core: " + blockName(scan, scan.coreSymbol())).withStyle(ChatFormatting.GREEN));

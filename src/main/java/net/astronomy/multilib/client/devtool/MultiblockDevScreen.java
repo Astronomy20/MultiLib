@@ -708,20 +708,37 @@ public class MultiblockDevScreen extends AbstractContainerScreen<MultiblockDevMe
         blockListViewport = null;
 
         MultiblockScanResult scan = menu.getLastScan();
-        if (!menu.isLastScanSuccess()) {
+        // EMPTY_AREA is folded into the same branch as "never scanned yet" rather than treated as a
+        // real failure (unlike TOO_MANY_BLOCK_TYPES/INCOMPLETE_MULTIPART_BLOCK, which genuinely need a
+        // different world edit): it's just "nothing to show", and re-evaluating autoDetectOn live every
+        // frame here (instead of freezing on the one-time packet's static message) is what makes this
+        // line track the Detect toggle in real time, not only refresh when a new scan happens to land.
+        boolean emptyArea = !menu.isLastScanSuccess()
+                && net.astronomy.multilib.core.devtool.MultiblockScanner.EMPTY_AREA_MESSAGE.equals(menu.getLastScanMessage());
+        if (!menu.isLastScanSuccess() && !emptyArea) {
             // Word-wrapped instead of a single drawString: the message previously ran straight off the
             // right edge of the panel instead of wrapping, and the underlying "scan failed" messages are
             // now short/specific enough (see MultiblockDevPacketHandler) that two lines is plenty.
             y = drawWrapped(guiGraphics, Component.literal(menu.getLastScanMessage()), x, y, maxWidth, lineHeight, 0xFF5555);
-        } else if (scan == null) {
+        } else if (scan == null || emptyArea) {
             // Worded for auto-detect (a toggle) rather than "click Detect", which no longer describes
-            // what the button does - same wording the HUD list uses for the same empty state.
+            // what the button does. Re-evaluated live every frame (not just on the packet that produced
+            // emptyArea/scan==null) so it tracks the Detect toggle in real time:
+            //  - Detect OFF: nothing has run (or ever will, until re-enabled) - a plain gray instruction,
+            //    not a warning, since there may or may not even be blocks placed yet.
+            //  - Detect ON and still empty: Detect IS running and genuinely found nothing - that's the
+            //    one case worth calling out in red, same as a real scan failure below.
             boolean autoDetectOn = this.minecraft != null && this.minecraft.level != null
                     && this.minecraft.level.getBlockEntity(menu.getDevBlockPos())
                             instanceof net.astronomy.multilib.core.devtool.MultiblockDevBlockEntity be
                     && be.isAutoDetectOn();
-            guiGraphics.drawString(this.font, Component.literal(autoDetectOn ? "No blocks yet" : "Activate Detect"), x, y, 0xAAAAAA, false);
-            y += lineHeight;
+            if (autoDetectOn) {
+                y = drawWrapped(guiGraphics, Component.literal(net.astronomy.multilib.core.devtool.MultiblockScanner.EMPTY_AREA_MESSAGE),
+                        x, y, maxWidth, lineHeight, 0xFF5555);
+            } else {
+                guiGraphics.drawString(this.font, Component.literal("Turn on Detect"), x, y, 0xAAAAAA, false);
+                y += lineHeight;
+            }
         } else {
             // Pinned first, above the scrollable list below - this is the one piece of scan info that
             // must always stay visible without scrolling, regardless of how many block types the area

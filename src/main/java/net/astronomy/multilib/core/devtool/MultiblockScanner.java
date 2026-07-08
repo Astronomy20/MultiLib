@@ -53,6 +53,17 @@ public final class MultiblockScanner {
 
     private MultiblockScanner() {}
 
+    /**
+     * Shared wording for {@link FailureReason#EMPTY_AREA}, referenced by both the server-side packet
+     * builder ({@code MultiblockDevPacketHandler#buildScanPacket}) and the client-side GUI/HUD renderers
+     * so they can recognize this specific failure (by message equality - the {@code DevScanResultPacket}
+     * wire format only carries a plain string, not the {@link FailureReason} enum itself) and fold it
+     * into the same live, auto-detect-state-aware message the "never scanned yet" case already shows,
+     * instead of freezing on a static "Area is empty" line that never explains what to do next and never
+     * updates again until another scan packet happens to arrive.
+     */
+    public static final String EMPTY_AREA_MESSAGE = "Area is empty.";
+
     /** Why a scan didn't produce a result - lets the caller show a specific, correct chat message instead of one generic "scan failed" for every case. */
     public enum FailureReason {
         /** Not a failure - {@link ScanOutcome#result()} is present. */

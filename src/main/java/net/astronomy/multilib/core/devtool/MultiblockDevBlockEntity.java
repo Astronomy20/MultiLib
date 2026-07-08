@@ -146,10 +146,22 @@ public class MultiblockDevBlockEntity extends BlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
+        if (level != null && !level.isClientSide()) {
+            MultiblockDevBlockIndex.register(level.dimension(), worldPosition);
+        }
         if (autoDetectOn) {
             updateAutoDetectRegistration();
         }
         propagateRenderPreviewIfApplicable();
+    }
+
+    /** Covers both "block broken" and "chunk unloaded" - see {@link MultiblockDevBlockIndex} for why unload-time removal is safe. */
+    @Override
+    public void setRemoved() {
+        if (level != null && !level.isClientSide()) {
+            MultiblockDevBlockIndex.unregister(level.dimension(), worldPosition);
+        }
+        super.setRemoved();
     }
 
     public boolean isRenderOn() { return renderOn; }
@@ -378,7 +390,15 @@ public class MultiblockDevBlockEntity extends BlockEntity {
         this.lastScan = outcome.result().map(this::resolveTagAgainstScan).orElse(null);
         setChanged();
         syncToClients();
-        return outcome;
+        // Return the tag-RESOLVED scan, not the scanner's raw one. Every packet path that pushes this
+        // return value to a watching GUI/HUD list (the auto-detect tick, the manual Detect packet, the
+        // area-break refresh) would otherwise overwrite the list with a scan whose core/activation
+        // symbols are unset - while this BE's own lastScan (which drives the glow sync and exports)
+        // kept the tag. That mismatch is exactly the "list loses the core/activation line but glow and
+        // export still have it" bug.
+        return lastScan != null
+                ? new MultiblockScanner.ScanOutcome(Optional.of(lastScan), outcome.failureReason())
+                : outcome;
     }
 
     /**
@@ -475,9 +495,14 @@ public class MultiblockDevBlockEntity extends BlockEntity {
 
         if (lastScan != null) {
             // Guaranteed non-null now - already checked above before tagBlockId/tagIsCore were mutated.
+            // Exactly one of core/activation is ever set - the same single-tag shape
+            // resolveTagAgainstScan produces on every re-Detect. This used to always set
+            // activationSymbol (and keep a stale coreSymbol when tagging an activation), so the
+            // GUI/HUD list showed an extra core/activation entry that the next Detect then silently
+            // removed - while an export taken before that Detect still contained it.
             Character symbol = findSymbolForBlock(lastScan, clickedBlockId);
             this.lastScan = new MultiblockScanResult(lastScan.layers(), lastScan.symbolToBlock(),
-                    tagIsCore ? symbol : lastScan.coreSymbol(), symbol);
+                    tagIsCore ? symbol : null, tagIsCore ? null : symbol);
         }
         setChanged();
         syncToClients();
@@ -493,6 +518,36 @@ public class MultiblockDevBlockEntity extends BlockEntity {
         }
         setChanged();
         syncToClients();
+    }
+
+    /**
+     * Called by {@code MultiblockDevBreakHandler} (one tick after the break landed) when a block inside
+     * this dev-block's area was broken. An explicit break is the one "tagged block missing" case
+     * {@link #resolveTagAgainstScan} must NOT treat as a transient scan miss: the block is definitively
+     * gone, so when no other occurrence of the tagged type remains in the area the tag is cleared
+     * outright - glow off, GUI core/activation line cleared - instead of staying dormant forever. When
+     * other occurrences remain (an activation-duplicate tag), only the broken position is dropped from
+     * the glow; the handler's follow-up re-scan re-derives core-vs-activation from the new counts.
+     */
+    public void onAreaBlockBroken(BlockPos brokenPos, BlockState brokenState) {
+        if (level == null || level.isClientSide() || tagBlockId == null) return;
+        if (!BuiltInRegistries.BLOCK.getKey(brokenState.getBlock()).equals(tagBlockId)) return;
+
+        List<BlockPos> remaining = findMatchingPositionsLive(brokenState.getBlock());
+        // Defensive: this runs after the break landed, so brokenPos shouldn't match anymore - but if a
+        // multi-part sibling or a re-placed block still does, never count the broken position itself.
+        remaining.removeIf(p -> p.equals(brokenPos));
+        if (MultiblockMultiPartBlocks.countLogicalInstances(remaining, brokenState.getBlock()) == 0) {
+            clearTag();
+            return;
+        }
+        if (knownTagPositions != null) {
+            List<BlockPos> filtered = new ArrayList<>(knownTagPositions);
+            filtered.removeIf(p -> p.equals(brokenPos));
+            this.knownTagPositions = filtered;
+            setChanged();
+            syncToClients();
+        }
     }
 
     /** Every position within {@link #getAbsoluteBoundingBox()} currently holding {@code block}. */

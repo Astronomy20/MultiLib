@@ -219,7 +219,7 @@ public final class MultiblockDevPacketHandler {
             return new DevScanResultPacket(devBlockPos, true, "", outcome.result().get());
         }
         String message = switch (outcome.failureReason()) {
-            case EMPTY_AREA -> "Area is empty";
+            case EMPTY_AREA -> MultiblockScanner.EMPTY_AREA_MESSAGE;
             case TOO_MANY_BLOCK_TYPES -> "Too many distinct block types in this area (max "
                     + MultiblockScanner.maxSymbols() + ").";
             case INCOMPLETE_MULTIPART_BLOCK -> "A multi-part block (door/bed/tall plant/etc.) is only "
@@ -415,10 +415,16 @@ public final class MultiblockDevPacketHandler {
             } catch (IOException e) {
                 MultiLib.LOGGER.error("[MultiLib] Dev block: failed to write lang entry to {}", langFile, e);
             }
-            try {
-                MultiblockDevOutputPaths.writeLangSnippet(outFile, langKey, langValue);
-            } catch (IOException e) {
-                MultiLib.LOGGER.error("[MultiLib] Dev block: failed to write lang snippet next to {}", outFile, e);
+            // The standalone single-entry lang "template" only exists to be copy-pasted into a real mod
+            // project alongside the Java scaffold. JSON/KubeJS exports already write a *functional* lang
+            // entry (dev resourcepack / kubejs assets tree, via mergeLangEntry above) that works in-game
+            // as-is, so a template file next to those exports is just noise.
+            if (format == RequestDevExportPacket.Format.JAVA) {
+                try {
+                    MultiblockDevOutputPaths.writeLangSnippet(outFile, langKey, langValue);
+                } catch (IOException e) {
+                    MultiLib.LOGGER.error("[MultiLib] Dev block: failed to write lang snippet next to {}", outFile, e);
+                }
             }
             if (onWriteSucceeded != null) {
                 onWriteSucceeded.run();
@@ -499,6 +505,11 @@ public final class MultiblockDevPacketHandler {
             be.placePatternInWorld(lm.scan());
             be.tagFromScan(lm.scan());
             be.setRenderOn(true);
+            // Load drops a live structure into the world to be tweaked by hand - switching auto-detect
+            // on here means those hand-edits (and breaks - see MultiblockDevBreakHandler) keep the scan,
+            // tag glow and HUD list current on their own, instead of requiring a manual Detect after
+            // every change. Same effect as pressing the GUI's Detect toggle right after loading.
+            be.setAutoDetectOn(true);
             PacketDistributor.sendToPlayer(player, new net.astronomy.multilib.network.DevLoadResultPacket(
                     devBlockPos, true, "", lm.path(), lm.displayName(), lm.scan()));
 
