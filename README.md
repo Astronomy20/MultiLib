@@ -4,7 +4,7 @@
 
 You describe a structure once with a fluent builder, and MultiLib handles detection (in every orientation it allows), persistent instance tracking, a ghost-overlay preview, an auto-place tool, and JEI/REI/EMI/Patchouli integration.
 
-> **Status:** MultiLib is under active development (`v0.0.1`). It's usable today but expect bugs.
+> **Status:** MultiLib is under active development (`v1.0.0`). It's usable today but expect bugs.
 
 ## Why MultiLib
 

@@ -249,17 +249,15 @@ test {
     useJUnitPlatform()
 }
 
-// `gradle build` should not compile or run src/test - the unit-test source set needs
-// its own setup (see the testImplementation comment above) and shouldn't gate normal
-// builds. Run unit tests explicitly with `gradle test` instead.
-// Match by task name rather than handing a TaskProvider to Set.remove(): each
-// tasks.named('test') call yields a fresh provider whose equals() won't match the one
-// the java plugin registered on check, so a plain remove() would silently no-op.
-tasks.named('check').configure {
-    dependsOn.removeIf { dep ->
-        (dep instanceof TaskProvider && dep.name == 'test') ||
-        (dep instanceof Task && dep.name == 'test') ||
-        dep == 'test'
+// `gradle build` must never compile or run src/test. Removing the check->test edge is not
+// enough on its own: with the NeoForge moddev plugin, compileTestJava gets pulled into the
+// build graph independently of check (and these tests need the Minecraft classpath, which the
+// test source set doesn't get, so they can't compile in a plain build anyway). Disable the
+// test tasks outright so `gradle build`/`check` skip src/test entirely. Run unit tests on
+// demand with `gradle test -PenableTests` (see the enableTests gate below).
+if (!project.hasProperty('enableTests')) {
+    ['compileTestJava', 'processTestResources', 'testClasses', 'test'].each { name ->
+        tasks.named(name).configure { enabled = false }
     }
 }
 
