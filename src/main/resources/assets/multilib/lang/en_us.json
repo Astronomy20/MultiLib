@@ -115,6 +115,8 @@
   "multilib.preference.title": "Choose the preferred multiblock for this block",
   "multilib.preference.set": "Preferred definition set to '%s'.",
   "multilib.preference.invalid": "'%s' is no longer a valid candidate here.",
+  "multilib.preference.no_variants": "This block has only one candidate definition - nothing to choose between.",
+  "multilib.preference.not_candidate": "This block isn't a core/activation symbol for any registered definition.",
 
   "multilib.guide.tooltip": "Examples of MultiLib's multiblock structures",
   "multilib.guide.item_name": "MultiLib Guide"

@@ -6,6 +6,7 @@ import net.astronomy.multilib.core.preference.MultiblockPreferenceToolRegistry;
 import net.astronomy.multilib.core.registry.MultiblockAmbiguityResolver;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -29,8 +30,10 @@ import java.util.List;
  * server, since that's real per-world state.
  * <p>
  * Holding the wrench suppresses every other interaction on the clicked block, same as
- * {@code MultiblockDevTagHandler} - a wrench click is never anything other than a preference attempt,
- * even when it turns out to be a no-op (block isn't ambiguous).
+ * {@code MultiblockDevTagHandler} - a wrench click is never anything other than a preference attempt.
+ * When there's nothing to disambiguate, a chat line explains why instead of silently doing nothing:
+ * one message if the block isn't a core/activation symbol for any definition at all, another if it's a
+ * symbol for exactly one (no variants to choose between).
  */
 @OnlyIn(Dist.CLIENT)
 @EventBusSubscriber(modid = MultiLib.MODID, value = Dist.CLIENT)
@@ -53,7 +56,14 @@ public class MultiblockPreferenceInputHandler {
         BlockPos pos = event.getPos();
         List<MultiblockDefinition> candidates = MultiblockAmbiguityResolver.candidatesAt(level, pos,
                 (def, state) -> def.matchesActivationOrCore(state));
-        if (candidates.size() < 2) return; // nothing ambiguous here - no-op, same as a normal wrench miss
+        if (candidates.isEmpty()) {
+            player.displayClientMessage(Component.translatable("multilib.preference.not_candidate"), false);
+            return;
+        }
+        if (candidates.size() < 2) {
+            player.displayClientMessage(Component.translatable("multilib.preference.no_variants"), false);
+            return;
+        }
 
         net.minecraft.client.Minecraft.getInstance().setScreen(new MultiblockPreferenceScreen(pos, candidates));
     }

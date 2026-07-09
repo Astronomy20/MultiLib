@@ -67,7 +67,8 @@ Right-clicking a core/activation block with it:
 
 - opens a picker listing every definition that block is ambiguously a candidate for (one button per definition, using the same display-name convention the recipe viewers use, plus Cancel);
 - picking one calls `setPreferredDefinition(...)` for that exact position and reports the outcome as a chat line;
-- clicking a block that **isn't** ambiguous does nothing — no menu opens.
+- clicking a block that's a core/activation symbol for exactly one definition (no variants to choose between) reports that as a chat line instead of opening a picker;
+- clicking a block that isn't a core/activation symbol for any registered definition reports that as a chat line too.
 
 It's an authoring convenience for testing multi-candidate setups; ship your own tool/command/GUI (built on the public API) for anything player-facing.
 
