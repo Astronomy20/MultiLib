@@ -83,7 +83,7 @@ public class MyFurnaceBE extends AbstractMultiblockControllerBE {
     // setRecipe(...) once, save/load in saveController/loadController
 }
 
-MultiLibAPI.define(id)
+MultiLib.define(id)
     // ... layers/keys ...
     .onTick(ctx -> ctx.instance().getCorePos().ifPresent(core -> {
         if (ctx.level().getBlockEntity(core) instanceof MyFurnaceBE be) {

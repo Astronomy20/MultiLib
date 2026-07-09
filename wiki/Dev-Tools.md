@@ -66,7 +66,7 @@ Once a scan exists, the three **Export** buttons write it to disk. Every export 
 
 | Format | Written to | Result |
 |---|---|---|
-| **Java** | `config/multilib/output/<ClassName>.java` | A `MultiLibAPI.define(...)` scaffold with layers/keys/core/name filled in, `TODO`s for the rest. Copy into your mod. |
+| **Java** | `config/multilib/output/<ClassName>.java` | A `MultiLib.define(...)` scaffold with layers/keys/core/name filled in, `TODO`s for the rest. Copy into your mod. |
 | **KubeJS** | `kubejs/server_scripts/<namespace>/<path>.js` | A `MultiblockEvents.create(...)` script — see [KubeJS Integration](KubeJS-Integration.md). |
 | **JSON** | The world's `datapacks/<namespace>/.../multiblocks/<path>.json` | A real [datapack definition](Advanced-Features.md#jsondatapack-definitions). The tool scaffolds `pack.mcmeta`, then enables and reloads the pack, so the structure is detectable immediately. |
 

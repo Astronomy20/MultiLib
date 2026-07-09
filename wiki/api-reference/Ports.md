@@ -58,7 +58,7 @@ Registers the forwarding: any capability query of `cap` against a block entity o
 
 ## Relation to `ioPort()`
 
-[`MultiLibAPI.block(block).ioPort()`](../Advanced-Features.md#io-ports) already forwards capabilities from a plain tracked block to the controller, with zero classes to write. Choose the port base classes instead when the port needs its **own block entity**: a persistent controller link that survives chunk reloads, typed `getController(Class)` access, or any custom per-port behavior/state. The two mechanisms coexist - they solve the same routing problem at different levels of ceremony.
+[`MultiLib.block(block).ioPort()`](../Advanced-Features.md#io-ports) already forwards capabilities from a plain tracked block to the controller, with zero classes to write. Choose the port base classes instead when the port needs its **own block entity**: a persistent controller link that survives chunk reloads, typed `getController(Class)` access, or any custom per-port behavior/state. The two mechanisms coexist - they solve the same routing problem at different levels of ceremony.
 
 ## See also
 

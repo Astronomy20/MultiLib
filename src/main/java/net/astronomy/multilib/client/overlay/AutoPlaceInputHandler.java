@@ -2,7 +2,7 @@ package net.astronomy.multilib.client.overlay;
 
 import net.astronomy.multilib.CommonConfig;
 import net.astronomy.multilib.MultiLib;
-import net.astronomy.multilib.api.client.MultiLibClientAPI;
+import net.astronomy.multilib.api.client.MultiLibClient;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
 import net.astronomy.multilib.network.GhostBlockData;
 import net.astronomy.multilib.network.RequestAutoPlacePacket;
@@ -29,7 +29,7 @@ import java.util.List;
  * Holding the auto-place modifier key (Left Ctrl by default) and Right-clicking triggers
  * auto-placement on an autoPlace()-enabled core block, placing exactly one missing block per click.
  * The modifier key is not a Controls-menu keybind - its default only changes if the integrating
- * mod's own client-side code calls {@link MultiLibClientAPI#setAutoPlaceModifierKey(int)}. The
+ * mod's own client-side code calls {@link MultiLibClient#setAutoPlaceModifierKey(int)}. The
  * default doesn't collide with the ghost overlay's Shift+Right-click trigger. Works with an item in
  * hand too - the server picks a missing position that matches the held item, so holding something
  * unrelated to the structure places nothing rather than a random block.
@@ -54,7 +54,7 @@ public class AutoPlaceInputHandler {
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (!MultiLibClientAPI.isAutoPlaceModifierDown()) return;
+        if (!MultiLibClient.isAutoPlaceModifierDown()) return;
         Player player = event.getEntity();
 
         Level level = event.getLevel();
@@ -84,7 +84,7 @@ public class AutoPlaceInputHandler {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || !MultiLibClientAPI.isAutoPlaceModifierDown() || !mc.options.keyUse.isDown()) {
+        if (mc.player == null || mc.level == null || !MultiLibClient.isAutoPlaceModifierDown() || !mc.options.keyUse.isDown()) {
             holding = false;
             ticksSinceLastRequest = 0;
             return;

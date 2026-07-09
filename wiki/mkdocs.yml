@@ -35,8 +35,8 @@ nav:
       - KubeJS Integration: KubeJS-Integration.md
   - API Reference:
       - Core:
-          - MultiLibAPI: api-reference/MultiLibAPI.md
-          - MultiLibClientAPI: api-reference/MultiLibClientAPI.md
+          - MultiLib: api-reference/MultiLib.md
+          - MultiLibClient: api-reference/MultiLibClient.md
           - MultiblockBuilder: api-reference/MultiblockBuilder.md
           - MultiblockDefinition: api-reference/MultiblockDefinition.md
           - BlockIngredient: api-reference/BlockIngredient.md

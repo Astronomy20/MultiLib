@@ -28,7 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Makes {@code IMultiblockWrench}/{@code MultiLibAPI.registerWrenchItem} actually do something: any
+ * Makes {@code IMultiblockWrench}/{@code MultiLib.registerWrenchItem} actually do something: any
  * right-click on a candidate activation/core block with a registered wrench item attempts formation
  * here, regardless of whether the item is a hand-written Java class or a data-driven/scripted one
  * that can't implement a custom interface.

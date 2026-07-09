@@ -190,7 +190,7 @@ public class WrenchInteractionEvent extends Event {
 }
 ```
 
-**Not cancellable.** Fired on every registered-wrench use (see `IMultiblockWrench`/[`registerWrenchItem`](MultiLibAPI.md#registerwrenchitemitem-item)), including no-op clicks on non-multiblock blocks. MultiLib's own chat feedback (`WrenchFeedbackHandler`) is `DEV_MODE`-gated and off by default — a mod wanting player-facing feedback listens here itself (or uses the `MultiblockEvents.wrench(...)` KubeJS event).
+**Not cancellable.** Fired on every registered-wrench use (see `IMultiblockWrench`/[`registerWrenchItem`](MultiLib.md#registerwrenchitemitem-item)), including no-op clicks on non-multiblock blocks. MultiLib's own chat feedback (`WrenchFeedbackHandler`) is `DEV_MODE`-gated and off by default — a mod wanting player-facing feedback listens here itself (or uses the `MultiblockEvents.wrench(...)` KubeJS event).
 
 `getResult()` returns a `WrenchResult`, a sealed interface with one variant per outcome:
 
@@ -221,7 +221,7 @@ public class MultiblockDefinitionsReloadedEvent extends Event {
 
 **Not cancellable.** Fired once on the server after JSON definitions finish (re)loading — the first server-start load and every `/reload`. At this point `MultiblockRegistry` holds the full set for this cycle: Java definitions (from mod setup) plus the JSON ones just loaded.
 
-For integrations acting on the complete registry rather than per-definition — re-registering dynamic definitions, or patching via `MultiLibAPI.redefine(...)` (which needs the target already registered). KubeJS's `create`/`modify` hook into this — see [KubeJS § When scripts run](../KubeJS-Integration.md#when-scripts-run).
+For integrations acting on the complete registry rather than per-definition — re-registering dynamic definitions, or patching via `MultiLib.redefine(...)` (which needs the target already registered). KubeJS's `create`/`modify` hook into this — see [KubeJS § When scripts run](../KubeJS-Integration.md#when-scripts-run).
 
 ## See also
 

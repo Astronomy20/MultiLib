@@ -4,7 +4,7 @@
 
 Package: `net.astronomy.multilib.api.definition`
 
-The immutable, built representation of a structure. You never construct this directly - get one from [`MultiblockBuilder.build()`](MultiblockBuilder.md#build) (via `MultiLibAPI.define(id)...build()`).
+The immutable, built representation of a structure. You never construct this directly - get one from [`MultiblockBuilder.build()`](MultiblockBuilder.md#build) (via `MultiLib.define(id)...build()`).
 
 ## Identity & shape accessors
 
@@ -72,7 +72,7 @@ The immutable, built representation of a structure. You never construct this dir
 |---|---|
 | `isWallSharingEnabled()` | Definition-level default, `false` unless set via `.wallSharing(true)` on the builder |
 | `getSymbolWallSharingOverrides()` | Per-symbol overrides set via `.key(symbol, ingredient, mode)`/`.noWallSharing(...)` |
-| `getWallSharingMode(char symbol)` | Resolves the **effective** mode for a symbol. The chain differs by symbol role: for the **core/activation** symbol - symbol override → block-level `BlockDefinition` override → falls back to `DISABLED` regardless of the definition-level default. For **ordinary** symbols - symbol override → `IWallSharable`/`MultiLibAPI` block-level registration (only consulted if there's exactly one candidate block) → falls back to `isWallSharingEnabled() ? ENABLED : DISABLED` (i.e. `DISABLED` unless the definition opted in). Note: ordinary symbols never consult the block-level `BlockDefinition` override - that step only applies to core/activation symbols. |
+| `getWallSharingMode(char symbol)` | Resolves the **effective** mode for a symbol. The chain differs by symbol role: for the **core/activation** symbol - symbol override → block-level `BlockDefinition` override → falls back to `DISABLED` regardless of the definition-level default. For **ordinary** symbols - symbol override → `IWallSharable`/`MultiLib` block-level registration (only consulted if there's exactly one candidate block) → falls back to `isWallSharingEnabled() ? ENABLED : DISABLED` (i.e. `DISABLED` unless the definition opted in). Note: ordinary symbols never consult the block-level `BlockDefinition` override - that step only applies to core/activation symbols. |
 
 ## Visuals & recipe browsers
 

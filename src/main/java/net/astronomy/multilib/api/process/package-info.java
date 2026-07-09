@@ -60,7 +60,7 @@
  * }</pre>
  *
  * <pre>{@code
- * MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("mymod", "furnace"))
+ * MultiLib.define(ResourceLocation.fromNamespaceAndPath("mymod", "furnace"))
  *         .layer("PPP", " P ", " G ")
  *         .key('P', BlockIngredient.of(MySetup.PART_BLOCK))
  *         .key('O', BlockIngredient.of(MySetup.CONTROLLER_BLOCK))

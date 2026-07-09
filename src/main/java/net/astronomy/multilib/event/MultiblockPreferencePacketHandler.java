@@ -1,6 +1,6 @@
 package net.astronomy.multilib.event;
 
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.network.PreferredDefinitionResultPacket;
 import net.astronomy.multilib.network.RequestSetPreferredDefinitionPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -13,7 +13,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * The client already filtered/validated the candidate list locally before ever showing the picker (see
  * {@code MultiblockAmbiguityResolver#candidatesAt}, callable from client code precisely so this stays
  * cheap and consistent) - this handler re-validates server-side anyway via
- * {@link MultiLibAPI#setPreferredDefinition} rather than trusting the client's selection blindly, since
+ * {@link MultiLib#setPreferredDefinition} rather than trusting the client's selection blindly, since
  * the block at {@code pos} could have changed in the time between the client opening the picker and the
  * player clicking a choice.
  */
@@ -26,7 +26,7 @@ public final class MultiblockPreferencePacketHandler {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             ServerLevel level = player.serverLevel();
 
-            boolean accepted = MultiLibAPI.setPreferredDefinition(level, packet.pos(), packet.definitionId());
+            boolean accepted = MultiLib.setPreferredDefinition(level, packet.pos(), packet.definitionId());
             PacketDistributor.sendToPlayer(player,
                     new PreferredDefinitionResultPacket(packet.pos(), accepted, packet.definitionId()));
         });

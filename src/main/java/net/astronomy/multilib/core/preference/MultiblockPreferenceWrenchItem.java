@@ -5,7 +5,7 @@ import net.minecraft.world.item.Item;
 /**
  * Dev-only tool: right-clicking a core/activation block with this item held opens a picker of every
  * definition that block is ambiguously a candidate for (see {@code MultiblockAmbiguityResolver}),
- * letting a developer bind one of them to that exact position via {@code MultiLibAPI#setPreferredDefinition}
+ * letting a developer bind one of them to that exact position via {@code MultiLib#setPreferredDefinition}
  * - see {@code client.preference.MultiblockPreferenceInputHandler} for the client-side trigger and
  * {@code MultiblockPreferenceScreen} for the picker itself. A no-op click (no menu opens) when the
  * clicked block isn't actually ambiguous for anything.

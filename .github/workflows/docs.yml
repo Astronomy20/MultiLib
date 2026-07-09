@@ -38,7 +38,7 @@ jobs:
           sed \
             -e 's#\](\.\./\.\./wiki/api-reference/Multiblock-States-And-Progress)#](api-reference/Multiblock-States-And-Progress.md)#' \
             -e 's#\](\.\./\.\./wiki/Advanced-Features#\](Advanced-Features.md#' \
-            -e 's|](/wiki/index#7-api-reference)|](api-reference/MultiLibAPI.md)|' \
+            -e 's|](/wiki/index#7-api-reference)|](api-reference/MultiLib.md)|' \
             -e 's#\](wiki/index\.md)#](index.md)#' \
             -e 's#\](wiki/Getting-Started)#](Getting-Started.md)#' \
             -e 's#\](wiki/Core-Concepts)#](Core-Concepts.md)#' \

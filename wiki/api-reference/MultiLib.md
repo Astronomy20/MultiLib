@@ -1,6 +1,6 @@
 [← Back to Home](../index.md)
 
-# `MultiLibAPI`
+# `MultiLib`
 
 Package: `net.astronomy.multilib.api`
 
@@ -17,7 +17,7 @@ public static MultiblockBuilder define(ResourceLocation id)
 Starts a new [`MultiblockBuilder`](MultiblockBuilder.md) for the structure identified by `id` (equivalent to `new MultiblockBuilder().id(id)`). `id` is what recipe-browser integrations, JSON overrides, wrench diagnostics, and `getDefinition(id)` use to reference this structure.
 
 ```java
-MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
+MultiLib.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
         .layer("PPP", " P ", " G ")
         .key('P', BlockIngredient.of(Blocks.STONE_BRICKS))
         .key('G', BlockIngredient.of(Blocks.GOLD_BLOCK))
@@ -36,7 +36,7 @@ public static BlockDefinitionBuilder block(Block block)
 Entry point for declaring **block-level** multiblock metadata - properties of the `Block` itself, independent of any single structure: `.core(ids...)`, `.ioPort()`, `.dropOriginalOnBreak()`, `.mainFace()`, `.wallSharing(enabled)`. See [BlockDefinition reference](BlockDefinition.md).
 
 ```java
-MultiLibAPI.block(MyBlocks.CONTROLLER_BLOCK).mainFace().build();
+MultiLib.block(MyBlocks.CONTROLLER_BLOCK).mainFace().build();
 ```
 
 ---

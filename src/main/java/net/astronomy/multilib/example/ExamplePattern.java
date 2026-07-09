@@ -1,6 +1,6 @@
 package net.astronomy.multilib.example;
 
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.FormationMode;
 import net.astronomy.multilib.api.definition.RotationAxis;
 import net.astronomy.multilib.api.definition.RotationMode;
@@ -30,7 +30,7 @@ public class ExamplePattern {
         // ever previews from the core (see GhostOverlayInputHandler), so this also keeps it from
         // being confused with example_simple.json's diamond/emerald blocks, which 'D'/'E' reuse here
         // purely as plain body blocks with no activation/core role.
-        MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("multilib", "example"))
+        MultiLib.define(ResourceLocation.fromNamespaceAndPath("multilib", "example"))
                 .layer("PPP", " P ", " G ")
                 .layer("POP", " P ", " G ")
                 .key('P', BlockIngredient.of(ExampleSetup.PART_BLOCK))

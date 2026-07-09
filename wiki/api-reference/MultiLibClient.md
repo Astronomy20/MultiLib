@@ -1,6 +1,6 @@
 [← Back to Home](../index.md)
 
-# `MultiLibClientAPI`
+# `MultiLibClient`
 
 Package: `net.astronomy.multilib.api.client` — **`@OnlyIn(Dist.CLIENT)`**
 
@@ -45,4 +45,4 @@ The icon actually used, in priority order: the `categoryIcon` config value (if n
 
 - [Configuration](../Configuration.md) — the `categoryIcon` client config that overrides `setCategoryIcon`
 - [Advanced Features § Auto-place](../Advanced-Features.md#auto-place) — the feature the modifier key drives
-- [MultiLibAPI](MultiLibAPI.md) — the common-side (non-client) entry point
+- [MultiLib](MultiLib.md) — the common-side (non-client) entry point

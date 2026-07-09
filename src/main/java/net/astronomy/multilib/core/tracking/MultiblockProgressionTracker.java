@@ -21,7 +21,7 @@ import java.util.UUID;
  * overworld regardless of which dimension the multiblock actually formed in, since progression is
  * conceptually per-player, not per-dimension.
  * <p>
- * General-purpose record-keeping - exposed via {@link net.astronomy.multilib.api.MultiLibAPI} for mod
+ * General-purpose record-keeping - exposed via {@link net.astronomy.multilib.api.MultiLib} for mod
  * developers and integrations that want an "ever/last reached" answer. Note {@code compat/ftbquests}'
  * {@code MultiblockTask} deliberately does NOT use this for its completion check: a permanently-standing
  * historical record would let a quest re-complete instantly on reset, or "complete" a task for a

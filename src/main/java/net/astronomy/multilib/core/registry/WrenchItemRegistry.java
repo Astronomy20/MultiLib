@@ -9,7 +9,7 @@ import java.util.Set;
 /**
  * Items registered here are treated as wrenches by {@code WrenchInteractionHandler} exactly like an
  * {@link IMultiblockWrench}-implementing Item, without needing an actual Java subclass - the entry
- * point for this is {@code MultiLibAPI.registerWrenchItem}, meant for data-driven/scripted items
+ * point for this is {@code MultiLib.registerWrenchItem}, meant for data-driven/scripted items
  * (e.g. KubeJS) that can't implement a custom interface.
  */
 public final class WrenchItemRegistry {

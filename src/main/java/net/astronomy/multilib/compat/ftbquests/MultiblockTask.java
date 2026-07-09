@@ -9,7 +9,7 @@ import dev.ftb.mods.ftbquests.quest.Quest;
 import dev.ftb.mods.ftbquests.quest.TeamData;
 import dev.ftb.mods.ftbquests.quest.task.AbstractBooleanTask;
 import dev.ftb.mods.ftbquests.quest.task.TaskType;
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.api.state.MultiblockState;
 import net.astronomy.multilib.api.state.MultiblockStateRegistry;
@@ -156,7 +156,7 @@ public class MultiblockTask extends AbstractBooleanTask {
     @Override
     @Environment(EnvType.CLIENT)
     public Icon getAltIcon() {
-        return MultiLibAPI.getDefinition(multiblockId)
+        return MultiLib.getDefinition(multiblockId)
                 .map(MultiblockRecipeDisplay::catalystStack)
                 .filter(stack -> !stack.isEmpty())
                 .<Icon>map(ItemIcon::getItemIcon)
@@ -172,7 +172,7 @@ public class MultiblockTask extends AbstractBooleanTask {
     @Environment(EnvType.CLIENT)
     public void onButtonClicked(Button button, boolean canClick) {
         button.playClickSound();
-        MultiLibAPI.getDefinition(multiblockId).ifPresent(RecipeViewerLink::open);
+        MultiLib.getDefinition(multiblockId).ifPresent(RecipeViewerLink::open);
     }
 
     @Override
@@ -181,7 +181,7 @@ public class MultiblockTask extends AbstractBooleanTask {
         super.fillConfigGroup(config);
 
         List<ResourceLocation> definitionIds = new ArrayList<>();
-        for (MultiblockDefinition def : MultiLibAPI.getAllDefinitions()) {
+        for (MultiblockDefinition def : MultiLib.getAllDefinitions()) {
             definitionIds.add(def.getId());
         }
         if (definitionIds.isEmpty()) definitionIds.add(UNSET);
@@ -190,7 +190,7 @@ public class MultiblockTask extends AbstractBooleanTask {
                         .id(ResourceLocation::toString)
                         // Core/activation block icon per entry, same stack JEI/REI/EMI use as this
                         // structure's catalyst - ItemStack.EMPTY safely renders as no icon.
-                        .icon(id -> ItemIcon.getItemIcon(MultiLibAPI.getDefinition(id)
+                        .icon(id -> ItemIcon.getItemIcon(MultiLib.getDefinition(id)
                                 .map(MultiblockRecipeDisplay::catalystStack)
                                 .orElse(ItemStack.EMPTY)))
                         // "Display Name [namespace:path]" while editing, for disambiguation - the task's
@@ -221,7 +221,7 @@ public class MultiblockTask extends AbstractBooleanTask {
 
     /** For the task's own title: the display name alone if set, otherwise the raw id - never both. */
     private static MutableComponent multiblockTitleName(ResourceLocation id) {
-        return MultiLibAPI.getDefinition(id)
+        return MultiLib.getDefinition(id)
                 .flatMap(MultiblockDefinition::getNameTranslationKey)
                 .<MutableComponent>map(Component::translatable)
                 .orElseGet(() -> Component.literal(id.toString()));
@@ -229,7 +229,7 @@ public class MultiblockTask extends AbstractBooleanTask {
 
     /** For the picker list: "Display Name [namespace:path]" when set, else just the id - disambiguates while editing. */
     private static MutableComponent multiblockListEntryName(ResourceLocation id) {
-        return MultiLibAPI.getDefinition(id)
+        return MultiLib.getDefinition(id)
                 .flatMap(MultiblockDefinition::getNameTranslationKey)
                 .<MutableComponent>map(key -> Component.translatable(key).append(
                         Component.literal(" [" + id + "]").withStyle(ChatFormatting.GRAY)))

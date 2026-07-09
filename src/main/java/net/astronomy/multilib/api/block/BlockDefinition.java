@@ -50,7 +50,7 @@ public final class BlockDefinition {
      * and OR-ing the boolean flags, instead of one call silently discarding the other. Needed because two
      * independent multiblocks (most commonly two Java definitions in unrelated classes, or two separate
      * datapack files, unaware of each other) can each declare the same shared block as their own core via
-     * separate {@code MultiLibAPI.block(sameBlock).core(id).build()} calls - before this merge existed,
+     * separate {@code MultiLib.block(sameBlock).core(id).build()} calls - before this merge existed,
      * {@code BlockDefinitionRegistry.register} used a plain {@code Map.put}, so the second declaration
      * replaced the first outright: the first multiblock's {@code coreOfMultiblocks} entry (and its
      * ioPort/dropOriginalOnBreak/mainFace flags) vanished, and if that multiblock relied on this

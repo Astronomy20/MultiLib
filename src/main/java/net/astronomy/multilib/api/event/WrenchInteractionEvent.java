@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Fired every time a registered wrench (see {@code IMultiblockWrench}/
- * {@code MultiLibAPI#registerWrenchItem}) is used on a block - including when nothing happens (the
+ * {@code MultiLib#registerWrenchItem}) is used on a block - including when nothing happens (the
  * block isn't part of any multiblock). The library's own chat feedback for this event (see
  * {@code event.WrenchFeedbackHandler}) is gated behind {@code CommonConfig#DEV_MODE} and off by
  * default; a mod wanting player-facing feedback regardless of dev mode should listen for this event

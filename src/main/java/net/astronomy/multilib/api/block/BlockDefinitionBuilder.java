@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  * Fluent builder for block-level multiblock metadata. Accessed via
- * {@code MultiLibAPI.block(Block)}. Unlike {@link net.astronomy.multilib.api.definition.MultiblockBuilder},
+ * {@code MultiLib.block(Block)}. Unlike {@link net.astronomy.multilib.api.definition.MultiblockBuilder},
  * this declares properties of the Block itself rather than of a single multiblock structure.
  */
 public final class BlockDefinitionBuilder {

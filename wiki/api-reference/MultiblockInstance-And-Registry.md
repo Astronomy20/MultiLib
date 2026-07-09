@@ -51,7 +51,7 @@ public final class MultiblockRegistry {
 - `registerJson(...)` / `clearJsonDefinitions()` - used by the datapack reload listener to swap out JSON-defined definitions on `/reload` without touching Java-defined ones.
 - `getCandidatesFor(Block block)` - the core lookup used by `BlockActivationHandler`: returns every definition indexed under `block` (via `BlockIngredient.getCandidateBlocks()`) **plus** every "always-checked" definition (one whose activation/core ingredient can't be enumerated - tags, predicates, `any()`). Results are sorted by `priority` (descending), then **JSON-defined before Java-defined** on ties (the same "data overrides hardcoded defaults" convention vanilla uses for recipes/loot tables/tags).
 
-Prefer `MultiLibAPI.getDefinition(id)` / `getAllDefinitions()` from outside MultiLib itself - this class is the internal implementation.
+Prefer `MultiLib.getDefinition(id)` / `getAllDefinitions()` from outside MultiLib itself - this class is the internal implementation.
 
 ## `BlockDefinitionRegistry`
 

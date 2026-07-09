@@ -22,7 +22,7 @@ protected ServerLevel getServerLevel();
 protected void markDirtyAndSync();
 ```
 
-`MultiblockState` is registry-backed, not an enum — `StandardMultiblockState` provides `UNFORMED`/`IDLE`/`RUNNING`/`ERROR`; register your own via `MultiLibAPI.registerMultiblockState(...)`. `setState(...)` is a no-op if unchanged; otherwise it calls `onStateChanged`, records progression, posts `MultiblockStateChangedEvent`, and syncs ([lifecycle](Multiblock-States-And-Progress.md)).
+`MultiblockState` is registry-backed, not an enum — `StandardMultiblockState` provides `UNFORMED`/`IDLE`/`RUNNING`/`ERROR`; register your own via `MultiLib.registerMultiblockState(...)`. `setState(...)` is a no-op if unchanged; otherwise it calls `onStateChanged`, records progression, posts `MultiblockStateChangedEvent`, and syncs ([lifecycle](Multiblock-States-And-Progress.md)).
 
 `getActiveModelId()` is the block rendered in place of the hidden core — read every frame by [`MultiblockMasterModelRenderer`](#multiblockmastermodelrenderer).
 

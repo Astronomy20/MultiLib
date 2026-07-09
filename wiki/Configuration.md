@@ -30,7 +30,7 @@ The `devtool*` and `devMode` options only matter while authoring with the Dev To
 | Option | Type | Default | Purpose |
 |---|---|---|---|
 | `jeiPreviewAutoRotate` | bool | `true` | Whether the recipe browser's standalone 3D preview model auto-rotates by default. Only affects the JEI/REI/EMI recipe page's rotating model — the in-world ghost overlay is anchored to the structure's real placement and never rotates. |
-| `categoryIcon` | string | *(empty)* | Item id used as the icon for the multiblock category tab in JEI/REI/EMI (e.g. `minecraft:crafting_table`). When set, it overrides whatever a consuming mod registered via [`MultiLibClientAPI.setCategoryIcon(...)`](api-reference/MultiLibClientAPI.md#setcategoryiconitemlike-item); leave empty unless a player/dev wants to force a specific icon. |
+| `categoryIcon` | string | *(empty)* | Item id used as the icon for the multiblock category tab in JEI/REI/EMI (e.g. `minecraft:crafting_table`). When set, it overrides whatever a consuming mod registered via [`MultiLibClient.setCategoryIcon(...)`](api-reference/MultiLibClient.md#setcategoryiconitemlike-item); leave empty unless a player/dev wants to force a specific icon. |
 
 ## See also
 

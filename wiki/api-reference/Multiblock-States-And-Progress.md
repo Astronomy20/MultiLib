@@ -35,7 +35,7 @@ Registering the same `id` twice returns the same instance, so it's safe from a s
 
 Registration must happen before the registry freezes (`FMLLoadCompleteEvent`) — do it in your mod constructor or `FMLCommonSetupEvent`, not lazily, or it throws. Declare states as `public static final MultiblockState` fields (like `StandardMultiblockState`) and load the class early enough.
 
-From outside MultiLib, prefer `MultiLibAPI.registerMultiblockState(...)`.
+From outside MultiLib, prefer `MultiLib.registerMultiblockState(...)`.
 
 ## `StandardMultiblockState`
 
@@ -89,7 +89,7 @@ Long-term "has this player ever reached this state, and when" memory (per-player
 
 `stateId = null` in `hasReached(...)` checks "ever reached *any* state" (i.e. formed at least once).
 
-From outside MultiLib, prefer `MultiLibAPI.hasReachedMultiblockState(...)`/`recordMultiblockStateReached(...)`. The [FTB Quests](../Advanced-Features.md#ftb-quests-compatibility) integration deliberately doesn't use this tracker for completion.
+From outside MultiLib, prefer `MultiLib.hasReachedMultiblockState(...)`/`recordMultiblockStateReached(...)`. The [FTB Quests](../Advanced-Features.md#ftb-quests-compatibility) integration deliberately doesn't use this tracker for completion.
 
 ## `MultiblockProgressAPI`
 
@@ -163,5 +163,5 @@ A placed block that doesn't satisfy the pattern (vs. `MissingBlock`, nothing pla
 - [BlockIngredient § matchesBlockType](BlockIngredient.md) - the `WRONG` vs `WRONG_STATE` distinction `computeDetailed` relies on
 - [MultiblockComposition](MultiblockComposition.md) - the equivalent read-only report for an already-**formed** structure
 - [Callbacks & Events](Callbacks-And-Events.md)
-- [MultiLibAPI](MultiLibAPI.md)
+- [MultiLib](MultiLib.md)
 - [Advanced Features § FTB Quests compatibility](../Advanced-Features.md#ftb-quests-compatibility)

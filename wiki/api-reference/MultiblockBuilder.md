@@ -4,7 +4,7 @@
 
 Package: `net.astronomy.multilib.api.definition`
 
-Fluent builder for one [`MultiblockDefinition`](MultiblockDefinition.md). Obtain an instance via `MultiLibAPI.define(id)` or `new MultiblockBuilder().id(id)`. Every setter returns `this`, so calls chain.
+Fluent builder for one [`MultiblockDefinition`](MultiblockDefinition.md). Obtain an instance via `MultiLib.define(id)` or `new MultiblockBuilder().id(id)`. Every setter returns `this`, so calls chain.
 
 See [Core Concepts](../Core-Concepts.md) for the conceptual model. This page documents the full method surface.
 
@@ -219,7 +219,7 @@ Same validation and construction, but never touches `MultiblockRegistry`. Use fo
 ## Minimal example
 
 ```java
-MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "furnace_array"))
+MultiLib.define(ResourceLocation.fromNamespaceAndPath("examplemod", "furnace_array"))
         .layer("BBB", "BOB", "BBB")
         .key('B', BlockIngredient.tag(BlockTags.LOGS))
         .key('O', BlockIngredient.of(Blocks.FURNACE))

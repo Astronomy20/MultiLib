@@ -1,6 +1,6 @@
 package net.astronomy.multilib.api.definition;
 
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.block.BlockDefinition;
 import net.astronomy.multilib.api.callback.MultiblockAmbientCallback;
 import net.astronomy.multilib.api.callback.MultiblockBrokenCallback;
@@ -337,7 +337,7 @@ public final class MultiblockDefinition {
                 if (block instanceof IWallSharable ws) {
                     return ws.getDefaultWallSharingMode();
                 }
-                Optional<WallSharingMode> registered = MultiLibAPI.getRegisteredWallSharingMode(block);
+                Optional<WallSharingMode> registered = MultiLib.getRegisteredWallSharingMode(block);
                 if (registered.isPresent()) {
                     return registered.get();
                 }

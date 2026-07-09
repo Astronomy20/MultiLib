@@ -4,7 +4,7 @@
 
 Package: `net.astronomy.multilib.api.block`
 
-Block-level multiblock metadata - properties of a `Block` itself, independent of any single `MultiblockDefinition`. Accessed via `MultiLibAPI.block(block)`.
+Block-level multiblock metadata - properties of a `Block` itself, independent of any single `MultiblockDefinition`. Accessed via `MultiLib.block(block)`.
 
 ## Why separate from `MultiblockDefinition`
 
@@ -61,7 +61,7 @@ public final class BlockDefinition {
 ## Example
 
 ```java
-MultiLibAPI.block(MyBlocks.REACTOR_CORE)
+MultiLib.block(MyBlocks.REACTOR_CORE)
         .core(ResourceLocation.fromNamespaceAndPath("examplemod", "reactor"))
         .mainFace()
         .ioPort()
@@ -72,6 +72,6 @@ With this declared, the `examplemod:reactor` `MultiblockBuilder` doesn't need to
 
 ## See also
 
-- [MultiLibAPI § block(Block)](MultiLibAPI.md#blockblock-block)
+- [MultiLib § block(Block)](MultiLib.md#blockblock-block)
 - [Directional Cores Guide](../Directional-Cores-Guide.md)
 - [Advanced Features § Wall sharing, IO ports](../Advanced-Features.md)

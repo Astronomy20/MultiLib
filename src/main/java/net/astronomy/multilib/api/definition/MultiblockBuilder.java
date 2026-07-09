@@ -844,7 +844,7 @@ public final class MultiblockBuilder {
     }
 
     /**
-     * If no block declares itself core of this multiblock id (via {@code MultiLibAPI.block(...).core(id)}),
+     * If no block declares itself core of this multiblock id (via {@code MultiLib.block(...).core(id)}),
      * this is a no-op. Otherwise, resolves/validates the multiblock's core symbol against the block-level
      * declaration: auto-assigns the core symbol when the builder didn't set one, or logs a mismatch error
      * (without throwing) when both sides disagree.

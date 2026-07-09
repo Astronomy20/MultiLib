@@ -1,7 +1,7 @@
 package net.astronomy.multilib.compat.kubejs;
 
 import dev.latvian.mods.kubejs.event.KubeEvent;
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.MultiblockBuilder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -29,18 +29,18 @@ public class MultiblockCreateKubeEvent implements KubeEvent {
         // silenceDevModeChat(): KubeJSMultiblockSetup already reports a validation failure to the
         // KubeJS console/script error overlay - broadcasting the same failure to chat too would just
         // show the player the same thing twice.
-        MultiblockBuilder builder = MultiLibAPI.define(id).silenceDevModeChat();
+        MultiblockBuilder builder = MultiLib.define(id).silenceDevModeChat();
         builders.add(builder);
         return builder;
     }
 
     /**
-     * Registers {@code item} as a wrench (see {@link MultiLibAPI#registerWrenchItem}) - the
+     * Registers {@code item} as a wrench (see {@link MultiLib#registerWrenchItem}) - the
      * script-side equivalent of implementing {@code IMultiblockWrench} on a hand-written Item
      * subclass, for items created in KubeJS itself which can't implement a custom Java interface.
      */
     public void wrench(Item item) {
-        MultiLibAPI.registerWrenchItem(item);
+        MultiLib.registerWrenchItem(item);
     }
 
     List<MultiblockBuilder> getBuilders() {

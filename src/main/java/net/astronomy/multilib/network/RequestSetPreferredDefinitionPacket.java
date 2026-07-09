@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 /**
  * Sent client → server by the preference wrench (see {@code core.preference}) once a player picks one
  * of the candidate definitions shown for an ambiguous core/activation block - binds {@code definitionId}
- * to {@code pos} via {@code MultiLibAPI#setPreferredDefinition}. Answered by
+ * to {@code pos} via {@code MultiLib#setPreferredDefinition}. Answered by
  * {@link PreferredDefinitionResultPacket}.
  */
 public record RequestSetPreferredDefinitionPacket(BlockPos pos, ResourceLocation definitionId) implements CustomPacketPayload {

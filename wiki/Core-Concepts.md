@@ -8,7 +8,7 @@ The model MultiLib uses to describe and detect a structure. The coordinate syste
 
 A **definition** (`MultiblockDefinition`) is an immutable description of:
 
-- an **id** (`ResourceLocation`) — how the structure is referenced (recipe viewers, JSON, wrench, `MultiLibAPI.getDefinition`);
+- an **id** (`ResourceLocation`) — how the structure is referenced (recipe viewers, JSON, wrench, `MultiLib.getDefinition`);
 - **symbols** — single characters mapped to `BlockIngredient`s;
 - **layers** — horizontal slices described with those symbols (or a procedural `PatternProvider`, or a `shapeless()` flood-fill — see [Advanced Features](Advanced-Features.md));
 - a **core** and/or **activation** symbol;
@@ -16,7 +16,7 @@ A **definition** (`MultiblockDefinition`) is an immutable description of:
 - a **formation mode**;
 - callbacks (`onFormed`, `onBroken`, `onTick`, `onAmbient`) and an optional `validator`.
 
-You never construct one directly — assemble it with `MultiblockBuilder` (via `MultiLibAPI.define(id)`) and finish with `.build()`.
+You never construct one directly — assemble it with `MultiblockBuilder` (via `MultiLib.define(id)`) and finish with `.build()`.
 
 ## Symbols and `BlockIngredient`
 

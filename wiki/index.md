@@ -23,7 +23,7 @@
 ## Quick example
 
 ```java
-MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
+MultiLib.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
         .layer("PPP", " P ", " G ")
         .layer("POP", " P ", " G ")
         .key('P', BlockIngredient.of(Blocks.STONE_BRICKS))
@@ -42,7 +42,7 @@ Registered once at mod setup, this detects the structure in every allowed rotati
 
 - **New here?** [Getting Started](Getting-Started.md), then [Core Concepts](Core-Concepts.md).
 - **Designing a structure?** [Pattern Design Guide](Pattern-Design-Guide.md) and [Advanced Features](Advanced-Features.md).
-- **Full API:** [API Reference](api-reference/MultiLibAPI.md).
+- **Full API:** [API Reference](api-reference/MultiLib.md).
 - **Tuning behavior?** [Configuration](Configuration.md).
 - **Authoring in-game?** [Dev Tools](Dev-Tools.md).
 - **Porting old code?** [Migrating from PatternBuilder](Migrating-From-PatternBuilder.md).

@@ -6,7 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * What happened when a registered wrench (see {@link IMultiblockWrench}/
- * {@code MultiLibAPI#registerWrenchItem}) was used on a block. Carried by
+ * {@code MultiLib#registerWrenchItem}) was used on a block. Carried by
  * {@code WrenchInteractionEvent} - the library itself never acts on this beyond posting that event;
  * whether (and how) to surface it to the player is entirely up to whoever listens.
  */

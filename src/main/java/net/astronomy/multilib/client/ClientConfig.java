@@ -15,7 +15,7 @@ public class ClientConfig {
     public static final ModConfigSpec.ConfigValue<String> CATEGORY_ICON = BUILDER
             .comment("Item ID used as the icon for the multiblock category tab in JEI/REI/EMI (e.g. smelting, crafting, brewing).",
                     "Empty by default. When set, this overrides whatever icon a consuming mod registered via",
-                    "MultiLibClientAPI.setCategoryIcon(...) in Java, so leave it empty unless a player/dev wants to",
+                    "MultiLibClient.setCategoryIcon(...) in Java, so leave it empty unless a player/dev wants to",
                     "force a specific icon.")
             .define("categoryIcon", "");
 

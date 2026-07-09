@@ -27,16 +27,16 @@ import org.slf4j.LoggerFactory;
  * setup - to pick a different key for its own use of MultiLib's auto-place feature.
  */
 @OnlyIn(Dist.CLIENT)
-public class MultiLibClientAPI {
+public class MultiLibClient {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MultiLibClientAPI.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MultiLibClient.class);
 
     private static int autoPlaceModifierKey = InputConstants.KEY_LCONTROL;
 
     /** {@code null} until a consuming mod calls {@link #setCategoryIcon(ItemLike)}. */
     private static Item categoryIcon = null;
 
-    private MultiLibClientAPI() {
+    private MultiLibClient() {
     }
 
     /**

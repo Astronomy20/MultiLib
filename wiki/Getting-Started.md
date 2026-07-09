@@ -17,7 +17,7 @@ MultiLib is a library mod: depend on it at compile and runtime, as with any NeoF
 
 | Class | Role |
 |---|---|
-| `MultiLibAPI` | Entry point: `define(id)` starts a structure, `block(block)` declares block metadata. |
+| `MultiLib` | Entry point: `define(id)` starts a structure, `block(block)` declares block metadata. |
 | `MultiblockBuilder` | Fluent builder: symbols, layers, rotation, formation mode, callbacks. |
 | `MultiblockDefinition` | The immutable result of `.build()`. |
 | `BlockIngredient` | What a symbol matches — a block, tag, block state, or predicate. |
@@ -32,7 +32,7 @@ Register once during mod setup, after the blocks you reference exist — typical
 
 ```java
 public static void registerAll() {
-    MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
+    MultiLib.define(ResourceLocation.fromNamespaceAndPath("examplemod", "my_altar"))
             .layer("PPP", " P ", " G ")
             .layer("POP", " P ", " G ")
             .key('P', BlockIngredient.of(Blocks.STONE_BRICKS))
@@ -79,4 +79,4 @@ For a core that tracks formed state, exposes a menu, or ticks while formed, exte
 ## Next steps
 
 - [Core Concepts](Core-Concepts.md) — symbols, layers, core/activation, formation modes.
-- [API Reference](api-reference/MultiLibAPI.md) — full per-class reference.
+- [API Reference](api-reference/MultiLib.md) — full per-class reference.

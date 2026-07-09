@@ -2,7 +2,7 @@ package net.astronomy.multilib.compat.kubejs;
 
 import dev.latvian.mods.kubejs.event.KubeEvent;
 import dev.latvian.mods.kubejs.script.ConsoleJS;
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.MultiblockBuilder;
 import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
@@ -15,7 +15,7 @@ import java.util.function.Consumer;
  * Fired once per multiblock JSON datapack (re)load so scripts can patch existing definitions -
  * Java, JSON, or previously KubeJS-defined.
  * <p>
- * Doesn't delegate to {@link MultiLibAPI#redefine} (unlike everything else here, which reuses the
+ * Doesn't delegate to {@link MultiLib#redefine} (unlike everything else here, which reuses the
  * shared Java API rather than re-implementing it) specifically because that method's
  * {@code Optional<MultiblockDefinition>} return can't distinguish "no such id" from "validation
  * failed" or carry the failed builder's {@link MultiblockBuilder#getLastValidationError()} back out -
@@ -24,7 +24,7 @@ import java.util.function.Consumer;
 public class MultiblockModifyKubeEvent implements KubeEvent {
 
     public boolean modify(ResourceLocation id, Consumer<MultiblockBuilder> callback) {
-        Optional<MultiblockDefinition> existing = MultiLibAPI.getDefinition(id);
+        Optional<MultiblockDefinition> existing = MultiLib.getDefinition(id);
         if (existing.isEmpty()) {
             ConsoleJS.SERVER.error("[MultiLib] MultiblockEvents.modify: no multiblock registered with id '" + id + "'");
             return false;

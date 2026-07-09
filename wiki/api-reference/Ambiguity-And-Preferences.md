@@ -25,7 +25,7 @@ A preference is only ever an **override on top of** priority order, never the so
 
 ## Public API
 
-Three thin, validated passthroughs on [`MultiLibAPI`](MultiLibAPI.md) — the intended integration surface. MultiLib ships **no forced UI**; a mod can drive these from its own tool, GUI, or command.
+Three thin, validated passthroughs on [`MultiLib`](MultiLib.md) — the intended integration surface. MultiLib ships **no forced UI**; a mod can drive these from its own tool, GUI, or command.
 
 ### `setPreferredDefinition(ServerLevel level, BlockPos pos, ResourceLocation definitionId)`
 
@@ -57,7 +57,7 @@ Removes any binding for `pos`. No-op if none was set.
 
 ## Preference persistence
 
-`MultiblockPreferenceTracker` is a per-`ServerLevel` [`SavedData`](https://docs.neoforged.net/) named `multilib_preferences`, keyed by `BlockPos`. It's real per-world gameplay state — persisted across restarts, just like [`WorldMultiblockTracker`](MultiblockInstance-And-Registry.md). Corrupted/foreign entries are skipped on load rather than failing the whole file. You normally never touch it directly; go through the `MultiLibAPI` methods above.
+`MultiblockPreferenceTracker` is a per-`ServerLevel` [`SavedData`](https://docs.neoforged.net/) named `multilib_preferences`, keyed by `BlockPos`. It's real per-world gameplay state — persisted across restarts, just like [`WorldMultiblockTracker`](MultiblockInstance-And-Registry.md). Corrupted/foreign entries are skipped on load rather than failing the whole file. You normally never touch it directly; go through the `MultiLib` methods above.
 
 ## Preference wrench (dev mode)
 
@@ -73,7 +73,7 @@ It's an authoring convenience for testing multi-candidate setups; ship your own 
 
 ## See also
 
-- [MultiLibAPI](MultiLibAPI.md) — the three preference methods in the full API listing
+- [MultiLib](MultiLib.md) — the three preference methods in the full API listing
 - [Core Concepts § Registration and lookup](../Core-Concepts.md#registration-and-lookup) — how priority order works
 - [Dev Tools](../Dev-Tools.md) — the other `devMode`-gated authoring aids
 - [MultiblockBuilder § priority](MultiblockBuilder.md) — the tie-break priority set per definition

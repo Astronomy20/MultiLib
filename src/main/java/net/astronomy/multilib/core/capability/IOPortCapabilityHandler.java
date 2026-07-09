@@ -17,7 +17,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Makes blocks declared via {@code MultiLibAPI.block(block).ioPort()} forward item/fluid/energy
+ * Makes blocks declared via {@code MultiLib.block(block).ioPort()} forward item/fluid/energy
  * capability requests directly to the core block entity of the multiblock they're currently part
  * of, so the modder never has to write the redirect plumbing by hand.
  */

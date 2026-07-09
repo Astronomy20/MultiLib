@@ -65,7 +65,7 @@ public final class MultiblockRegistry {
      * previously KubeJS-registered) and registers {@code replacement} in its place, keeping whichever
      * {@link Source} {@code oldId} was already tagged with (falling back to {@link Source#JAVA} if it
      * had none) - this overload is for callers patching an *existing* definition in place
-     * ({@code MultiLibAPI#redefine}, {@code MultiblockEvents.modify}), which doesn't change where the
+     * ({@code MultiLib#redefine}, {@code MultiblockEvents.modify}), which doesn't change where the
      * definition originally came from. {@code oldId} and {@code replacement.getId()} are taken
      * separately (rather than always replacing under the same id) so a caller that renamed the
      * definition via {@code builder.id(...)} still cleans up the original id instead of leaving a stale

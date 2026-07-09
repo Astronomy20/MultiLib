@@ -2,13 +2,13 @@
 
 # Migrating from the old PatternBuilder API
 
-The matching/registration system was rewritten. `PatternBuilder`, `PatternManager`, the old `PatternMatcher`, `PatternRegistry`, and `PatternAction` are gone — everything goes through `MultiblockBuilder`/`MultiblockDefinition` via `MultiLibAPI.define(id)`. This is a porting checklist; read [Core Concepts](Core-Concepts.md) first if the new API is unfamiliar.
+The matching/registration system was rewritten. `PatternBuilder`, `PatternManager`, the old `PatternMatcher`, `PatternRegistry`, and `PatternAction` are gone — everything goes through `MultiblockBuilder`/`MultiblockDefinition` via `MultiLib.define(id)`. This is a porting checklist; read [Core Concepts](Core-Concepts.md) first if the new API is unfamiliar.
 
 ## Class mapping
 
 | Old | New |
 |---|---|
-| `PatternManager.pattern()` | `MultiLibAPI.define(id)` |
+| `PatternManager.pattern()` | `MultiLib.define(id)` |
 | `PatternBuilder` | `MultiblockBuilder` |
 | `PatternMatcher` (one algorithm) | `PatternMatcher` dispatcher → `ShapedMatcher` / `ShapelessMatcher` / `FunctionalMatcher` |
 | `PatternRegistry` | `MultiblockRegistry` (+ `BlockDefinitionRegistry`) |

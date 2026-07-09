@@ -1,6 +1,6 @@
 package net.astronomy.multilib.example;
 
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.FormationMode;
 import net.astronomy.multilib.api.definition.RotationMode;
 import net.astronomy.multilib.api.ingredient.BlockIngredient;
@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.Blocks;
  */
 public class ExampleDirectionalPattern {
     public static void registerAll() {
-        MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("multilib", "example_directional"))
+        MultiLib.define(ResourceLocation.fromNamespaceAndPath("multilib", "example_directional"))
                 .layer(
                         " G ",
                         "IOD",
@@ -42,6 +42,6 @@ public class ExampleDirectionalPattern {
 
         // The core's own placed facing (read from its HORIZONTAL_FACING blockstate property) pins the
         // ghost overlay/auto-place preview orientation - see OverlayRequestHandler.extractMainFace.
-        MultiLibAPI.block(ExampleSetup.DIRECTIONAL_CONTROLLER_BLOCK).mainFace().build();
+        MultiLib.block(ExampleSetup.DIRECTIONAL_CONTROLLER_BLOCK).mainFace().build();
     }
 }

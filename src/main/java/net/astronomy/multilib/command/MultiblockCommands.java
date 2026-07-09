@@ -104,7 +104,7 @@ public final class MultiblockCommands {
      * Unlike {@link #suggestDefinitionIds} (every registered id, used by {@code info}/{@code prefer
      * clear}-less contexts), {@code prefer}'s {@code definition} argument only ever makes sense as one of
      * the definitions actually ambiguous at the already-typed {@code pos} - the same "core or activation
-     * symbol at this block" candidate set {@link net.astronomy.multilib.api.MultiLibAPI#setPreferredDefinition}
+     * symbol at this block" candidate set {@link net.astronomy.multilib.api.MultiLib#setPreferredDefinition}
      * itself validates against (see {@link MultiblockAmbiguityResolver#candidatesAt}), so a suggestion
      * offered here always resolves to a binding {@code setPreferredDefinition} will actually accept.
      * {@code pos} may not be a loaded/valid position yet while the player is still mid-typing (or may be
@@ -307,7 +307,7 @@ public final class MultiblockCommands {
         BlockPos pos = BlockPosArgument.getLoadedBlockPos(ctx, "pos");
         ResourceLocation id = ResourceLocationArgument.getId(ctx, "definition");
 
-        boolean accepted = net.astronomy.multilib.api.MultiLibAPI.setPreferredDefinition(level, pos, id);
+        boolean accepted = net.astronomy.multilib.api.MultiLib.setPreferredDefinition(level, pos, id);
         if (!accepted) {
             src.sendFailure(Component.translatable("command.multilib.prefer.invalid",
                     id.toString(), pos.getX(), pos.getY(), pos.getZ()));
@@ -323,7 +323,7 @@ public final class MultiblockCommands {
         ServerLevel level = src.getLevel();
         BlockPos pos = BlockPosArgument.getLoadedBlockPos(ctx, "pos");
 
-        net.astronomy.multilib.api.MultiLibAPI.clearPreferredDefinition(level, pos);
+        net.astronomy.multilib.api.MultiLib.clearPreferredDefinition(level, pos);
         src.sendSuccess(() -> Component.translatable("command.multilib.prefer.cleared",
                 pos.getX(), pos.getY(), pos.getZ()), true);
         return 1;

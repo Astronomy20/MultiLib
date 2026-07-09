@@ -328,7 +328,7 @@ public class OverlayRequestHandler {
     // send a request for a definition that opted out, and this must refuse it rather than preview
     // anyway. Ambiguity (2+ eligible candidates for this exact block) is resolved by
     // MultiblockAmbiguityResolver - priority order by default, or a MultiblockPreferenceTracker
-    // override if one was set (see MultiLibAPI#setPreferredDefinition / core.preference).
+    // override if one was set (see MultiLib#setPreferredDefinition / core.preference).
     private static MultiblockDefinition findDefinitionAt(ServerLevel level, BlockPos pos) {
         return MultiblockAmbiguityResolver.resolve(level, pos,
                         (def, state) -> def.isGhostOverlayEnabled() && def.matchesActivationOrCore(state))

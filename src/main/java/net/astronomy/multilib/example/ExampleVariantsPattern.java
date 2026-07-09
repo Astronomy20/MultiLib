@@ -1,6 +1,6 @@
 package net.astronomy.multilib.example;
 
-import net.astronomy.multilib.api.MultiLibAPI;
+import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.FormationMode;
 import net.astronomy.multilib.api.definition.RotationMode;
 import net.astronomy.multilib.api.ingredient.BlockIngredient;
@@ -24,7 +24,7 @@ public class ExampleVariantsPattern {
         //      same instance UUID, controller state/contents preserved, no onBroken/onFormed
         //      callbacks - the wrench event reports WrenchResult.VariantChanged (KubeJS status
         //      "variant_changed"), and JEI/REI/EMI show one page per variant.
-        MultiLibAPI.define(ResourceLocation.fromNamespaceAndPath("multilib", "example_variants"))
+        MultiLib.define(ResourceLocation.fromNamespaceAndPath("multilib", "example_variants"))
                 .key('I', BlockIngredient.of(Blocks.IRON_BLOCK)) // shared keys apply to every variant
                 .key('L', BlockIngredient.of(Blocks.LAPIS_BLOCK))
                 .variant("tall", v -> v

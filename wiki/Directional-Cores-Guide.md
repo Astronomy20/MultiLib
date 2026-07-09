@@ -35,7 +35,7 @@ This is `ExampleDirectionalControllerBlock` in the source. `.mainFace()` is inde
 ## 2. Declare `.mainFace()`
 
 ```java
-MultiLibAPI.block(MyBlocks.DIRECTIONAL_CONTROLLER).mainFace().build();
+MultiLib.block(MyBlocks.DIRECTIONAL_CONTROLLER).mainFace().build();
 ```
 
 A block-level declaration ([`BlockDefinition`](api-reference/BlockDefinition.md)). It takes effect only if the block has `HORIZONTAL_FACING` or `FACING` (`extractMainFace` checks horizontal first, then projects a vertical `FACING` onto the nearest horizontal). On a block with neither, it's a silent no-op — the preview just follows the player.
@@ -45,7 +45,7 @@ A block-level declaration ([`BlockDefinition`](api-reference/BlockDefinition.md)
 Nothing special; keep whatever rotation policy fits:
 
 ```java
-MultiLibAPI.define(id)
+MultiLib.define(id)
         .layer(" G ", "IOD", " E ")
         .key('O', BlockIngredient.of(MyBlocks.DIRECTIONAL_CONTROLLER))
         // G/D/E/I keys...
@@ -53,7 +53,7 @@ MultiLibAPI.define(id)
         .rotations(RotationMode.HORIZONTAL)
         .build();
 
-MultiLibAPI.block(MyBlocks.DIRECTIONAL_CONTROLLER).mainFace().build();
+MultiLib.block(MyBlocks.DIRECTIONAL_CONTROLLER).mainFace().build();
 ```
 
 This is `ExampleDirectionalPattern`, asymmetric on all four sides so the preview orientation is obvious when testing. The key point: **"the matcher accepts any rotation" and "the preview shows one fixed orientation" are independent.** `RotationMode.HORIZONTAL` still lets the structure be built facing any direction; `.mainFace()` only changes what the preview shows before it's built.

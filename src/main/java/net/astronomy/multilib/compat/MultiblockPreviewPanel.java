@@ -791,11 +791,11 @@ public final class MultiblockPreviewPanel {
     /**
      * The recipe-category icon shared by JEI/REI/EMI/FTB Quests. Resolution order: the
      * {@code categoryIcon} client config value if set (always wins), then whatever a consuming mod
-     * registered via {@link net.astronomy.multilib.api.client.MultiLibClientAPI#setCategoryIcon},
+     * registered via {@link net.astronomy.multilib.api.client.MultiLibClient#setCategoryIcon},
      * then a plain structure block.
      */
     public static ItemStack categoryIconStack() {
-        return net.astronomy.multilib.api.client.MultiLibClientAPI.getCategoryIconStack();
+        return net.astronomy.multilib.api.client.MultiLibClient.getCategoryIconStack();
     }
 
     /** The multiblock's display name, for the title row - its auto-derived translation key's text. */

@@ -9,7 +9,7 @@ Systems beyond the shaped-pattern-plus-callbacks flow of [Core Concepts](Core-Co
 `.shapeless()` switches from a fixed grid to a **flood-fill** match (`ShapelessMatcher`): it fills outward from the placed block (6-directional, stopping at air) up to `.maxSize(x, y, z)` (default `64,64,64`), then validates the blob.
 
 ```java
-MultiLibAPI.define(id)
+MultiLib.define(id)
         .shapeless()
         .minSize(3, 3, 3).maxSize(9, 9, 9)
         .shell(BlockIngredient.of(Blocks.IRON_BLOCK))
@@ -133,7 +133,7 @@ Requirements: the core extends `AbstractMultiblockControllerBlock`, parts extend
 Non-core symbols can share a block with an adjacent structure, but this is **opt-in**. `getWallSharingMode(char)` resolves per symbol, highest priority first:
 
 1. **Symbol-level** — `.key(symbol, ingredient, mode)` or `.noWallSharing(...)`.
-2. **Block-level** — `IWallSharable.getDefaultWallSharingMode()` or `MultiLibAPI.block(block).wallSharing(...)`.
+2. **Block-level** — `IWallSharable.getDefaultWallSharingMode()` or `MultiLib.block(block).wallSharing(...)`.
 3. **Definition-level** — `.wallSharing(boolean)`, `false` unless set.
 4. **Fallback** — ordinary symbols follow the definition default; the core/activation symbol always defaults to `DISABLED` unless explicitly overridden.
 
@@ -143,7 +143,7 @@ Non-core symbols can share a block with an adjacent structure, but this is **opt
 
 `.autoPlace()` enables Ctrl+Right-click auto-building: clicking an unformed core with the modifier held scans each fixed-grid cell, and for every missing cell whose expected block the player holds, places it — consuming one item (free in creative). It then attempts formation, so a stocked player completes a structure in one click. An action-bar message reports blocks placed and still missing.
 
-The modifier key defaults to Left Ctrl and isn't a Controls-menu keybind; a consuming mod can rebind it via [`MultiLibClientAPI.setAutoPlaceModifierKey(...)`](api-reference/MultiLibClientAPI.md#auto-place-modifier-key). Its repeat speed is tunable in [config](Configuration.md#commonconfig-configmultilibcommontoml) (`autoPlaceSpeedHeldItem`/`autoPlaceSpeedEmptyHand`).
+The modifier key defaults to Left Ctrl and isn't a Controls-menu keybind; a consuming mod can rebind it via [`MultiLibClient.setAutoPlaceModifierKey(...)`](api-reference/MultiLibClient.md#auto-place-modifier-key). Its repeat speed is tunable in [config](Configuration.md#commonconfig-configmultilibcommontoml) (`autoPlaceSpeedHeldItem`/`autoPlaceSpeedEmptyHand`).
 
 ## Ghost overlay
 
@@ -153,7 +153,7 @@ With `.mainFace()` on the core's `BlockDefinition` ([Directional Cores Guide](Di
 
 ## IO ports
 
-`MultiLibAPI.block(block).ioPort().build()` marks a block whose item/fluid/energy capability requests are forwarded to the controller of whichever instance contains it (`IOPortCapabilityHandler`). A small "input/output" block anywhere in a structure then proxies the controller's handlers, with no forwarding code of your own. For a port with its own block entity, see [Ports](api-reference/Ports.md).
+`MultiLib.block(block).ioPort().build()` marks a block whose item/fluid/energy capability requests are forwarded to the controller of whichever instance contains it (`IOPortCapabilityHandler`). A small "input/output" block anywhere in a structure then proxies the controller's handlers, with no forwarding code of your own. For a port with its own block entity, see [Ports](api-reference/Ports.md).
 
 ## Built-in machine toolkit
 

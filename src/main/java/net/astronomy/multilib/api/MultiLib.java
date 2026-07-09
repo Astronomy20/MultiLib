@@ -27,7 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public class MultiLibAPI {
+public class MultiLib {
 
     private static final Map<Block, WallSharingMode> BLOCK_WALL_SHARING = new HashMap<>();
 
