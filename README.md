@@ -70,4 +70,4 @@ MIT - see the license file for details.
 ## Links
 
 - [Documentation](https://astronomy20.github.io/MultiLib/)
-- [Wiki source](wiki/index.md)
+- [Wiki](wiki/index.md)
