@@ -45,7 +45,6 @@ Registered once at mod setup, this detects the structure in every allowed rotati
 - **Full API:** [API Reference](api-reference/MultiLib.md).
 - **Tuning behavior?** [Configuration](Configuration.md).
 - **Authoring in-game?** [Dev Tools](Dev-Tools.md).
-- **Porting old code?** [Migrating from PatternBuilder](Migrating-From-PatternBuilder.md).
 - **Stuck?** [FAQ & Troubleshooting](FAQ-Troubleshooting.md).
 
 ## Contributing

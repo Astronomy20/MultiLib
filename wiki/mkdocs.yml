@@ -61,4 +61,3 @@ nav:
           - RotationUtils: api-reference/RotationUtils.md
   - Help:
       - FAQ & Troubleshooting: FAQ-Troubleshooting.md
-      - Migrating from PatternBuilder: Migrating-From-PatternBuilder.md
