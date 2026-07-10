@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "multilib_model_hidden=false": { "model": "multilib:block/example_tank" },
+    "multilib_model_hidden=true":  { "model": "multilib:block/example_tank" }
+  }
+}

@@ -50,9 +50,9 @@ public final class MultiblockStructurePreviewRenderer {
                                int centerX, int centerY, int viewSize,
                                float yawDegrees, float pitchDegrees, @Nullable Integer onlyLayer,
                                @Nullable BlockHit highlight) {
-        List<List<String>> layers = definition.getLayers();
+        List<List<String>> layers = definition.getPreviewLayers();
         if (layers.isEmpty()) return;
-        Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
+        Map<Character, BlockIngredient> blockMap = definition.getPreviewBlockMap();
 
         int layersCount = layers.size();
         int maxWidth = 1, maxHeight = 1;
@@ -137,9 +137,9 @@ public final class MultiblockStructurePreviewRenderer {
     public static BlockHit pick(MultiblockDefinition definition, int centerX, int centerY, int viewSize,
                                  float yawDegrees, float pitchDegrees, @Nullable Integer onlyLayer,
                                  double mouseX, double mouseY) {
-        List<List<String>> layers = definition.getLayers();
+        List<List<String>> layers = definition.getPreviewLayers();
         if (layers.isEmpty()) return null;
-        Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
+        Map<Character, BlockIngredient> blockMap = definition.getPreviewBlockMap();
 
         int layersCount = layers.size();
         int maxWidth = 1, maxHeight = 1;

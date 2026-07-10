@@ -22,6 +22,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -286,16 +287,42 @@ public abstract class AbstractMultiblockControllerBE extends BlockEntity {
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        // Mirrors saveAdditional() exactly (instanceId + saveController content included) - the default
+        // BlockEntity#handleUpdateTag() feeds whatever this returns straight into loadAdditional() on the
+        // client, so leaving any of these out means the client silently keeps stale/default values for
+        // them forever (e.g. a controller's own fluid tank never reflecting real contents client-side,
+        // which broke fill/drain "full" detection - see ExampleTankBlock#useItemOn).
         CompoundTag tag = new CompoundTag();
         tag.putString("state", state.getId().toString());
+        if (instanceId != null) {
+            tag.put("instanceId", NbtUtils.createUUID(instanceId));
+        }
         if (activeModelId != null) {
             tag.putString("activeModelId", activeModelId.toString());
         }
+        saveController(tag, registries);
         return tag;
     }
 
     @Override
     public @Nullable ClientboundBlockEntityDataPacket getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    /**
+     * {@code setChanged()} alone (the default {@code onChanged} callback wired into every controller's
+     * component fields, e.g. {@link net.astronomy.multilib.api.component.FluidTankComponent}) only marks
+     * this block entity's chunk dirty for saving - it does NOT push an update packet to nearby clients.
+     * Without this override, content changes (fluid fill/drain, energy/item component changes, etc.) were
+     * only ever visible to the client that triggered them via other means (open GUI, chat message) and
+     * never actually synced, so every OTHER client-side read of this data (e.g. deciding whether a bucket
+     * interaction should fall through to placing a world fluid block) worked off permanently stale data.
+     */
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
     }
 }

@@ -10,6 +10,7 @@ import net.astronomy.multilib.core.matching.PatternMatcher;
 import net.astronomy.multilib.core.matching.ShapedMatcher;
 import net.astronomy.multilib.core.matching.StructureOrientation;
 import net.astronomy.multilib.core.registry.MultiblockAmbiguityResolver;
+import net.astronomy.multilib.core.tracking.WorldMultiblockTracker;
 import net.astronomy.multilib.network.GhostBlockData;
 import net.astronomy.multilib.network.OverlayDataPacket;
 import net.astronomy.multilib.network.RequestOverlayPacket;
@@ -25,9 +26,13 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -81,7 +86,7 @@ public class OverlayRequestHandler {
             }
 
             MultiblockDefinition definition = findDefinitionAt(level, corePos);
-            int totalLayers = definition != null ? definition.getLayerCount() : 1;
+            int totalLayers = definition != null ? definition.getPreviewLayerCount() : 1;
             PlayerOverlayState current = PLAYER_STATES.get(player.getUUID());
             int nextMode;
 
@@ -231,7 +236,7 @@ public class OverlayRequestHandler {
                 continue;
             }
 
-            int totalLayers = tickDefinition != null ? tickDefinition.getLayerCount() : 1;
+            int totalLayers = tickDefinition != null ? tickDefinition.getPreviewLayerCount() : 1;
             sendOverlayUpdate(player, level, corePos, tickDefinition, entry.getValue().currentMode(), totalLayers,
                     entry.getValue().axis(), entry.getValue().rotation(), entry.getValue().anchorSymbol(),
                     entry.getValue().activationGameTime());
@@ -349,7 +354,15 @@ public class OverlayRequestHandler {
     private static List<GhostBlockData> calculateGhostBlocks(ServerLevel level, BlockPos corePos,
                                                                MultiblockDefinition definition, int mode,
                                                                String axis, int rotation, char anchorSymbol) {
-        if (definition == null || definition.getLayers().isEmpty()) return List.of();
+        if (definition == null || definition.getPreviewLayers().isEmpty()) return List.of();
+
+        // A position already covered by a tracked (formed) instance of THIS definition has nothing left
+        // to preview - checked directly against the tracker rather than relying solely on
+        // PatternMatcher.matches() below, which re-derives success/failure from scratch every refresh
+        // and has no notion of "already registered" on its own.
+        for (var existing : WorldMultiblockTracker.get(level).getInstancesAt(corePos)) {
+            if (existing.getDefinitionId().equals(definition.getId())) return null;
+        }
 
         MatchResult result = PatternMatcher.matches(level, corePos, definition);
         if (result instanceof MatchResult.Success) {
@@ -357,8 +370,8 @@ public class OverlayRequestHandler {
         }
 
         List<GhostBlockData> ghostData = new ArrayList<>();
-        List<List<String>> layers = definition.getLayers();
-        Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
+        List<List<String>> layers;
+        Map<Character, BlockIngredient> blockMap;
 
         // findDefinitionAt/handleRequest already resolved which declared symbol was actually clicked
         // (core or activation - see resolveAnchorSymbol) - anchor on that cell specifically, since
@@ -366,7 +379,55 @@ public class OverlayRequestHandler {
         // symbol is kept separately below purely for the "always highlight the core" rendering rule,
         // regardless of which symbol the preview was anchored on.
         char coreSymbol = definition.getCoreSymbol();
-        BlockPos origin = StructureOrientation.findSymbolOrigin(corePos, layers, anchorSymbol, axis, rotation);
+        BlockPos origin;
+        // The axis/rotation actually used below - normally just axis/rotation as passed in, EXCEPT for
+        // shapeless (see the override inside the branch just below).
+        String effectiveAxis = axis;
+        int effectiveRotation = rotation;
+        if (definition.isShapeless()) {
+            // A shapeless structure has no fixed relative layout to preview from a static grid - and
+            // critically, it has no reason to be centered on wherever the player happened to click
+            // either. Instead of guessing, this walks outward from corePos through whatever's ALREADY
+            // built (same connectivity rule real matching uses - see ShapelessMatcher#matchSolidFill),
+            // so the ghost is anchored exactly to the real, currently-built structure: already-correct
+            // blocks render nothing (see the per-cell loop below), and only the genuinely missing
+            // extension - up to at least minSize - shows as a ghost. This is what "anchored to a
+            // partially-built structure" actually requires: previewing a fixed abstract box near the
+            // click was never going to line up with a real, asymmetric, already-in-progress build.
+            Vec3iBox extent = floodCurrentExtent(level, corePos, definition);
+            int sizeX = Math.min(Math.max(extent.sizeX(), definition.getShapelessMinSize().getX()), definition.getShapelessMaxSize().getX());
+            int sizeY = Math.min(Math.max(extent.sizeY(), definition.getShapelessMinSize().getY()), definition.getShapelessMaxSize().getY());
+            int sizeZ = Math.min(Math.max(extent.sizeZ(), definition.getShapelessMinSize().getZ()), definition.getShapelessMaxSize().getZ());
+            // The per-cell loop below subtracts width/2 and height/2 (centerX/centerZ) from col/row
+            // before offsetting from `origin` - i.e. it always treats `origin` as the X/Z CENTER of the
+            // layer, never a corner (Y is the one axis it doesn't center: relY lands exactly on origin.y
+            // at the bottom layer). Compensate here so `origin` still ends up anchored at the real
+            // min-corner extent.minX/Y/Z once that centering is applied, instead of drifting the whole
+            // box off to one side.
+            origin = new BlockPos(extent.minX() + sizeX / 2, extent.minY(), extent.minZ() + sizeZ / 2);
+
+            char fillSymbol = definition.hasActivation() ? definition.getActivationSymbol() : definition.getCoreSymbol();
+            String row = String.valueOf(fillSymbol).repeat(sizeX);
+            List<String> rows = new ArrayList<>(sizeZ);
+            for (int z = 0; z < sizeZ; z++) rows.add(row);
+            List<String> immutableRows = List.copyOf(rows);
+            List<List<String>> dynLayers = new ArrayList<>(sizeY);
+            for (int y = 0; y < sizeY; y++) dynLayers.add(immutableRows);
+            layers = dynLayers;
+            blockMap = definition.getBlockMap();
+
+            // ShapelessMatcher never applies a rotation to real matching (it always builds MatchData
+            // with a fixed TransformData(0, false, "NONE")) - the ghost must match that, or the preview
+            // box rotates around origin based on whichever way the player happens to be facing (the
+            // fallback handleRequest uses when StructureOrientation#detectFromPlacedBlocks has nothing
+            // to detect from, which for shapeless - empty getLayers() - is always).
+            effectiveAxis = "Y";
+            effectiveRotation = 0;
+        } else {
+            layers = definition.getPreviewLayers();
+            blockMap = definition.getPreviewBlockMap();
+            origin = StructureOrientation.findSymbolOrigin(corePos, layers, anchorSymbol, axis, rotation);
+        }
 
         for (int layerIdx = 0; layerIdx < layers.size(); layerIdx++) {
             // mode counts up from the bottom (mode=1 = bottommost, displayed "1/N") while layers[]
@@ -393,7 +454,7 @@ public class OverlayRequestHandler {
 
                     int relX = col - centerX;
                     int relZ = row - centerZ;
-                    int[] t = ShapedMatcher.applyTransform(relX, relY, relZ, axis, rotation);
+                    int[] t = ShapedMatcher.applyTransform(relX, relY, relZ, effectiveAxis, effectiveRotation);
                     BlockPos checkPos = origin.offset(t[0], t[1], t[2]);
 
                     BlockState expectedState = getRepresentativeState(ingredient);
@@ -423,5 +484,67 @@ public class OverlayRequestHandler {
 
     private static BlockState getRepresentativeState(BlockIngredient ingredient) {
         return ingredient.getRenderState();
+    }
+
+    /** Inclusive-bounds bounding box, plus its own size per axis - see {@link #floodCurrentExtent}. */
+    private record Vec3iBox(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        int sizeX() { return maxX - minX + 1; }
+        int sizeY() { return maxY - minY + 1; }
+        int sizeZ() { return maxZ - minZ + 1; }
+    }
+
+    /**
+     * Walks outward from {@code corePos} through connected blocks matching any of {@code definition}'s
+     * declared key() ingredients - the same connectivity rule {@code ShapelessMatcher}'s solid-fill path
+     * uses to determine what's actually part of the structure - to find the bounding box of whatever's
+     * ALREADY built, for the ghost overlay to anchor on (see {@link #calculateGhostBlocks}). Bounded by
+     * {@code maxSize} distance from {@code corePos} per axis (a real structure can never be found outside
+     * that anyway) plus a generous absolute node cap, purely as a performance backstop against an
+     * accidentally common material extending into unrelated terrain.
+     */
+    private static Vec3iBox floodCurrentExtent(ServerLevel level, BlockPos corePos, MultiblockDefinition definition) {
+        var maxSz = definition.getShapelessMaxSize();
+        Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
+
+        int minX = corePos.getX(), maxX = corePos.getX();
+        int minY = corePos.getY(), maxY = corePos.getY();
+        int minZ = corePos.getZ(), maxZ = corePos.getZ();
+
+        Set<BlockPos> visited = new HashSet<>();
+        Deque<BlockPos> queue = new ArrayDeque<>();
+        visited.add(corePos);
+        queue.add(corePos);
+        int cap = 4096;
+
+        while (!queue.isEmpty() && visited.size() < cap) {
+            BlockPos current = queue.poll();
+            minX = Math.min(minX, current.getX()); maxX = Math.max(maxX, current.getX());
+            minY = Math.min(minY, current.getY()); maxY = Math.max(maxY, current.getY());
+            minZ = Math.min(minZ, current.getZ()); maxZ = Math.max(maxZ, current.getZ());
+
+            for (Direction dir : Direction.values()) {
+                if (visited.size() >= cap) break;
+                BlockPos next = current.relative(dir);
+                if (visited.contains(next)) continue;
+                if (Math.abs(next.getX() - corePos.getX()) >= maxSz.getX()) continue;
+                if (Math.abs(next.getY() - corePos.getY()) >= maxSz.getY()) continue;
+                if (Math.abs(next.getZ() - corePos.getZ()) >= maxSz.getZ()) continue;
+
+                BlockState state = level.getBlockState(next);
+                boolean matches = false;
+                for (BlockIngredient ingredient : blockMap.values()) {
+                    if (ingredient.matches(level, next, state)) {
+                        matches = true;
+                        break;
+                    }
+                }
+                if (!matches) continue;
+
+                visited.add(next);
+                queue.add(next);
+            }
+        }
+
+        return new Vec3iBox(minX, minY, minZ, maxX, maxY, maxZ);
     }
 }

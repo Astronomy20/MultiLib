@@ -5,6 +5,7 @@ import dev.emi.emi.api.EmiEntrypoint;
 import dev.emi.emi.api.EmiPlugin;
 import dev.emi.emi.api.EmiRegistry;
 import dev.emi.emi.api.recipe.EmiRecipeCategory;
+import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.client.RecipeViewerLink;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
@@ -36,11 +37,13 @@ public class MultiblockEmiPlugin implements EmiPlugin {
         Map<ResourceLocation, MultiblockEmiRecipe> byDefinitionId = new HashMap<>();
         // One recipe per variant - see MultiblockJeiPlugin#registerRecipes for the same convention.
         // putIfAbsent keeps RecipeViewerLink pointed at the parent (first/primary) variant's page.
-        MultiblockRegistry.getAllDefinitions().forEach(def -> def.getAllVariants().forEach(variant -> {
-            MultiblockEmiRecipe recipe = new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(variant));
-            registry.addRecipe(recipe);
-            byDefinitionId.putIfAbsent(def.getId(), recipe);
-        }));
+        MultiblockRegistry.getAllDefinitions().stream()
+                .filter(MultiblockDefinition::isShowInRecipeViewers)
+                .forEach(def -> def.getAllVariants().forEach(variant -> {
+                    MultiblockEmiRecipe recipe = new MultiblockEmiRecipe(MultiblockRecipeDisplay.of(variant));
+                    registry.addRecipe(recipe);
+                    byDefinitionId.putIfAbsent(def.getId(), recipe);
+                }));
 
         // Lets other MultiLib compat modules (e.g. compat/ftbquests) open this exact multiblock's
         // recipe page without depending on EMI directly. Opens the recipe instance directly

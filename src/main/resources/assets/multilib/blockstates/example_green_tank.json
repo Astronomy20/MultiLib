@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "multilib:block/example_green_tank" }
+  }
+}

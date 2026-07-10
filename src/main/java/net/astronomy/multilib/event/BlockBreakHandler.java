@@ -6,7 +6,9 @@ import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBE;
 import net.astronomy.multilib.api.blockentity.IMultiblockPart;
 import net.astronomy.multilib.api.callback.MultiblockBrokenCallback;
 import net.astronomy.multilib.api.callback.MultiblockBrokenContext;
+import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.api.event.MultiblockBrokenEvent;
+import net.astronomy.multilib.api.ingredient.BlockIngredient;
 import net.astronomy.multilib.api.instance.MultiblockContext;
 import net.astronomy.multilib.api.instance.MultiblockInstance;
 import net.astronomy.multilib.core.registry.BlockDefinitionRegistry;
@@ -33,11 +35,78 @@ public class BlockBreakHandler {
 
         WorldMultiblockTracker tracker = WorldMultiblockTracker.get(level);
         Set<MultiblockInstance> instances = tracker.getInstancesAt(pos);
-        if (instances.isEmpty()) return;
+        if (instances.isEmpty()) {
+            // TEMP DEBUG - remove once the "hole stays formed" bug is confirmed fixed. If this fires for a
+            // position the player clearly just broke off a visibly-formed structure, it means the tracker
+            // had no record of that position at all at break time (e.g. a second fast break landing before
+            // the first one's deferred retrigger re-registered anything) - the structure is left stale.
+            MultiLib.LOGGER.info("[MultiLib DEBUG] onBlockBreak: no tracked instance at broken pos={}", pos);
+            return;
+        }
 
         for (MultiblockInstance instance : new HashSet<>(instances)) {
             handleBreak(level, tracker, instance, pos, MultiblockBrokenContext.BreakReason.PLAYER_BREAK);
+            // Deferred, NOT called inline here: BlockEvent.BreakEvent fires BEFORE the block at pos is
+            // actually removed from the world (see handleBreak's own comment on this same fact) - a
+            // match attempt run synchronously right now would still see the old block state at pos and
+            // just re-discover the exact same structure unchanged, never a smaller one. Queuing via
+            // the server's own task queue runs this after the current tick's synchronous block removal
+            // has actually happened, so the retry sees pos as air like it's supposed to.
+            level.getServer().execute(() -> retriggerRemainingStructure(level, instance, pos));
         }
+    }
+
+    /**
+     * For a broken shapeless instance, tries re-forming from whatever's left - e.g. breaking one block
+     * off the top of a solid-fill tank should re-form the still-valid smaller structure underneath,
+     * not just leave it unformed until something else happens to re-trigger it. Shaped/pattern-provider
+     * definitions are deliberately left alone: they have no notion of "still valid at a smaller size"
+     * the way shapeless min/maxSize does, so there's nothing meaningful to retry there.
+     */
+    private static void retriggerRemainingStructure(ServerLevel level, MultiblockInstance brokenInstance, BlockPos removedPos) {
+        MultiblockDefinition definition = MultiblockRegistry.get(brokenInstance.getDefinitionId()).orElse(null);
+        if (definition == null || !definition.isShapeless() || !definition.hasActivation()) return;
+
+        BlockIngredient activationIngredient = definition.getBlockMap().get(definition.getActivationSymbol());
+        if (activationIngredient == null) return;
+
+        // Try EVERY remaining position, not just the first candidate - matchSolidFill's growth is seeded
+        // from whatever position it's called with, and that seed must end up inside the final matched
+        // bounding box (see its "no valid smaller structure left containing the activation block" case).
+        // If we broke one block off the top layer, the OTHER blocks that used to make up that same now-
+        // invalid layer are still physically present and still pass activationIngredient.matches() - but
+        // seeding the search from one of THEM fails, since the only valid smaller structure left is the
+        // layer below, which doesn't contain that seed position. Stopping at the first match (the old
+        // behavior) could pick exactly one of those and give up entirely, even though a perfectly valid
+        // smaller structure exists and would have matched from a different remaining position (e.g. one
+        // already inside the shrunken layer).
+        boolean reformed = false;
+        for (BlockPos p : brokenInstance.getPositions()) {
+            if (p.equals(removedPos) || !level.isLoaded(p)) continue;
+            BlockState state = level.getBlockState(p);
+            if (!activationIngredient.matches(level, p, state)) continue;
+            if (BlockActivationHandler.triggerFormationAt(level, p, null)) {
+                reformed = true;
+                break;
+            }
+        }
+        // TEMP DEBUG - remove once the "hole stays formed" bug is confirmed fixed.
+        MultiLib.LOGGER.info("[MultiLib DEBUG] retriggerRemainingStructure removedPos={} oldSize={} reformed={} "
+                        + "newInstancesAtRemovedNeighbors={}", removedPos, brokenInstance.getPositions().size(),
+                reformed, describeNeighborInstances(level, removedPos));
+    }
+
+    private static String describeNeighborInstances(ServerLevel level, BlockPos removedPos) {
+        WorldMultiblockTracker tracker = WorldMultiblockTracker.get(level);
+        StringBuilder sb = new StringBuilder();
+        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+            BlockPos n = removedPos.relative(dir);
+            Set<MultiblockInstance> at = tracker.getInstancesAt(n);
+            sb.append(dir).append("=").append(at.size());
+            for (MultiblockInstance i : at) sb.append("(size=").append(i.getPositions().size()).append(")");
+            sb.append(" ");
+        }
+        return sb.toString();
     }
 
     public static void handleBreak(ServerLevel level, WorldMultiblockTracker tracker,
@@ -66,13 +135,11 @@ public class BlockBreakHandler {
                     MultiLib.LOGGER.error("[MultiLib] onBroken callback for '{}' threw", def.getId(), e);
                 }
             }
-            if (def.hasCore()) {
-                instance.getCorePos().ifPresent(corePos -> {
-                    if (level.getBlockEntity(corePos) instanceof AbstractMultiblockControllerBE ctrl) {
-                        ctrl.onStructureBroken(brokenCtx);
-                    }
-                });
-            }
+            BlockActivationHandler.resolveControllerPos(def, instance).ifPresent(controllerPos -> {
+                if (level.getBlockEntity(controllerPos) instanceof AbstractMultiblockControllerBE ctrl) {
+                    ctrl.onStructureBroken(brokenCtx);
+                }
+            });
             for (BlockPos pos : instance.getPositions()) {
                 if (!level.isLoaded(pos)) continue;
                 if (level.getBlockEntity(pos) instanceof IMultiblockPart part) {

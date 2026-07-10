@@ -142,13 +142,20 @@ public class MultiLib {
     }
 
     /**
-     * Binds {@code pos} to {@code definitionId} for every feature that resolves ambiguous multi-
-     * candidate blocks (ghost overlay, auto-place - see {@code core.registry.MultiblockAmbiguityResolver}):
-     * when the block at {@code pos} is a valid core/activation symbol for more than one registered
-     * definition, {@code definitionId} wins there specifically, instead of whichever definition
-     * priority order would otherwise pick. Purely mechanism - MultiLib ships no forced UI for this; a
-     * mod can call it directly from its own tool/GUI/command, or see {@code core.preference} for the
-     * library's own optional dev-facing wrench built on top of the exact same call.
+     * Binds {@code pos} - and every other position reachable from it through directly adjacent blocks
+     * of that exact same type (see {@code MultiblockPreferenceTracker#setForConnectedRegion}) - to
+     * {@code definitionId}, for every feature that resolves ambiguous multi-candidate blocks (ghost
+     * overlay, auto-place - see {@code core.registry.MultiblockAmbiguityResolver}): when the block at
+     * {@code pos} is a valid core/activation symbol for more than one registered definition,
+     * {@code definitionId} wins there specifically, instead of whichever definition priority order
+     * would otherwise pick. The propagation to same-type neighbors matters whenever that block type is
+     * itself the bulk of a structure (e.g. a shapeless definition whose solid-fill body, or a shaped
+     * definition whose walls, are all one material) - otherwise only the single clicked position would
+     * be resolved, and every other identical block belonging to the same structure would stay
+     * ambiguous and could still show a competing definition's ghost. Purely mechanism - MultiLib ships
+     * no forced UI for this; a mod can call it directly from its own tool/GUI/command, or see
+     * {@code core.preference} for the library's own optional dev-facing wrench built on top of the
+     * exact same call.
      * <p>
      * Validates immediately rather than accepting anything: {@code definitionId} must actually be
      * among the candidates {@link MultiblockAmbiguityResolver} would consider for the block currently
@@ -165,7 +172,7 @@ public class MultiLib {
                 .candidatesAt(level, pos, (def, state) -> def.matchesActivationOrCore(state))
                 .stream().anyMatch(def -> def.getId().equals(definitionId));
         if (!valid) return false;
-        MultiblockPreferenceTracker.get(level).set(pos, definitionId);
+        MultiblockPreferenceTracker.get(level).setForConnectedRegion(level, pos, definitionId);
         return true;
     }
 

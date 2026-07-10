@@ -5,6 +5,7 @@ import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.runtime.IJeiRuntime;
+import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.client.RecipeViewerLink;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
@@ -43,6 +44,7 @@ public class MultiblockJeiPlugin implements IModPlugin {
         // parent-first for multi-variant ones, each variant being a full definition the display
         // renders as-is.
         List<MultiblockRecipeDisplay> recipes = MultiblockRegistry.getAllDefinitions().stream()
+                .filter(MultiblockDefinition::isShowInRecipeViewers)
                 .flatMap(def -> def.getAllVariants().stream())
                 .map(MultiblockRecipeDisplay::of)
                 .toList();

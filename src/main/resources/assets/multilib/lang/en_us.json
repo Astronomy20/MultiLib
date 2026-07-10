@@ -101,6 +101,12 @@
   "item.multilib.example_part": "Example Multiblock Part",
   "block.multilib.example_controller": "Example Multiblock Controller",
   "item.multilib.example_controller": "Example Multiblock Controller",
+  "block.multilib.example_tank": "Example Fluid Tank",
+  "item.multilib.example_tank": "Example Fluid Tank",
+  "block.multilib.example_red_tank": "Example Red Tank (Aggregating, Cuboid)",
+  "item.multilib.example_red_tank": "Example Red Tank (Aggregating, Cuboid)",
+  "block.multilib.example_green_tank": "Example Green Tank (Aggregating, Freeform)",
+  "item.multilib.example_green_tank": "Example Green Tank (Aggregating, Freeform)",
   "block.multilib.example_directional_controller": "Example Directional Multiblock Controller",
   "item.multilib.example_directional_controller": "Example Directional Multiblock Controller",
 

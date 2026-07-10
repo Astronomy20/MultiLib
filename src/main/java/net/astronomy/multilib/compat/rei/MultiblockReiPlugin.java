@@ -7,6 +7,7 @@ import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
 import me.shedaniel.rei.api.client.view.ViewSearchBuilder;
 import me.shedaniel.rei.api.common.util.EntryStacks;
 import me.shedaniel.rei.forge.REIPluginClient;
+import net.astronomy.multilib.api.definition.MultiblockDefinition;
 import net.astronomy.multilib.client.RecipeViewerLink;
 import net.astronomy.multilib.compat.MultiblockRecipeDisplay;
 import net.astronomy.multilib.core.registry.MultiblockRegistry;
@@ -77,9 +78,10 @@ public class MultiblockReiPlugin implements REIClientPlugin {
     @Override
     public void registerDisplays(DisplayRegistry registry) {
         // One display per variant - see MultiblockJeiPlugin#registerRecipes for the same convention.
-        MultiblockRegistry.getAllDefinitions().forEach(def ->
-                def.getAllVariants().forEach(variant ->
-                        registry.add(new MultiblockDisplay(MultiblockRecipeDisplay.of(variant))))
-        );
+        MultiblockRegistry.getAllDefinitions().stream()
+                .filter(MultiblockDefinition::isShowInRecipeViewers)
+                .forEach(def ->
+                        def.getAllVariants().forEach(variant ->
+                                registry.add(new MultiblockDisplay(MultiblockRecipeDisplay.of(variant)))));
     }
 }

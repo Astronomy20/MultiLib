@@ -230,7 +230,7 @@ public final class MultiblockPreviewPanel {
 
     public static Layout layout(MultiblockDefinition def, int width, int height) {
         String devSourceLabel = CommonConfig.DEV_MODE.get() ? computeDevSourceLabel(def) : "";
-        return new Layout(width, height, countItems(def).size(), def.getLayerCount(), devSourceLabel);
+        return new Layout(width, height, countItems(def).size(), def.getPreviewLayerCount(), devSourceLabel);
     }
 
     /**
@@ -372,7 +372,7 @@ public final class MultiblockPreviewPanel {
         drawRotateIcon(gfx, lo.autoX() + (BADGE_SZ - BADGE_ICON_SZ) / 2, lo.autoY() + (BADGE_SZ - BADGE_ICON_SZ) / 2, BADGE_ICON_SZ, persistentAutoRotate);
 
         if (vs.selectedHit != null) {
-            BlockIngredient selIng = def.getBlockMap().get(vs.selectedHit.symbol());
+            BlockIngredient selIng = def.getPreviewBlockMap().get(vs.selectedHit.symbol());
             if (selIng != null) {
                 ItemStack selStack = representativeStack(selIng);
                 if (!selStack.isEmpty()) {
@@ -742,7 +742,7 @@ public final class MultiblockPreviewPanel {
      */
     public static List<Map.Entry<ItemStack, Integer>> countItems(MultiblockDefinition def) {
         Map<Character, Integer> symCount = new LinkedHashMap<>();
-        for (List<String> layer : def.getLayers()) {
+        for (List<String> layer : def.getPreviewLayers()) {
             for (String row : layer) {
                 for (char c : row.toCharArray()) {
                     if (c != ' ') symCount.merge(c, 1, Integer::sum);
@@ -751,7 +751,7 @@ public final class MultiblockPreviewPanel {
         }
         record Ranked(ItemStack stack, int count, int rank) {}
         List<Ranked> ranked = new ArrayList<>();
-        Map<Character, BlockIngredient> blockMap = def.getBlockMap();
+        Map<Character, BlockIngredient> blockMap = def.getPreviewBlockMap();
         for (Map.Entry<Character, Integer> e : symCount.entrySet()) {
             char symbol = e.getKey();
             BlockIngredient ing = blockMap.get(symbol);

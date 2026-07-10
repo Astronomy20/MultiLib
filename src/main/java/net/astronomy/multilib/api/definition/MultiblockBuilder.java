@@ -67,6 +67,8 @@ public final class MultiblockBuilder {
     // true by default - see MultiblockBuilder#ghostOverlay's javadoc for why (existing baseline
     // behavior, not a new opt-in capability).
     private boolean ghostOverlay = true;
+    // true by default, same reasoning as ghostOverlay above - see #showInRecipeViewers's javadoc.
+    private boolean showInRecipeViewers = true;
     /** 0 = unset (use {@code CommonConfig.GHOST_OVERLAY_DURATION_SECONDS}), -1 = never expires, positive = override seconds. */
     private int ghostOverlayDurationSeconds = 0;
     private boolean autoPlace = false;
@@ -155,6 +157,7 @@ public final class MultiblockBuilder {
         b.wallSharingEnabled = def.isWallSharingEnabled();
         b.symbolWallSharingOverrides.putAll(def.getSymbolWallSharingOverrides());
         b.ghostOverlay = def.isGhostOverlayEnabled();
+        b.showInRecipeViewers = def.isShowInRecipeViewers();
         b.ghostOverlayDurationSeconds = def.getGhostOverlayDurationSeconds().orElse(0);
         b.autoPlace = def.isAutoPlace();
         b.autoPlaceOverlay = def.isAutoPlaceOverlay();
@@ -472,6 +475,21 @@ public final class MultiblockBuilder {
      */
     public MultiblockBuilder ghostOverlay(boolean enabled) {
         this.ghostOverlay = enabled;
+        return this;
+    }
+
+    /**
+     * Whether this definition shows up as a recipe/structure page in JEI/REI/EMI at all. Defaults to
+     * {@code true} - existing baseline behavior, not a new opt-in feature. Call
+     * {@code .showInRecipeViewers(false)} for a definition that has no fixed "recipe" a player would
+     * meaningfully look up - e.g. a shapeless, dynamically-resizable structure like an expandable tank:
+     * every size within its min/maxSize range is equally valid, so a single recipe-viewer page (which
+     * can only ever show one representative size) would be misleading rather than helpful. Unaffected:
+     * the in-world ghost overlay ({@link #ghostOverlay(boolean)}) and the {@code /multiblock} command's
+     * own listing, both of which are asked-for explicitly rather than browsed passively.
+     */
+    public MultiblockBuilder showInRecipeViewers(boolean enabled) {
+        this.showInRecipeViewers = enabled;
         return this;
     }
 
@@ -799,7 +817,7 @@ public final class MultiblockBuilder {
                         effectiveFreeBlocks,
                         shapeless, shapelessMinSize, shapelessMaxSize,
                         shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
-                        wallSharingEnabled, symbolWallSharingOverrides, ghostOverlay, ghostOverlayDurationSeconds,
+                        wallSharingEnabled, symbolWallSharingOverrides, ghostOverlay, ghostOverlayDurationSeconds, showInRecipeViewers,
                         modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
                         keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty,
                         spec.name(), List.of(), List.of(), Map.of()
@@ -817,7 +835,7 @@ public final class MultiblockBuilder {
                 effectiveFreeBlocks,
                 shapeless, shapelessMinSize, shapelessMaxSize,
                 shellIngredient, shellFaces, interiorIngredient, shapelessRequirements,
-                wallSharingEnabled, symbolWallSharingOverrides, ghostOverlay, ghostOverlayDurationSeconds,
+                wallSharingEnabled, symbolWallSharingOverrides, ghostOverlay, ghostOverlayDurationSeconds, showInRecipeViewers,
                 modelId, iconItem, resolvedNameKey, uniqueSymbols, surfaceOnlySymbols, frameOnlySymbols, insideOnlySymbols,
                 keepVisibleSymbols, autoPlace, autoPlaceOverlay, allowedRotations, tierSpecs, formedProperty,
                 variantName, derivedVariants, rawSpecsForRecord, sharedBlockMapForRecord

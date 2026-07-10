@@ -3,6 +3,7 @@ package net.astronomy.multilib.event;
 import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBE;
 import net.astronomy.multilib.api.blockentity.IMultiblockPart;
+import net.astronomy.multilib.api.callback.MultiblockBrokenContext;
 import net.astronomy.multilib.api.callback.MultiblockFormedCallback;
 import net.astronomy.multilib.api.callback.MultiblockFormedContext;
 import net.astronomy.multilib.api.definition.FormationMode;
@@ -32,8 +33,10 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @EventBusSubscriber(modid = MultiLib.MODID)
@@ -46,10 +49,9 @@ public class BlockActivationHandler {
         ServerPlayer player = event.getEntity() instanceof ServerPlayer sp ? sp : null;
 
         List<MultiblockDefinition> candidates = MultiblockRegistry.getCandidatesFor(placedBlock);
-        if (!candidates.isEmpty() && MultiLib.LOGGER.isDebugEnabled()) {
-            MultiLib.LOGGER.debug("[MultiLib] onBlockPlaced: {} at {} has {} candidate definition(s): {}",
-                    placedBlock, event.getPos(), candidates.size(), candidates.stream().map(d -> d.getId().toString()).toList());
-        }
+        // TEMP DEBUG - remove once the "block vanishes right after placing" bug is confirmed fixed.
+        MultiLib.LOGGER.info("[MultiLib DEBUG] onBlockPlaced: {} at {}, {} candidate definition(s)",
+                placedBlock, event.getPos(), candidates.size());
 
         for (MultiblockDefinition definition : candidates) {
             if (!definition.getFormationMode().allowsAutomatic()) continue;
@@ -61,9 +63,12 @@ public class BlockActivationHandler {
 
             MatchResult result = PatternMatcher.matches(level, event.getPos(), definition);
             if (result instanceof MatchResult.Success success) {
+                MultiLib.LOGGER.info("[MultiLib DEBUG] onBlockPlaced: {} MATCHED at {} with {} positions - "
+                                + "calling handleFormation", definition.getId(), event.getPos(),
+                        success.data().positions().size());
                 handleFormation(level, definition, success.data(), player);
             } else if (result instanceof MatchResult.Failure failure) {
-                MultiLib.LOGGER.debug("[MultiLib] {} did not match at {}: {}",
+                MultiLib.LOGGER.info("[MultiLib DEBUG] {} did not match at {}: {}",
                         definition.getId(), event.getPos(), failure.report().summary());
             }
         }
@@ -71,6 +76,37 @@ public class BlockActivationHandler {
 
     private static void handleFormation(ServerLevel level, MultiblockDefinition definition, MatchData matchData,
                                          @Nullable ServerPlayer player) {
+        // A newly placed block that matches this definition's activation symbol re-triggers matching
+        // from ITS position (see onBlockPlaced) - for a structure built out of a common material
+        // (typical for a shapeless solid-fill definition), a later block placed nearby but outside the
+        // already-formed instance still floods straight into that instance's own positions (they're
+        // still the same connected material), producing another MatchResult.Success that overlaps the
+        // first.
+        Set<MultiblockInstance> overlapping = existingInstancesOfSameDefinition(level, definition, matchData);
+        if (!overlapping.isEmpty()) {
+            boolean identical = overlapping.size() == 1
+                    && overlapping.iterator().next().getPositions().equals(matchData.positions());
+            if (identical) {
+                // Exact same structure, unchanged - an unrelated placement elsewhere just re-discovered
+                // it via flood fill. Not a new or different structure; nothing to do. Without this,
+                // every such placement re-ran validator/formed callbacks and registered a duplicate
+                // instance on top of the one already formed - "re-validated on every block placed".
+                return;
+            }
+            // The new match differs from what's currently registered - e.g. the player extended a
+            // smaller already-formed structure into a bigger one (stone is the activation block, they
+            // built a taller box around the existing one). That's a real change: the stale instance(s)
+            // need to be broken properly (broken callbacks + formed-property reset, same as any other
+            // break - see BlockBreakHandler) before the new, current match is formed below. Skipping
+            // unconditionally here (the old behavior) would silently ignore legitimate growth instead
+            // of forming the now-larger structure and retiring the smaller one.
+            WorldMultiblockTracker replacedTracker = WorldMultiblockTracker.get(level);
+            for (MultiblockInstance old : overlapping) {
+                BlockBreakHandler.handleBreak(level, replacedTracker, old, matchData.origin(),
+                        MultiblockBrokenContext.BreakReason.REPLACED);
+            }
+        }
+
         Optional<UUID> formedBy = player != null ? Optional.of(player.getUUID()) : Optional.empty();
 
         if (definition.getValidator().isPresent()) {
@@ -128,13 +164,11 @@ public class BlockActivationHandler {
             }
         }
 
-        if (definition.hasCore()) {
-            instance.getCorePos().ifPresent(corePos -> {
-                if (level.getBlockEntity(corePos) instanceof AbstractMultiblockControllerBE controller) {
-                    controller.onStructureFormed(formedCtx);
-                }
-            });
-        }
+        resolveControllerPos(definition, instance).ifPresent(controllerPos -> {
+            if (level.getBlockEntity(controllerPos) instanceof AbstractMultiblockControllerBE controller) {
+                controller.onStructureFormed(formedCtx);
+            }
+        });
 
         for (BlockPos pos : instance.getPositions()) {
             if (level.getBlockEntity(pos) instanceof IMultiblockPart part) {
@@ -143,11 +177,46 @@ public class BlockActivationHandler {
         }
     }
 
+    /** Every distinct tracked instance of {@code definition} itself that shares at least one position with {@code matchData} - see {@link #handleFormation}'s guard comment. */
+    private static Set<MultiblockInstance> existingInstancesOfSameDefinition(ServerLevel level, MultiblockDefinition definition, MatchData matchData) {
+        WorldMultiblockTracker tracker = WorldMultiblockTracker.get(level);
+        Set<MultiblockInstance> result = new HashSet<>();
+        for (BlockPos pos : matchData.positions()) {
+            for (MultiblockInstance existing : tracker.getInstancesAt(pos)) {
+                if (existing.getDefinitionId().equals(definition.getId())) result.add(existing);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Which position's block entity should receive controller callbacks ({@code onStructureFormed}/
+     * {@code onStructureBroken}) for {@code instance} - the declared core if there is one, otherwise
+     * falls back to (any one of) the activation symbol's own positions. Without this fallback, a
+     * definition that never bothers declaring a separate {@code .core(...)} - the common case for a
+     * uniform-material shapeless structure, where the activation symbol already is the only material -
+     * would never fire controller callbacks at all (per {@code MultiblockDefinition#hasCore}), silently
+     * disabling any state/component (e.g. a fluid tank) a controller block entity is meant to expose,
+     * even though the block placed is perfectly capable of hosting one.
+     */
+    public static Optional<BlockPos> resolveControllerPos(MultiblockDefinition definition, MultiblockInstance instance) {
+        if (definition.hasCore()) {
+            Optional<BlockPos> corePos = instance.getCorePos();
+            if (corePos.isPresent()) return corePos;
+        }
+        if (definition.hasActivation()) {
+            Set<BlockPos> activationPositions = instance.getPositionsFor(definition.getActivationSymbol());
+            if (!activationPositions.isEmpty()) return Optional.of(activationPositions.iterator().next());
+        }
+        return Optional.empty();
+    }
+
     public static void triggerFormationAt(ServerLevel level, BlockPos pos) {
         triggerFormationAt(level, pos, null);
     }
 
-    public static void triggerFormationAt(ServerLevel level, BlockPos pos, @Nullable ServerPlayer player) {
+    /** @return true if a definition actually matched and was formed from {@code pos}. */
+    public static boolean triggerFormationAt(ServerLevel level, BlockPos pos, @Nullable ServerPlayer player) {
         Block block = level.getBlockState(pos).getBlock();
         List<MultiblockDefinition> candidates = MultiblockRegistry.getCandidatesFor(block);
         BlockState state = level.getBlockState(pos);
@@ -162,9 +231,10 @@ public class BlockActivationHandler {
             MatchResult result = PatternMatcher.matches(level, pos, definition);
             if (result instanceof MatchResult.Success success) {
                 handleFormation(level, definition, success.data(), player);
-                break;
+                return true;
             }
         }
+        return false;
     }
 
     /**
