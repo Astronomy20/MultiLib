@@ -8,7 +8,7 @@ Work through this in order:
 
 1. **Is `.build()` actually called during mod setup?** Registration happens when `.build()` runs — make sure your registration method is invoked (e.g. from `FMLCommonSetupEvent`).
 2. **Did registration silently fail?** An unset id or missing geometry **throws** `IllegalStateException` (visible). But a conflicting block-level `.core(id)` or a violated geometry constraint (`.unique`/`.surfaceOnly`/…) only *logs* an error and skips registration — `.build()` still returns an unregistered object. Check your logs ([details](Core-Concepts.md#registration-and-lookup)).
-3. **Is the layout right?** Rows → Z, characters → X, **`.layer(...)` order → Y top-to-bottom** (opposite of old `PatternBuilder` — see [Migrating](Migrating-From-PatternBuilder.md)).
+3. **Is the layout right?** Rows → Z, characters → X, **`.layer(...)` order → Y top-to-bottom**.
 4. **A typo silently disabled a symbol?** A character with no `.key(...)` is treated as `' '` (no constraint), with no build error. Verify every layer character has a key.
 5. **Right formation mode?** `WRENCH` (or any mode with `allowsAutomatic = false`) never triggers from placement — use a wrench ([formation modes](Core-Concepts.md#formation-modes)).
 6. **A validator vetoing?** `.validator(...)` can return `ValidationResult.Invalid` after a shape match. Also check no other mod cancels `MultiblockFormedEvent`.
@@ -58,4 +58,4 @@ The `net.astronomy.multilib.example` package:
 
 ## See also
 
-- [Core Concepts](Core-Concepts.md), [Pattern Design Guide](Pattern-Design-Guide.md), [Rotation & Matching](Rotation-And-Matching.md), [Advanced Features](Advanced-Features.md), [Migrating](Migrating-From-PatternBuilder.md)
+- [Core Concepts](Core-Concepts.md), [Pattern Design Guide](Pattern-Design-Guide.md), [Rotation & Matching](Rotation-And-Matching.md), [Advanced Features](Advanced-Features.md)

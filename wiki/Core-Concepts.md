@@ -52,8 +52,6 @@ Each `.layer(String... rows)` call adds **one horizontal (Y) slice**:
 - **Character order → X.** Leftmost char = lowest X.
 - **`.layer(...)` call order → Y, top to bottom.** First call = **top**, last call = **bottom**.
 
-> ⚠️ **Opposite of the old `PatternBuilder` API**, where the first call was the bottom. Porting old code means flipping call order — see [Migrating](Migrating-From-PatternBuilder.md).
-
 ```java
 .layer("PPP",   // top    → relY = 0
        " P ",
@@ -113,17 +111,6 @@ For structures with state (running/idle/error, a menu, per-tick logic), extend `
 
 See [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md) and the `ExampleControllerBE`/`ExampleControllerBlock` reference classes.
 
-## What changed from the old API (summary)
-
-Coming from the earlier `PatternBuilder`/`PatternManager` system, the load-bearing differences:
-
-- Layer order is **reversed** (first call = top).
-- Rotation is **enforced** — `RotationMode.NONE` genuinely disables it (the old flag was a no-op bug).
-- Structures are **tracked as persistent instances** with a real form/break lifecycle, not one-shot placement reactions.
-- Ingredients are pluggable (`BlockIngredient`), not a single exact `Block`.
-- A structure can be `shapeless()`, procedural, or JSON-defined — not just a shaped grid.
-
-Full checklist: [Migrating](Migrating-From-PatternBuilder.md).
 
 ## See also
 

@@ -8,7 +8,7 @@ Package: `net.astronomy.multilib.util`
 
 A stateless math helper used internally by [`ShapedMatcher`](../Rotation-And-Matching.md) to compute per-transform origins and offsets. You generally won't call this directly unless you're implementing custom matching/placement logic of your own on top of MultiLib's primitives.
 
-⚠️ **This is a completely different signature from the old API.** The old two-method split (`rotate(x, z, rotation)` for horizontal + `rotateVertical(x, y, z, axis, rotation)` for vertical) is gone. There is now a single unified method that rotates around **any** axis, and it takes an **angle in degrees**, not a `0–3` step index. See [Migrating from the old PatternBuilder API](../Migrating-From-PatternBuilder.md) if you're porting old code.
+⚠️ **This is a completely different signature from the old API.** The old two-method split (`rotate(x, z, rotation)` for horizontal + `rotateVertical(x, y, z, axis, rotation)` for vertical) is gone. There is now a single unified method that rotates around **any** axis, and it takes an **angle in degrees**, not a `0–3` step index.
 
 ## Methods
 
@@ -60,4 +60,3 @@ Rotation directions (right-handed, looking down the positive axis toward the ori
 
 - [Rotation & Matching Deep Dive](../Rotation-And-Matching.md) - how `ShapedMatcher` composes rotation axis + angle with `RotationMode`/`AllowedRotation` to search candidate orientations
 - [MultiblockBuilder § Rotation](MultiblockBuilder.md#rotation)
-- [Migrating from the old PatternBuilder API](../Migrating-From-PatternBuilder.md)

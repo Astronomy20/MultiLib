@@ -14,7 +14,7 @@ See [Core Concepts](../Core-Concepts.md) for the conceptual model. This page doc
 Sets the structure's id. Required - `.build()` throws if unset.
 
 ### `layer(String... rows)`
-The single attribute for declaring layers. Appends one horizontal (Y) slice. **First call = top of the structure, last call = bottom** (opposite of the old `PatternBuilder` API - see [Migrating from the old PatternBuilder API](../Migrating-From-PatternBuilder.md)).
+The single attribute for declaring layers. Appends one horizontal (Y) slice. **First call = top of the structure, last call = bottom**.
 
 ### `key(char symbol, Block block)`
 Shorthand for `key(symbol, BlockIngredient.of(block))`.

@@ -6,7 +6,7 @@ Design decisions for laying out a shaped pattern. Read [Core Concepts](Core-Conc
 
 ## Sketch it top-down first
 
-Draw one grid per Y level, **top level first** — the first `.layer(...)` call is the top, the last is the bottom (reverse of the old `PatternBuilder`). Within a level, rows go lowest-Z to highest-Z, characters go lowest-X to highest-X. Reading a `.layer(...)` block top-to-bottom as printed matches drawing the structure from the front:
+Draw one grid per Y level, **top level first** — the first `.layer(...)` call is the top, the last is the bottom. Within a level, rows go lowest-Z to highest-Z, characters go lowest-X to highest-X. Reading a `.layer(...)` block top-to-bottom as printed matches drawing the structure from the front:
 
 ```java
 .layer("PPP",   // top    (relY = 0)
