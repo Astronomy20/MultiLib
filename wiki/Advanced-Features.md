@@ -181,7 +181,7 @@ A "wrench" is any `Item` implementing `IMultiblockWrench` (`useOn(UseOnContext)`
 | GuideME | Placeholder — no stable registration API yet; `GuideMEHelper.logInfo(...)` logs availability, register pages via GuideME's own JSON | `compat.guideme` |
 | FTB Quests | Auto-registered (if loaded) — a "Multiblock" quest task ([below](#ftb-quests-compatibility)) | `compat.ftbquests` |
 
-For recipe browsers, `.icon(itemId)` sets the icon; the title auto-derives from `multiblock.<namespace>.<path>` ([Visuals](api-reference/MultiblockBuilder.md#visuals-recipe-browsers)).
+For recipe browsers, `.icon(itemId)` sets the icon; the title auto-derives from `multiblock.<namespace>.<path>` ([Visuals](api-reference/MultiblockBuilder.md#visuals-recipe-browsers)). `.showInRecipeViewers(false)` opts a definition out entirely - useful for a shapeless structure valid across a whole size range, where a single representative page would be misleading.
 
 ## FTB Quests compatibility
 
@@ -197,7 +197,11 @@ Completion is **push-only**: the task listens to `MultiblockFormedEvent`/`Multib
 
 Structures can be created and modified from KubeJS scripts. See [KubeJS Integration](KubeJS-Integration.md).
 
+## Block aggregation
+
+A completely separate, lightweight mechanism from everything else on this page: neighbor blocks that merge purely by adjacency (Create-mod-style), with no declared pattern, no `MultiblockDefinition`, nothing pre-registered about their arrangement at all. `AbstractAggregatingBlock` + `AggregatableBlockEntity` opt a block in; an `AggregationShapePolicy` (cuboid, sphere, cylinder, pyramid, or freeform) decides which connected shapes are allowed to actually merge. See [Block Aggregation](api-reference/Block-Aggregation.md) for the full reference.
+
 ## See also
 
 - [Core Concepts](Core-Concepts.md), [Pattern Design Guide](Pattern-Design-Guide.md), [Directional Cores Guide](Directional-Cores-Guide.md), [KubeJS Integration](KubeJS-Integration.md)
-- [MultiblockBuilder](api-reference/MultiblockBuilder.md), [BlockDefinition](api-reference/BlockDefinition.md), [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md), [Multiblock States & Progress](api-reference/Multiblock-States-And-Progress.md)
+- [MultiblockBuilder](api-reference/MultiblockBuilder.md), [BlockDefinition](api-reference/BlockDefinition.md), [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md), [Multiblock States & Progress](api-reference/Multiblock-States-And-Progress.md), [Block Aggregation](api-reference/Block-Aggregation.md)

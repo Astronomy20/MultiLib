@@ -59,5 +59,6 @@ nav:
           - HUD Providers: api-reference/HUD-Providers.md
       - Utilities:
           - RotationUtils: api-reference/RotationUtils.md
+          - Block Aggregation: api-reference/Block-Aggregation.md
   - Help:
       - FAQ & Troubleshooting: FAQ-Troubleshooting.md

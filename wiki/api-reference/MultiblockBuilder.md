@@ -196,6 +196,9 @@ Item shown as this structure's icon in JEI/REI/EMI.
 
 Every definition's display name (JEI/REI/EMI title) resolves automatically from `multiblock.<namespace>.<path>`, following the same convention as `block.<namespace>.<path>` for blocks - define that key in your lang file. There's no separate call needed; the key is derived straight from the mandatory id.
 
+### `showInRecipeViewers(boolean enabled)`
+Whether this definition gets a JEI/REI/EMI page at all. Defaults to `true`. Set `false` for a structure with no single fixed "recipe" worth showing - e.g. a shapeless structure valid across a whole size range, where any one page would misleadingly present just one size. Doesn't affect the [ghost overlay](../Advanced-Features.md#ghost-overlay) or the `/multiblock` command listing, both asked-for explicitly rather than browsed.
+
 ### `ghostOverlayDebug()`
 Dev-only: while enabled, players see a chat debug line with the ghost overlay's render time whenever it's drawn for this structure. Not meant to ship enabled.
 
