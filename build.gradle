@@ -151,14 +151,19 @@ if (!ext.hasKubeJSLib) sourceSets.main.resources.exclude 'kubejs.plugins.txt'
 // work in runClient (and other dev runs) which consume sourceSets.main directly, not the jar.
 tasks.named('jar', Jar) {
     exclude 'net/astronomy/multilib/example/**'
-    exclude 'assets/multilib/blockstates/example_*.json'
-    exclude 'assets/multilib/models/block/example_*.json'
-    exclude 'assets/multilib/models/item/example_*.json'
-    exclude 'assets/multilib/textures/block/example_*.png'
+
+    include 'assets/multilib/lang/**'
+    exclude 'assets/multilib/blockstates/**'
+    exclude 'assets/multilib/models/**'
+    exclude 'assets/multilib/guides/**'
+    exclude 'assets/multilib/patchouli_books/**'
+    exclude 'assets/multilib/textures/block/example_controller.png'
+    exclude 'assets/multilib/textures/block/example_part.png'
+    exclude 'assets/multilib/textures/block/example_tank.png'
+    exclude 'assets/multilib/textures/block/texture.png'
     exclude 'assets/multilib/textures/item/example_wrench.png'
-    exclude 'assets/multilib/guides/multilib/guide/example_multiblock.md'
-    exclude 'assets/multilib/patchouli_books/multiblockguide/**'
-    exclude 'data/multilib/multiblocks/example_simple.json'
+
+    exclude 'data/**'
 }
 
 // Sets up a dependency configuration called 'localRuntime'.
