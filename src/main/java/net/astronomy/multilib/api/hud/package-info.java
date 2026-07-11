@@ -16,15 +16,33 @@
  *     plus the {@code setHudEnabled}/{@code setUnformedHintsEnabled} opt-out/opt-in switches.</li>
  * </ul>
  * Built-in providers cover the common cases so most mods never need to implement
- * {@code MultiblockHudProvider} from scratch:
- * {@link net.astronomy.multilib.api.hud.FormedStatusProvider} (the only default-on one),
+ * {@code MultiblockHudProvider} from scratch. All of them - including
+ * {@link net.astronomy.multilib.api.hud.FormedStatusProvider} - are opt-in: nothing is registered
+ * automatically, a definition with no registrations shows nothing on Jade/TOP at all.
+ * <p>
+ * Straight from a formed instance's own data:
+ * {@link net.astronomy.multilib.api.hud.FormedStatusProvider},
  * {@link net.astronomy.multilib.api.hud.TierHudProvider},
- * {@link net.astronomy.multilib.api.hud.ProcessHudProvider},
- * {@link net.astronomy.multilib.api.hud.EnergyHudProvider},
- * {@link net.astronomy.multilib.api.hud.FluidHudProvider},
- * {@link net.astronomy.multilib.api.hud.RedstoneControlHudProvider},
- * {@link net.astronomy.multilib.api.hud.OwnershipHudProvider}, and
- * {@link net.astronomy.multilib.api.hud.MissingBlocksProvider}.
+ * {@link net.astronomy.multilib.api.hud.StatHudProvider},
+ * {@link net.astronomy.multilib.api.hud.ControllerLocationHudProvider},
+ * {@link net.astronomy.multilib.api.hud.StructureSizeHudProvider},
+ * {@link net.astronomy.multilib.api.hud.PortsSummaryHudProvider},
+ * {@link net.astronomy.multilib.api.hud.MissingBlocksProvider}, and
+ * {@link net.astronomy.multilib.api.hud.AggregateGroupHudProvider}.
+ * <p>
+ * Straight from a NeoForge capability at the core: {@link net.astronomy.multilib.api.hud.EnergyHudProvider},
+ * {@link net.astronomy.multilib.api.hud.FluidHudProvider}, {@link net.astronomy.multilib.api.hud.ItemHudProvider}.
+ * <p>
+ * Via an opt-in {@code HudXxxSource} hook the controller block entity implements:
+ * {@link net.astronomy.multilib.api.hud.ProcessHudProvider} ({@link net.astronomy.multilib.api.hud.HudProcessSource}),
+ * {@link net.astronomy.multilib.api.hud.RecipeHudProvider} (same hook),
+ * {@link net.astronomy.multilib.api.hud.RedstoneControlHudProvider} ({@link net.astronomy.multilib.api.hud.HudRedstoneSource}),
+ * {@link net.astronomy.multilib.api.hud.OwnershipHudProvider} ({@link net.astronomy.multilib.api.hud.HudOwnershipSource}),
+ * {@link net.astronomy.multilib.api.hud.ErrorReasonHudProvider} ({@link net.astronomy.multilib.api.hud.HudErrorSource}),
+ * {@link net.astronomy.multilib.api.hud.ComparatorOutputHudProvider} ({@link net.astronomy.multilib.api.hud.HudComparatorSource}).
+ * <p>
+ * Assembly-level (Fase 12): {@link net.astronomy.multilib.api.hud.AssemblyStatusProvider},
+ * {@link net.astronomy.multilib.api.hud.AssemblyAggregateStatHudProvider}.
  *
  * <h2>Registering a custom provider</h2>
  * <pre>{@code

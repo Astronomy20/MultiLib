@@ -1,6 +1,9 @@
 package net.astronomy.multilib.api.process;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.BlockEntity;
+
+import java.util.Optional;
 
 /**
  * A single timed job a {@link RecipeProcessor} can run: how long it takes, whether it can start, and what
@@ -61,5 +64,15 @@ public interface ProcessRecipe<BE extends BlockEntity, D> {
      */
     default boolean canContinue(ProcessContext<BE, D> ctx) {
         return true;
+    }
+
+    /**
+     * Optional label for this job, shown by {@code api/hud}'s {@code RecipeHudProvider} alongside
+     * {@link ProcessHudProvider}'s progress bar (e.g. the item being smelted). Purely a display hint -
+     * {@link RecipeProcessor} never reads this itself. Defaults to empty: a dev who doesn't override this
+     * simply gets no "what's running" line, same as not implementing {@code HudProcessSource} at all.
+     */
+    default Optional<Component> getDisplayName() {
+        return Optional.empty();
     }
 }
