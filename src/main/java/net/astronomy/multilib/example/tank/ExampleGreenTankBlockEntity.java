@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.tank;
 
 import net.astronomy.multilib.api.aggregate.AggregatableBlockEntity;
 import net.astronomy.multilib.api.aggregate.AggregateGroup;
@@ -21,45 +21,39 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Demo neighbor-aggregating fluid tank #1: Create-mod-style. Place several {@code example_red_tank}
- * blocks touching each other and they merge into one bigger logical tank purely because they're
- * adjacent - no JSON pattern, no declared {@code MultiblockDefinition}, nothing pre-registered about
- * their arrangement at all. {@link net.astronomy.multilib.api.aggregate.AbstractAggregatingBlock} (see
- * {@link ExampleRedTankBlock}) drives the neighbor rescans, and
- * {@link AggregationShapePolicies#cuboid} only lets rectangular-prism arrangements actually merge - an
- * L-shape or an offset stack just stays as separate independent 1-block tanks instead.
+ * Demo neighbor-aggregating fluid tank #2: the "abstract structure" style from the reference video -
+ * the exact same {@link net.astronomy.multilib.api.aggregate.AbstractAggregatingBlock} mechanism as
+ * {@link ExampleRedTankBlockEntity}, except with {@link AggregationShapePolicies#freeform()} instead of
+ * {@link AggregationShapePolicies#cuboid}: there is no shape constraint at all. A stepped/offset stack,
+ * an L-shape, a branching blob - any set of {@code example_green_tank} blocks connected by adjacency
+ * merges into one logical tank, because adjacency is the only thing that was ever checked.
  * <p>
- * Compare {@link ExampleGreenTankBlockEntity}, which uses the exact same mechanism with
- * {@link AggregationShapePolicies#freeform()} instead - any connected shape at all is allowed to merge.
- * <p>
- * Every block holds its own real, independent {@link #tank} at a fixed per-block capacity - nothing is
- * resized or transferred when the group grows/shrinks, since each block's own content is exactly what's
- * saved to (and loaded from) that block's own NBT. What scales with the group is only the combined view
- * any interaction sees - see {@link #resolveActiveHandler()}.
+ * See {@link ExampleRedTankBlockEntity}'s javadoc for the full per-block-storage/combined-view
+ * explanation - it applies here unchanged, only the shape policy differs.
  */
-public class ExampleRedTankBlockEntity extends BlockEntity implements AggregatableBlockEntity, FluidAggregateTank {
+public class ExampleGreenTankBlockEntity extends BlockEntity implements AggregatableBlockEntity, FluidAggregateTank {
 
-    public static final ResourceLocation GROUP_ID = ResourceLocation.fromNamespaceAndPath("multilib", "example_red_tank");
-    private static final AggregationShapePolicy SHAPE = AggregationShapePolicies.cuboid(3, 3, 3);
+    public static final ResourceLocation GROUP_ID = ResourceLocation.fromNamespaceAndPath("multilib", "example_green_tank");
+    private static final AggregationShapePolicy SHAPE = AggregationShapePolicies.freeform();
     public static final int CAPACITY_PER_BLOCK = 4_000;
 
-    // Redundant with the cuboid(3, 3, 3) policy itself (which already tops out at 3*3*3 = 27 blocks),
-    // but declared explicitly anyway so this reads the same way as ExampleGreenTankBlockEntity's own
-    // override - getMaxAggregateSize() is always checked in addition to the shape policy, never a
-    // substitute for one.
-    private static final int MAX_AGGREGATE_SIZE = 27;
+    // freeform() has no shape constraint of its own - getMaxAggregateSize() is the ONLY thing capping
+    // how large a group can grow. Kept small (rather than the interface's default 512) so the cap is
+    // actually easy to hit and observe while testing: place a 17th connected block and it stays its own
+    // singleton instead of joining, exactly like a rejected cuboid merge would for ExampleRedTankBlockEntity.
+    private static final int MAX_AGGREGATE_SIZE = 16;
 
     public final FluidTankComponent tank = new FluidTankComponent(CAPACITY_PER_BLOCK, null, this::onTankChanged);
     private AggregateGroup group;
 
-    public ExampleRedTankBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    public ExampleGreenTankBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
         this.group = AggregationEngine.singleton(GROUP_ID, pos);
     }
 
     // Referenced by ExampleAggregateTankSetup's BlockEntityType.Builder.
-    public static ExampleRedTankBlockEntity create(BlockPos pos, BlockState state) {
-        return new ExampleRedTankBlockEntity(ExampleAggregateTankSetup.RED_TANK_BE_TYPE, pos, state);
+    public static ExampleGreenTankBlockEntity create(BlockPos pos, BlockState state) {
+        return new ExampleGreenTankBlockEntity(ExampleAggregateTankSetup.GREEN_TANK_BE_TYPE, pos, state);
     }
 
     @Override
@@ -93,9 +87,6 @@ public class ExampleRedTankBlockEntity extends BlockEntity implements Aggregatab
         return tank;
     }
 
-    // Re-derives this block's group from live world state as soon as it's actually placed in a level -
-    // membership is never persisted (see class javadoc), so a freshly loaded/placed block always starts
-    // out as a lone singleton until this runs.
     @Override
     public void onLoad() {
         super.onLoad();
@@ -111,17 +102,11 @@ public class ExampleRedTankBlockEntity extends BlockEntity implements Aggregatab
         }
     }
 
-    /**
-     * The fluid handler this position should expose right now: every member of the current group's own
-     * {@link #tank}, combined into one logical total via {@link ExampleTankAggregateFluidHandler} - so it
-     * doesn't matter which specific block of the merged tank a bucket or pipe touches. A lone (singleton)
-     * block just exposes its own standalone tank.
-     */
     public IFluidHandler resolveActiveHandler() {
         if (level == null || group.isSingleton()) return tank;
         List<FluidTankComponent> memberTanks = new ArrayList<>();
         for (BlockPos pos : group.members()) {
-            if (level.getBlockEntity(pos) instanceof ExampleRedTankBlockEntity be) {
+            if (level.getBlockEntity(pos) instanceof ExampleGreenTankBlockEntity be) {
                 memberTanks.add(be.tank);
             }
         }
@@ -141,7 +126,6 @@ public class ExampleRedTankBlockEntity extends BlockEntity implements Aggregatab
         tank.load(tag, registries);
     }
 
-    // Synced to the client (not just saved to disk) so the fill-level renderer always has fresh data.
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();

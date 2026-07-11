@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.directional;
 
 import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.FormationMode;
@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.Blocks;
  * ({@code multilib:example_directional_controller}) has its own placed facing (like a furnace), and
  * the pattern is deliberately asymmetric on all 4 horizontal sides - gold north, diamond east,
  * emerald south, iron west of the core - so the preview's orientation is visually obvious. With
- * {@code .mainFace()} declared on the core's BlockDefinition (see {@link ExampleSetup}), the ghost
+ * {@code .mainFace()} declared on the core's BlockDefinition (see {@link DirectionalExampleSetup}), the ghost
  * overlay must always show this cross in the orientation the core is actually facing, never rotating
  * to match the player's look direction the way {@link ExamplePattern}'s non-directional core does.
  * {@code RotationMode.HORIZONTAL} is still allowed here on purpose, to demonstrate that "rigid"
@@ -32,7 +32,7 @@ public class ExampleDirectionalPattern {
                 .key('D', BlockIngredient.of(Blocks.DIAMOND_BLOCK))
                 .key('E', BlockIngredient.of(Blocks.EMERALD_BLOCK))
                 .key('I', BlockIngredient.of(Blocks.IRON_BLOCK))
-                .key('O', BlockIngredient.of(ExampleSetup.DIRECTIONAL_CONTROLLER_BLOCK))
+                .key('O', BlockIngredient.of(DirectionalExampleSetup.DIRECTIONAL_CONTROLLER_BLOCK))
                 .core('O')
                 .formationMode(FormationMode.AUTOMATIC_AND_WRENCH)
                 .rotations(RotationMode.HORIZONTAL)
@@ -42,6 +42,6 @@ public class ExampleDirectionalPattern {
 
         // The core's own placed facing (read from its HORIZONTAL_FACING blockstate property) pins the
         // ghost overlay/auto-place preview orientation - see OverlayRequestHandler.extractMainFace.
-        MultiLib.block(ExampleSetup.DIRECTIONAL_CONTROLLER_BLOCK).mainFace().build();
+        MultiLib.block(DirectionalExampleSetup.DIRECTIONAL_CONTROLLER_BLOCK).mainFace().build();
     }
 }

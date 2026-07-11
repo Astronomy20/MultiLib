@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.basic;
 
 import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBE;
@@ -13,12 +13,12 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Test/demo controller BlockEntity for the multilib:example structure (see ExampleSetup).
+ * Test/demo controller BlockEntity for the multilib:example structure (see BasicExampleSetup).
  */
 public class ExampleControllerBE extends AbstractMultiblockControllerBE {
 
     // Demo of the api/component toolkit: a 100k FE buffer that lives on the controller. It becomes
-    // a standard block capability via ExampleSetup#onRegisterCapabilities (so pipes/cables and the
+    // a standard block capability via BasicExampleSetup#onRegisterCapabilities (so pipes/cables and the
     // HUD EnergyHudProvider can see it) and survives world reloads through the saveController/
     // loadController hooks below. this::setChanged keeps the chunk dirty on every transfer.
     public final EnergyBufferComponent energy = new EnergyBufferComponent(100_000, 1_000, 1_000, this::setChanged);
@@ -38,11 +38,11 @@ public class ExampleControllerBE extends AbstractMultiblockControllerBE {
         energy.load(tag);
     }
 
-    // Referenced by ExampleSetup's BlockEntityType.Builder - kept here, instead of inline in
-    // ExampleSetup's own field initializer, so the lazy lookup of CONTROLLER_BE_TYPE isn't a
-    // self-reference inside ExampleSetup's initializer.
+    // Referenced by BasicExampleSetup's BlockEntityType.Builder - kept here, instead of inline in
+    // BasicExampleSetup's own field initializer, so the lazy lookup of CONTROLLER_BE_TYPE isn't a
+    // self-reference inside BasicExampleSetup's initializer.
     public static ExampleControllerBE create(BlockPos pos, BlockState state) {
-        return new ExampleControllerBE(ExampleSetup.CONTROLLER_BE_TYPE, pos, state);
+        return new ExampleControllerBE(BasicExampleSetup.CONTROLLER_BE_TYPE, pos, state);
     }
 
     @Override

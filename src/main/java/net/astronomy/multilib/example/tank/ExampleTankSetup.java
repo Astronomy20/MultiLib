@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.tank;
 
 import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.api.component.FluidTankComponent;
@@ -32,7 +32,7 @@ import java.util.Set;
 /**
  * Self-contained registration for {@link ExampleTankBlock}/{@link ExampleTankBlockEntity} - the
  * fluid-capable block used by the KubeJS-defined {@code multilib:expandable_tank} test structure
- * (see {@code expandable_tank.js}). Kept separate from {@link ExampleSetup} (the Java-defined
+ * (see {@code expandable_tank.js}). Kept separate from {@link BasicExampleSetup} (the Java-defined
  * {@code multilib:example} structure's own wiring) since this block belongs to a script-defined
  * structure instead - registering the block here doesn't declare any {@code MultiblockDefinition}
  * itself, that lives entirely in the KubeJS script.
@@ -40,7 +40,7 @@ import java.util.Set;
 @EventBusSubscriber(modid = MultiLib.MODID)
 public final class ExampleTankSetup {
 
-    // Assigned lazily inside onRegister() - see ExampleSetup's own field-declaration comment for why.
+    // Assigned lazily inside onRegister() - see BasicExampleSetup's own field-declaration comment for why.
     public static ExampleTankBlock TANK_BLOCK;
     public static BlockItem TANK_ITEM;
     public static BlockEntityType<ExampleTankBlockEntity> TANK_BE_TYPE;

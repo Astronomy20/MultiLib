@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.directional;
 
 import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBE;
 import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBlock;
@@ -23,7 +23,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Test/demo controller block with a real placed facing (like a furnace), used to exercise the
  * "rigid" {@code mainFace()} ghost-overlay behavior: its {@link net.astronomy.multilib.api.block.BlockDefinition}
- * (see {@link ExampleSetup}) declares {@code .mainFace()}, so the ghost overlay/auto-place preview
+ * (see {@link DirectionalExampleSetup}) declares {@code .mainFace()}, so the ghost overlay/auto-place preview
  * must always stay pinned to whichever way this block is actually facing in the world, never to the
  * player's look direction - unlike {@link ExampleControllerBlock}, which has no facing of its own and
  * always follows the player.
@@ -60,7 +60,7 @@ public class ExampleDirectionalControllerBlock extends AbstractMultiblockControl
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new ExampleDirectionalControllerBE(ExampleSetup.DIRECTIONAL_CONTROLLER_BE_TYPE, pos, state);
+        return new ExampleDirectionalControllerBE(DirectionalExampleSetup.DIRECTIONAL_CONTROLLER_BE_TYPE, pos, state);
     }
 
     @SuppressWarnings("unchecked")

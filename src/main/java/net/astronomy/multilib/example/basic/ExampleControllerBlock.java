@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.basic;
 
 import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBE;
 import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBlock;
@@ -53,7 +53,7 @@ public class ExampleControllerBlock extends AbstractMultiblockControllerBlock im
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new ExampleControllerBE(ExampleSetup.CONTROLLER_BE_TYPE, pos, state);
+        return new ExampleControllerBE(BasicExampleSetup.CONTROLLER_BE_TYPE, pos, state);
     }
 
     @SuppressWarnings("unchecked")

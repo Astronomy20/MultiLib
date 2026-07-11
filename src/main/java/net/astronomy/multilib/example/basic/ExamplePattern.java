@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.basic;
 
 import net.astronomy.multilib.api.MultiLib;
 import net.astronomy.multilib.api.definition.FormationMode;
@@ -33,8 +33,8 @@ public class ExamplePattern {
         MultiLib.define(ResourceLocation.fromNamespaceAndPath("multilib", "example"))
                 .layer("PPP", " P ", " G ")
                 .layer("POP", " P ", " G ")
-                .key('P', BlockIngredient.of(ExampleSetup.PART_BLOCK))
-                .key('O', BlockIngredient.of(ExampleSetup.CONTROLLER_BLOCK))
+                .key('P', BlockIngredient.of(BasicExampleSetup.PART_BLOCK))
+                .key('O', BlockIngredient.of(BasicExampleSetup.CONTROLLER_BLOCK))
                 .key('G', BlockIngredient.of(Blocks.GOLD_BLOCK))
                 .core('O')
                 .model(ResourceLocation.fromNamespaceAndPath("multilib", "example")).keepVisible('G')

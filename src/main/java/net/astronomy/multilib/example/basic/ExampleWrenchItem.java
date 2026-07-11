@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.basic;
 
 import net.astronomy.multilib.api.tool.IMultiblockWrench;
 import net.minecraft.world.item.Item;

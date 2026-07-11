@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.directional;
 
 import net.astronomy.multilib.MultiLib;
 import net.astronomy.multilib.api.blockentity.AbstractMultiblockControllerBE;
@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Test/demo controller BlockEntity for the multilib:example_directional structure (see ExampleSetup).
+ * Test/demo controller BlockEntity for the multilib:example_directional structure (see DirectionalExampleSetup).
  */
 public class ExampleDirectionalControllerBE extends AbstractMultiblockControllerBE {
 
@@ -18,10 +18,10 @@ public class ExampleDirectionalControllerBE extends AbstractMultiblockController
         setValidationInterval(100);
     }
 
-    // Referenced by ExampleSetup's BlockEntityType.Builder - same lazy-lookup reasoning as
+    // Referenced by DirectionalExampleSetup's BlockEntityType.Builder - same lazy-lookup reasoning as
     // ExampleControllerBE.create.
     public static ExampleDirectionalControllerBE create(BlockPos pos, BlockState state) {
-        return new ExampleDirectionalControllerBE(ExampleSetup.DIRECTIONAL_CONTROLLER_BE_TYPE, pos, state);
+        return new ExampleDirectionalControllerBE(DirectionalExampleSetup.DIRECTIONAL_CONTROLLER_BE_TYPE, pos, state);
     }
 
     @Override

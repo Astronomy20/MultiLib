@@ -1,7 +1,7 @@
 package net.astronomy.multilib.client.render;
 
 import net.astronomy.multilib.MultiLib;
-import net.astronomy.multilib.example.ExampleAggregateTankSetup;
+import net.astronomy.multilib.example.tank.ExampleAggregateTankSetup;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;

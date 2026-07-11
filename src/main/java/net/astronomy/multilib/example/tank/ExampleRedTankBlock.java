@@ -1,4 +1,4 @@
-package net.astronomy.multilib.example;
+package net.astronomy.multilib.example.tank;
 
 import net.astronomy.multilib.api.aggregate.AbstractAggregatingBlock;
 import net.minecraft.core.BlockPos;
