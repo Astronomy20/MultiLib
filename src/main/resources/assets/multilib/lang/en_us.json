@@ -60,6 +60,8 @@
   "multilib.hud.aggregate": "Group",
   "multilib.hud.aggregate_singleton": "Not merged",
   "multilib.hud.aggregate_value": "%s blocks merged",
+  "hud.multilib.assembly.status": "Assembly: %s",
+  "hud.multilib.assembly.role": "  %s: %s",
 
   "block.multilib.dev_block": "Dev Block",
   "item.multilib.dev_wrench": "Dev Wrench",
@@ -117,9 +119,6 @@
   "command.multilib.assembly.members.none": "No assembly at %s, %s, %s.",
   "command.multilib.assembly.members.header": "Assembly %s members:",
   "command.multilib.assembly.members.role": "  %s: %s",
-
-  "hud.multilib.assembly.status": "Assembly: %s",
-  "hud.multilib.assembly.role": "  %s: %s",
 
 
   "item.multilib.example_wrench": "Multiblock Wrench",
