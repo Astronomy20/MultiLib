@@ -41,7 +41,16 @@ public final class MultiblockJadeServerProvider implements IServerDataProvider<B
         if (!(accessor.getPlayer() instanceof ServerPlayer player)) return;
         BlockPos pos = accessor.getPosition();
 
-        List<HudEntry> entries = HudContext.at(level, pos, player)
+        var hudCtx = HudContext.at(level, pos, player);
+        // Formed only: an unformed core/activation block is still meaningfully "a Gold Block" (or
+        // whatever it is) on its own, so only override Jade's object-name line once the block is
+        // actually standing in for a formed structure. Also gated on the same per-definition
+        // setHudEnabled killswitch as gatherEntries below - disabling HUD for a definition must silence
+        // this override too, not just the body lines.
+        hudCtx.filter(ctx -> MultiblockHudRegistry.isHudEnabled(ctx.definition().getId()))
+                .ifPresent(ctx -> data.putString("definitionId", ctx.definition().getId().toString()));
+
+        List<HudEntry> entries = hudCtx
                 .map(MultiblockHudRegistry::gatherEntries)
                 .orElseGet(() -> MultiblockHudRegistry.gatherUnformedEntries(level, pos, player));
         if (entries.isEmpty()) return;
