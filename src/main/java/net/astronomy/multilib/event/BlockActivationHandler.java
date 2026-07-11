@@ -49,9 +49,6 @@ public class BlockActivationHandler {
         ServerPlayer player = event.getEntity() instanceof ServerPlayer sp ? sp : null;
 
         List<MultiblockDefinition> candidates = MultiblockRegistry.getCandidatesFor(placedBlock);
-        // TEMP DEBUG - remove once the "block vanishes right after placing" bug is confirmed fixed.
-        MultiLib.LOGGER.info("[MultiLib DEBUG] onBlockPlaced: {} at {}, {} candidate definition(s)",
-                placedBlock, event.getPos(), candidates.size());
 
         for (MultiblockDefinition definition : candidates) {
             if (!definition.getFormationMode().allowsAutomatic()) continue;
@@ -63,13 +60,7 @@ public class BlockActivationHandler {
 
             MatchResult result = PatternMatcher.matches(level, event.getPos(), definition);
             if (result instanceof MatchResult.Success success) {
-                MultiLib.LOGGER.info("[MultiLib DEBUG] onBlockPlaced: {} MATCHED at {} with {} positions - "
-                                + "calling handleFormation", definition.getId(), event.getPos(),
-                        success.data().positions().size());
                 handleFormation(level, definition, success.data(), player);
-            } else if (result instanceof MatchResult.Failure failure) {
-                MultiLib.LOGGER.info("[MultiLib DEBUG] {} did not match at {}: {}",
-                        definition.getId(), event.getPos(), failure.report().summary());
             }
         }
     }

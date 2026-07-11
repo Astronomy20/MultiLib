@@ -35,14 +35,7 @@ public class BlockBreakHandler {
 
         WorldMultiblockTracker tracker = WorldMultiblockTracker.get(level);
         Set<MultiblockInstance> instances = tracker.getInstancesAt(pos);
-        if (instances.isEmpty()) {
-            // TEMP DEBUG - remove once the "hole stays formed" bug is confirmed fixed. If this fires for a
-            // position the player clearly just broke off a visibly-formed structure, it means the tracker
-            // had no record of that position at all at break time (e.g. a second fast break landing before
-            // the first one's deferred retrigger re-registered anything) - the structure is left stale.
-            MultiLib.LOGGER.info("[MultiLib DEBUG] onBlockBreak: no tracked instance at broken pos={}", pos);
-            return;
-        }
+        if (instances.isEmpty()) return;
 
         for (MultiblockInstance instance : new HashSet<>(instances)) {
             handleBreak(level, tracker, instance, pos, MultiblockBrokenContext.BreakReason.PLAYER_BREAK);
@@ -80,33 +73,12 @@ public class BlockBreakHandler {
         // behavior) could pick exactly one of those and give up entirely, even though a perfectly valid
         // smaller structure exists and would have matched from a different remaining position (e.g. one
         // already inside the shrunken layer).
-        boolean reformed = false;
         for (BlockPos p : brokenInstance.getPositions()) {
             if (p.equals(removedPos) || !level.isLoaded(p)) continue;
             BlockState state = level.getBlockState(p);
             if (!activationIngredient.matches(level, p, state)) continue;
-            if (BlockActivationHandler.triggerFormationAt(level, p, null)) {
-                reformed = true;
-                break;
-            }
+            if (BlockActivationHandler.triggerFormationAt(level, p, null)) break;
         }
-        // TEMP DEBUG - remove once the "hole stays formed" bug is confirmed fixed.
-        MultiLib.LOGGER.info("[MultiLib DEBUG] retriggerRemainingStructure removedPos={} oldSize={} reformed={} "
-                        + "newInstancesAtRemovedNeighbors={}", removedPos, brokenInstance.getPositions().size(),
-                reformed, describeNeighborInstances(level, removedPos));
-    }
-
-    private static String describeNeighborInstances(ServerLevel level, BlockPos removedPos) {
-        WorldMultiblockTracker tracker = WorldMultiblockTracker.get(level);
-        StringBuilder sb = new StringBuilder();
-        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
-            BlockPos n = removedPos.relative(dir);
-            Set<MultiblockInstance> at = tracker.getInstancesAt(n);
-            sb.append(dir).append("=").append(at.size());
-            for (MultiblockInstance i : at) sb.append("(size=").append(i.getPositions().size()).append(")");
-            sb.append(" ");
-        }
-        return sb.toString();
     }
 
     public static void handleBreak(ServerLevel level, WorldMultiblockTracker tracker,
