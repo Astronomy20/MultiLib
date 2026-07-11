@@ -28,11 +28,24 @@ import java.util.function.Consumer;
  * insertion-ordered list - {@link #gatherEntries} runs global providers first, then that definition's
  * own, in registration order.
  *
+ * <h2>Nothing is registered by default</h2>
+ * This registry starts empty. Every built-in provider in this package - {@link FormedStatusProvider},
+ * {@link AssemblyStatusProvider}, {@link AssemblyAggregateStatHudProvider}, {@link EnergyHudProvider},
+ * {@link FluidHudProvider}, {@link ItemHudProvider}, {@link OwnershipHudProvider},
+ * {@link ProcessHudProvider}, {@link RecipeHudProvider}, {@link RedstoneControlHudProvider},
+ * {@link TierHudProvider}, {@link StatHudProvider}, {@link ControllerLocationHudProvider},
+ * {@link StructureSizeHudProvider}, {@link PortsSummaryHudProvider}, {@link ComparatorOutputHudProvider},
+ * {@link ErrorReasonHudProvider}, {@link AggregateGroupHudProvider}, {@link MissingBlocksProvider} - is a
+ * ready-made building block the dev opts into explicitly via {@link #registerGlobal}/{@link #register},
+ * never wired up automatically. Same "mechanism only, UX is the dev's call" policy as the rest of this
+ * library: a definition with no registrations shows nothing on Jade/TOP, not even its name.
+ *
  * <h2>Dev opt-out</h2>
- * {@link #setHudEnabled} is a per-definition killswitch: while disabled, {@link #gatherEntries} returns
- * an empty list for that definition, including {@link FormedStatusProvider}'s default line. Every piece
- * of info exposed through this bridge must be suppressible by the dev - same "mechanism only, UX is the
- * dev's call" policy as the rest of this library.
+ * {@link #setHudEnabled} is a per-definition killswitch on top of that: while disabled,
+ * {@link #gatherEntries} returns an empty list for that definition regardless of what's registered for
+ * it, and {@code compat/jade}'s object-name override (see {@code MultiblockJadeServerProvider}) is
+ * suppressed too. Useful for turning off HUD support for one definition without unregistering providers
+ * that also run globally for every other one.
  *
  * <h2>Thread-safety</h2>
  * All registration ({@link #registerGlobal}, {@link #register}, {@link #setHudEnabled},
@@ -48,13 +61,6 @@ public final class MultiblockHudRegistry {
     private static final Set<ResourceLocation> DISABLED_DEFINITIONS = new HashSet<>();
     private static boolean unformedHintsEnabled = false;
 
-    static {
-        // The only default-on provider - see FormedStatusProvider's own javadoc. Every other built-in
-        // provider in this package is opt-in: the dev registers it explicitly for the definitions it
-        // applies to. setHudEnabled(id, false) suppresses even this one, per definition.
-        registerGlobal(new FormedStatusProvider());
-    }
-
     private MultiblockHudRegistry() {}
 
     /** Registers {@code provider} to run for every formed multiblock instance, regardless of definition. */
@@ -69,8 +75,9 @@ public final class MultiblockHudRegistry {
 
     /**
      * Dev opt-out killswitch: while {@code enabled} is {@code false} for {@code definitionId},
-     * {@link #gatherEntries} returns an empty list for that definition - not even
-     * {@link FormedStatusProvider}'s default line is shown. Defaults to enabled for every definition.
+     * {@link #gatherEntries} returns an empty list for that definition, and {@code compat/jade}'s
+     * object-name override is suppressed too - regardless of which providers are registered globally or
+     * for this definition. Defaults to enabled for every definition.
      */
     public static void setHudEnabled(ResourceLocation definitionId, boolean enabled) {
         if (enabled) {
