@@ -64,6 +64,22 @@ MultiblockEvents.modify(event => {
 
 Everything flows through `toBuilder()`, so newer builder features are scriptable too: [`formedProperty(...)`](api-reference/MultiblockBuilder.md#formed-state-property), [tier stats](api-reference/MultiblockBuilder.md#tiers), and [variants](api-reference/MultiblockBuilder.md#variants) — e.g. `.variant('tall', v => { v.layer('III'); v.layer('ILI') })` (Rhino converts the arrow function to the `Consumer<VariantBuilder>` parameter).
 
+## Declaring an assembly
+
+```js
+MultiblockEvents.assembly(event => {
+    event.assembly('examplemod:steam_plant')
+        .role('core', 'examplemod:reactor_core')
+        .role('turbine', 'examplemod:turbine', 1, 8)
+        .proximity('core', 'turbine', 6)
+        .masterRole('core')
+        .breakPolicy('DEGRADE')
+        .aggregateStat('power', 'SUM')
+})
+```
+
+Fires on the same reload cycle as `create`/`modify`, re-declared safely on every `/reload`. See [Multiblock Assembly](api-reference/Multiblock-Assembly.md) for the full role/connection/policy reference.
+
 ## Wrench interaction events
 
 ```js
@@ -91,7 +107,7 @@ Both take the shared `MultiblockEventContext` that `onFormed`/`onBroken` receive
 
 ## Limitations
 
-- No script-side way to define a new `PatternProvider` type — the five built-ins are usable, but a custom shape needs a Java `PatternProviderSerializer`.
+- No script-side way to define a new `PatternProvider` type — the [built-ins](Advanced-Features.md#procedural-patterns-patternprovider) are usable, but a custom shape needs a Java `PatternProviderSerializer`.
 - `modify` replaces a definition wholesale via a rebuilt builder; there's no per-field read beyond the builder's own getters.
 
 ## See also

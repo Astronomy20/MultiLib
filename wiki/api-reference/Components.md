@@ -84,7 +84,7 @@ public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
 }
 ```
 
-`saveController`/`loadController` are the protected extension points [`AbstractMultiblockControllerBE`](BlockEntity-Abstractions.md) already provides - no `saveAdditional` override needed. `ExampleControllerBE`/`ExampleSetup` in the source tree carry exactly this wiring as a working reference.
+`saveController`/`loadController` are the protected extension points [`AbstractMultiblockControllerBE`](BlockEntity-Abstractions.md) already provides - no `saveAdditional` override needed. `ExampleControllerBE`/`BasicExampleSetup` (`example/basic/`) in the source tree carry exactly this wiring as a working reference.
 
 ## `ContentCache`
 

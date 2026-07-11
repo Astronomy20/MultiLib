@@ -29,7 +29,7 @@ Use the narrowest ingredient that expresses your intent. A tag/predicate/`any()`
 
 ```java
 .key('B', BlockIngredient.tag(BlockTags.LOGS))                // body — cheap
-.key('O', BlockIngredient.of(ExampleSetup.CONTROLLER_BLOCK))  // core — enumerable, indexed
+.key('O', BlockIngredient.of(BasicExampleSetup.CONTROLLER_BLOCK))  // core — enumerable, indexed
 ```
 
 Use `.ofState(...)` when a body block needs a specific facing or property, not just the right block.

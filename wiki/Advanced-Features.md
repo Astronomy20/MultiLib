@@ -55,9 +55,35 @@ Built-in providers (`net.astronomy.multilib.api.pattern.providers`):
 | `CylinderProvider(radius, height, ingredient)` | Solid cylinder along Y |
 | `HollowCubeProvider(width, height, depth, shell, interior)` | Cube with a shell and optional interior (`null` = unconstrained) |
 | `PyramidProvider(baseSize, ingredient)` | Stepped pyramid, shrinking 2 per Y step |
+| `ConeProvider(baseRadius, height, ingredient)` | Solid cone, linearly tapering to a point at the top |
+| `DomeProvider(radius, ingredient)` | Solid hemisphere — the upper half of a sphere |
+| `HollowDomeProvider(radius, ingredient)` | One-block-thick hemisphere shell (no floor) |
+| `RingProvider(outerRadius, innerRadius, height, ingredient)` | Annulus/tube: the band between two radii, extruded over `height` layers (`height=1` for a flat ring) |
+| `TorusProvider(majorRadius, minorRadius, ingredient)` | Solid donut lying flat in the XZ plane |
+| `PrismProvider(sides, radius, height, ingredient)` | Regular N-gon prism (hexagon, octagon, …), extruded over `height` layers |
 | `LayeredPatternProvider(layers, blockMap)` | Wraps a text grid as a provider — what `.layer(...)` uses internally |
+| `CompositeProvider` | CSG-style boolean composition of other providers — see below |
 
 Implement `PatternProvider` yourself for anything else (ellipsoid, maze, …) — it's a single-method interface.
+
+### `CompositeProvider` — combining shapes
+
+Builds a shape out of other `PatternProvider`s via `UNION`/`SUBTRACT`/`INTERSECT`, each placed at its own `(dx, dy, dz)` offset and folded in declaration order — the standard way to carve a cavity, cap a shape, or intersect two volumes without a bespoke lambda:
+
+```java
+PatternProvider reactor = CompositeProvider.builder()
+        .union(new CylinderProvider(4, 9, casing))          // solid pillar, seeds the shape
+        .subtract(new SphereProvider(2, casing), 2, 3, 2)    // carve a spherical cavity
+        .build();
+```
+
+- `UNION` adds the child's cells (first-writer-wins on overlap with an earlier union).
+- `SUBTRACT` clears every cell the child fills.
+- `INTERSECT` keeps only cells filled in **both** the running result and the child.
+- The composite's bounding box is normalized to `(0,0,0)` and derived from the `UNION` operations (falling back to all operations if there's no union) — put your seeding shape first.
+- Each child is only queried inside its own `getSize()` bounds, so a provider like `HollowCubeProvider` whose interior extends outside its shell never bleeds past its own footprint.
+
+`CompositeProvider` is JSON-serializable (`"type": "multilib:composite"`, see below) with a nested, recursive `"provider"` field per operation.
 
 ## JSON/datapack definitions
 
@@ -105,7 +131,19 @@ Top-level fields (all optional except `layers`+`keys` or `pattern`):
 | `{"any": true}` | `.any()` |
 | `{"type": "...", ...}` | A custom ingredient via `MultiblockSerializers.registerIngredient(...)` |
 
-`pattern.type` supports the five built-in providers (`multilib:sphere`/`cylinder`/`hollow_sphere`/`hollow_cube`/`pyramid`) plus any custom `PatternProviderSerializer`.
+`pattern.type` supports every built-in provider — `multilib:sphere`/`cylinder`/`hollow_sphere`/`hollow_cube`/`pyramid`/`cone`/`dome`/`hollow_dome`/`ring`/`torus`/`prism`/`composite` — plus any custom `PatternProviderSerializer`. `composite` nests recursively:
+
+```json
+{
+  "pattern": {
+    "type": "multilib:composite",
+    "operations": [
+      { "op": "union", "provider": { "type": "multilib:cylinder", "radius": 4, "height": 9, "ingredient": { "block": "examplemod:casing" } } },
+      { "op": "subtract", "provider": { "type": "multilib:sphere", "radius": 2, "ingredient": { "block": "examplemod:casing" } }, "dx": 2, "dy": 3, "dz": 2 }
+    ]
+  }
+}
+```
 
 An optional `"variants"` array declares [several geometries under one id](api-reference/MultiblockBuilder.md#variants) — mutually exclusive with a top-level `"layers"` (the loader rejects both). Each entry has a `"name"`, its own `"layers"`, and an optional `"keys"` overriding the shared top-level keys for that variant. Entries are tried in order:
 
@@ -163,8 +201,9 @@ The building blocks a processing machine needs, each with its own reference page
 - [Ports (hatches)](api-reference/Ports.md) — base classes for port blocks with their own block entity (persistent controller link, typed access); the richer counterpart to `ioPort()` above.
 - [Process engine](api-reference/Process-Engine.md) — a job state machine (progress, one-shot input/output, pause conditions) driven from your tick callback.
 - [Control helpers & commands](api-reference/Control-And-Commands.md) — redstone modes, comparator scaling, ownership, `/multilib`.
-- [HUD providers](api-reference/HUD-Providers.md) — Jade/The One Probe hover-info from one viewer-agnostic API.
+- [HUD providers](api-reference/HUD-Providers.md) — Jade/The One Probe hover-info from one viewer-agnostic API; 19 premade providers, all opt-in.
 - [Pattern variants](api-reference/MultiblockBuilder.md#variants) — several geometries under one id, with in-place wrench upgrades.
+- [Multiblock Assembly](api-reference/Multiblock-Assembly.md) — links several independent multiblock instances (e.g. a reactor core + turbines) into one logical machine, with role multiplicities, a connection graph, and aggregated capabilities/stats.
 
 All opt-in and mechanism-only — nothing is player-facing unless your mod makes it so.
 
@@ -204,4 +243,4 @@ A completely separate, lightweight mechanism from everything else on this page: 
 ## See also
 
 - [Core Concepts](Core-Concepts.md), [Pattern Design Guide](Pattern-Design-Guide.md), [Directional Cores Guide](Directional-Cores-Guide.md), [KubeJS Integration](KubeJS-Integration.md)
-- [MultiblockBuilder](api-reference/MultiblockBuilder.md), [BlockDefinition](api-reference/BlockDefinition.md), [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md), [Multiblock States & Progress](api-reference/Multiblock-States-And-Progress.md), [Block Aggregation](api-reference/Block-Aggregation.md)
+- [MultiblockBuilder](api-reference/MultiblockBuilder.md), [BlockDefinition](api-reference/BlockDefinition.md), [Block Entity Abstractions](api-reference/BlockEntity-Abstractions.md), [Multiblock States & Progress](api-reference/Multiblock-States-And-Progress.md), [Block Aggregation](api-reference/Block-Aggregation.md), [Multiblock Assembly](api-reference/Multiblock-Assembly.md)

@@ -57,6 +57,8 @@ nav:
           - Process Engine: api-reference/Process-Engine.md
           - Control & Commands: api-reference/Control-And-Commands.md
           - HUD Providers: api-reference/HUD-Providers.md
+      - Assembly:
+          - Multiblock Assembly: api-reference/Multiblock-Assembly.md
       - Utilities:
           - RotationUtils: api-reference/RotationUtils.md
           - Block Aggregation: api-reference/Block-Aggregation.md

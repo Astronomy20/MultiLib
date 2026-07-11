@@ -16,7 +16,8 @@
 - **Preview & auto-place** — ghost overlay and one-tool completion.
 - **Data-driven** — JSON/datapack definitions and KubeJS scripting.
 - **Recipe browsers** — JEI, REI, EMI, Patchouli, GuideME, FTB Quests.
-- **Machine toolkit** — energy/fluid/item buffer components, port/hatch base classes, a process engine, redstone/comparator/ownership helpers, `/multilib` commands, tier stat maps, and Jade/The One Probe hover-info. All opt-in and mechanism-only.
+- **Machine toolkit** — energy/fluid/item buffer components, port/hatch base classes, a process engine, redstone/comparator/ownership helpers, `/multilib` commands, tier stat maps, and 19 opt-in Jade/The One Probe hover-info providers. All opt-in and mechanism-only.
+- **Multiblock Assembly** — link several independent instances (a reactor core + N turbines) into one logical machine with role multiplicities, a connection graph, and aggregated capabilities/stats ([details](api-reference/Multiblock-Assembly.md)).
 - **Ambiguity handling** — a per-position [preferred-definition](api-reference/Ambiguity-And-Preferences.md) override when one block is a valid core for several structures.
 - **Block aggregation** — a separate, lightweight neighbor-merge mechanism ([details](api-reference/Block-Aggregation.md)) for Create-style connected blocks, with no declared pattern at all.
 - **Configurable** — [runtime config](Configuration.md) for preview/auto-place feel, recipe-browser icon, and the dev-tool suite.
