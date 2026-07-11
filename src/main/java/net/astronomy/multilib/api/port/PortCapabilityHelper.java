@@ -10,7 +10,7 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
  * {@link AbstractPortBlockEntity#getControllerCapability}, so a dev never has to hand-write the
  * {@code RegisterCapabilitiesEvent} lambda themselves. One call per (capability, port BE type) pair.
  * <p>
- * Example dev-side wiring, mirroring how {@code ExampleSetup} registers its own blocks/block entities
+ * Example dev-side wiring, mirroring how {@code BasicExampleSetup} registers its own blocks/block entities
  * (an {@code @EventBusSubscriber}-annotated class listening for {@code RegisterCapabilitiesEvent}):
  * <pre>{@code
  * @SubscribeEvent
