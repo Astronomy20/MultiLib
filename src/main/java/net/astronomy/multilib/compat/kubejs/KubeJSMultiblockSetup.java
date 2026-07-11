@@ -67,6 +67,20 @@ public final class KubeJSMultiblockSetup {
         }
 
         MultiblockKubeEvents.MODIFY.post(new MultiblockModifyKubeEvent());
+
+        // Assemblies (Fase 12): same reload-driven, re-declare-safe path as multiblocks. Each script
+        // re-declares its assembly every reload, so replace() (remove-then-register) is used rather
+        // than the builder's own registering build().
+        AssemblyCreateKubeEvent assemblyEvent = new AssemblyCreateKubeEvent();
+        MultiblockKubeEvents.ASSEMBLY.post(assemblyEvent);
+        for (net.astronomy.multilib.api.assembly.AssemblyBuilder builder : assemblyEvent.getBuilders()) {
+            try {
+                net.astronomy.multilib.api.assembly.AssemblyDefinition def = builder.buildWithoutRegister();
+                net.astronomy.multilib.core.assembly.AssemblyRegistry.replace(def.getId(), def);
+            } catch (Exception e) {
+                ConsoleJS.SERVER.error("[MultiLib] KubeJS assembly creation failed: " + e.getMessage());
+            }
+        }
     }
 
     @SubscribeEvent

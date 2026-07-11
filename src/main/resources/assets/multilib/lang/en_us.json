@@ -94,6 +94,20 @@
   "command.multilib.prefer.set": "Preferred definition set to '%s' at %s, %s, %s.",
   "command.multilib.prefer.cleared": "Cleared the preferred definition at %s, %s, %s.",
 
+  "command.multilib.assembly.list.empty": "No assemblies are formed in this level.",
+  "command.multilib.assembly.list.entry": "%s — %s [%s], %s member(s)",
+  "command.multilib.assembly.list.count": "%s assembly(ies).",
+  "command.multilib.assembly.info.unknown": "No assembly definition registered under '%s'.",
+  "command.multilib.assembly.info.header": "Assembly '%s':",
+  "command.multilib.assembly.info.role": "  role '%s' → %s (min %s, max %s)",
+  "command.multilib.assembly.info.policy": "  break=%s, formation=%s",
+  "command.multilib.assembly.members.none": "No assembly at %s, %s, %s.",
+  "command.multilib.assembly.members.header": "Assembly %s members:",
+  "command.multilib.assembly.members.role": "  %s: %s",
+
+  "hud.multilib.assembly.status": "Assembly: %s",
+  "hud.multilib.assembly.role": "  %s: %s",
+
 
   "item.multilib.example_wrench": "Multiblock Wrench",
 

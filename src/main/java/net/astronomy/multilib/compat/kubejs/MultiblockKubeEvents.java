@@ -28,4 +28,5 @@ public interface MultiblockKubeEvents {
     EventHandler CREATE = GROUP.server("create", () -> MultiblockCreateKubeEvent.class);
     EventHandler MODIFY = GROUP.server("modify", () -> MultiblockModifyKubeEvent.class);
     EventHandler WRENCH = GROUP.server("wrench", () -> MultiblockWrenchKubeEvent.class);
+    EventHandler ASSEMBLY = GROUP.server("assembly", () -> AssemblyCreateKubeEvent.class);
 }
