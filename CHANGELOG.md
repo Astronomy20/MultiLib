@@ -22,9 +22,14 @@ is cut, its entries move under a new version heading and this section resets to 
   graph, bottom-up formation, break policies, aggregated capabilities/stats). JSON, KubeJS
   (`MultiblockEvents.assembly(...)`), `/multilib assembly` commands, and dev-tool export included.
   See [wiki: Multiblock Assembly](wiki/api-reference/Multiblock-Assembly.md).
-- 7 premade geometric `PatternProvider`s: `ConeProvider`, `DomeProvider`, `HollowDomeProvider`,
-  `RingProvider`, `TorusProvider`, `PrismProvider`, and `CompositeProvider` (CSG-style
-  union/subtract/intersect composition of other providers).
+- 8 premade geometric `PatternProvider`s: `ConeProvider`, `DomeProvider`, `HollowDomeProvider`,
+  `RingProvider`, `TorusProvider`, `PrismProvider`, `CompositeProvider` (CSG-style
+  union/subtract/intersect composition of other providers), and `RevolutionProvider` (solid of
+  revolution: sweeps an arbitrary cross-section provider around the Y axis between a min/max
+  radius, for donut/torus shapes with a non-circular tube profile). Registered in JSON as
+  `multilib:revolution` with a nested `cross_section` field. A new `example/donut` demo shows it
+  off, including the technique for anchoring a single, non-repeated core block on an otherwise
+  rotationally symmetric ring via `CompositeProvider`.
 - 9 premade HUD providers: `ItemHudProvider`, `ControllerLocationHudProvider`,
   `StructureSizeHudProvider`, `AggregateGroupHudProvider`, `ErrorReasonHudProvider`,
   `RecipeHudProvider`, `StatHudProvider`, `PortsSummaryHudProvider`, `ComparatorOutputHudProvider`,

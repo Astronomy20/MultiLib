@@ -60,6 +60,7 @@ Built-in providers (`net.astronomy.multilib.api.pattern.providers`):
 | `HollowDomeProvider(radius, ingredient)` | One-block-thick hemisphere shell (no floor) |
 | `RingProvider(outerRadius, innerRadius, height, ingredient)` | Annulus/tube: the band between two radii, extruded over `height` layers (`height=1` for a flat ring) |
 | `TorusProvider(majorRadius, minorRadius, ingredient)` | Solid donut lying flat in the XZ plane |
+| `RevolutionProvider(minRadius, maxRadius, height, crossSection)` | Solid of revolution: sweeps a `crossSection` provider around the Y axis between `minRadius` and `maxRadius` — donut/torus shapes with an arbitrary tube profile instead of a fixed circle |
 | `PrismProvider(sides, radius, height, ingredient)` | Regular N-gon prism (hexagon, octagon, …), extruded over `height` layers |
 | `LayeredPatternProvider(layers, blockMap)` | Wraps a text grid as a provider — what `.layer(...)` uses internally |
 | `CompositeProvider` | CSG-style boolean composition of other providers — see below |
@@ -131,7 +132,7 @@ Top-level fields (all optional except `layers`+`keys` or `pattern`):
 | `{"any": true}` | `.any()` |
 | `{"type": "...", ...}` | A custom ingredient via `MultiblockSerializers.registerIngredient(...)` |
 
-`pattern.type` supports every built-in provider — `multilib:sphere`/`cylinder`/`hollow_sphere`/`hollow_cube`/`pyramid`/`cone`/`dome`/`hollow_dome`/`ring`/`torus`/`prism`/`composite` — plus any custom `PatternProviderSerializer`. `composite` nests recursively:
+`pattern.type` supports every built-in provider — `multilib:sphere`/`cylinder`/`hollow_sphere`/`hollow_cube`/`pyramid`/`cone`/`dome`/`hollow_dome`/`ring`/`torus`/`revolution`/`prism`/`composite` — plus any custom `PatternProviderSerializer`. `revolution` nests a `cross_section` provider the same way `composite` nests `provider`; `composite` nests recursively:
 
 ```json
 {

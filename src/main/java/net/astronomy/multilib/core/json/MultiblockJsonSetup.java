@@ -14,6 +14,7 @@ import net.astronomy.multilib.api.pattern.providers.HollowDomeProvider;
 import net.astronomy.multilib.api.pattern.providers.HollowSphereProvider;
 import net.astronomy.multilib.api.pattern.providers.PrismProvider;
 import net.astronomy.multilib.api.pattern.providers.PyramidProvider;
+import net.astronomy.multilib.api.pattern.providers.RevolutionProvider;
 import net.astronomy.multilib.api.pattern.providers.RingProvider;
 import net.astronomy.multilib.api.pattern.providers.SphereProvider;
 import net.astronomy.multilib.api.pattern.providers.TorusProvider;
@@ -141,6 +142,18 @@ public final class MultiblockJsonSetup {
                     Codec.INT.fieldOf("minor_radius").forGetter(p -> ((TorusProvider) p).getMinorRadius()),
                     MultiblockCodecs.BLOCK_INGREDIENT_OBJECT.fieldOf("ingredient").forGetter(p -> ((TorusProvider) p).getIngredient())
                 ).apply(inst, TorusProvider::new));
+            }
+        });
+
+        MultiblockSerializers.registerProvider(new PatternProviderSerializer() {
+            @Override public String getType() { return "multilib:revolution"; }
+            @Override public Codec<? extends PatternProvider> codec() {
+                return RecordCodecBuilder.create(inst -> inst.group(
+                    Codec.INT.fieldOf("min_radius").forGetter(p -> ((RevolutionProvider) p).getMinRadius()),
+                    Codec.INT.fieldOf("max_radius").forGetter(p -> ((RevolutionProvider) p).getMaxRadius()),
+                    Codec.INT.optionalFieldOf("height", 1).forGetter(p -> ((RevolutionProvider) p).getHeight()),
+                    MultiblockCodecs.PATTERN_PROVIDER.fieldOf("cross_section").forGetter(p -> ((RevolutionProvider) p).getCrossSection())
+                ).apply(inst, RevolutionProvider::new));
             }
         });
 
