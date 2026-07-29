@@ -75,18 +75,16 @@ jobs:
             echo
             echo "Every version of \`net.astronomy.multilib:multilib\` published to the [hosted Maven repository](Maven-Releases.md), newest first."
             echo
-            echo "| Version | Files |"
-            echo "|---|---|"
+            echo "| Version | Jar | Sources | POM |"
+            echo "|---|---|---|---|"
             if [ -d "$VERSIONS_DIR" ]; then
               for v in $(ls -1 "$VERSIONS_DIR" | sort -rV); do
                 dir="$VERSIONS_DIR/$v"
                 [ -d "$dir" ] || continue
-                files=""
-                for f in "$dir"/*; do
-                  name=$(basename "$f")
-                  files="$files[\`$name\`]($BASE_URL/$v/$name) "
-                done
-                echo "| \`$v\` | $files |"
+                jar_link="—"; [ -f "$dir/multilib-$v.jar" ] && jar_link="[jar]($BASE_URL/$v/multilib-$v.jar)"
+                src_link="—"; [ -f "$dir/multilib-$v-sources.jar" ] && src_link="[sources]($BASE_URL/$v/multilib-$v-sources.jar)"
+                pom_link="—"; [ -f "$dir/multilib-$v.pom" ] && pom_link="[pom]($BASE_URL/$v/multilib-$v.pom)"
+                echo "| \`$v\` | $jar_link | $src_link | $pom_link |"
               done
             fi
           } > wiki/Maven-Versions.md
