@@ -35,12 +35,15 @@ Every push publishes up to three version strings for the same content, so a vers
 
 ## Dependency
 
-Embed via `jarJar` (NeoForge's jar-in-jar) when MultiLib is a fundamental, non-optional dependency, so players don't need to install it separately. Tracking development (`-SNAPSHOT`):
+Embed via `jarJar` (NeoForge's jar-in-jar) when MultiLib is a fundamental, non-optional dependency, so players don't need to install it separately. `jarJar.ranged(it, ...)` is from an older ModDevGradle version and no longer exists on current versions (this project builds with `net.neoforged.moddev` 2.0.115) — use the current syntax instead, per the [official docs](https://docs.neoforged.net/toolchain/docs/dependencies/jarinjar/). Tracking development (`-SNAPSHOT`):
 
 ```groovy
 dependencies {
-    implementation jarJar("net.astronomy.multilib:multilib:1.1.0-SNAPSHOT") {
-        jarJar.ranged(it, "[1.1.0-SNAPSHOT,)")
+    jarJar(implementation("net.astronomy.multilib:multilib")) {
+        version {
+            strictly '[1.1.0-SNAPSHOT,)'
+            prefer '1.1.0-SNAPSHOT'
+        }
     }
 }
 ```
@@ -49,8 +52,11 @@ Pinning a release instead, once one exists:
 
 ```groovy
 dependencies {
-    implementation jarJar("net.astronomy.multilib:multilib:1.1.0") {
-        jarJar.ranged(it, "[1.1.0,)")
+    jarJar(implementation("net.astronomy.multilib:multilib")) {
+        version {
+            strictly '[1.1.0,)'
+            prefer '1.1.0'
+        }
     }
 }
 ```
