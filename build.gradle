@@ -157,13 +157,18 @@ tasks.named('jar', Jar) {
     // explicitly re-included - a previous `include 'assets/multilib/lang/**'` here did exactly that
     // (the published jar had only META-INF/MANIFEST.MF and the lang file). Lang files were never
     // excluded by anything below, so they're already included by the implicit default (**).
-    exclude 'assets/multilib/blockstates/**'
-    exclude 'assets/multilib/models/**'
+    // Blanket blockstates/**  and models/** excludes would also drop dev_block and dev_wrench,
+    // which are real devtool blocks/items, not examples - so exclude by the example_ prefix instead.
+    exclude 'assets/multilib/blockstates/example_*.json'
+    exclude 'assets/multilib/models/block/example_*.json'
+    exclude 'assets/multilib/models/item/example_*.json'
     exclude 'assets/multilib/guides/**'
     exclude 'assets/multilib/patchouli_books/**'
     exclude 'assets/multilib/textures/block/example_controller.png'
     exclude 'assets/multilib/textures/block/example_part.png'
     exclude 'assets/multilib/textures/block/example_tank.png'
+    exclude 'assets/multilib/textures/block/example_red_tank.png'
+    exclude 'assets/multilib/textures/block/example_green_tank.png'
     exclude 'assets/multilib/textures/block/texture.png'
     exclude 'assets/multilib/textures/item/example_wrench.png'
 

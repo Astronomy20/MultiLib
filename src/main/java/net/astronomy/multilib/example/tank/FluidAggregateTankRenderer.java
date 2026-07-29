@@ -1,10 +1,9 @@
-package net.astronomy.multilib.client.render;
+package net.astronomy.multilib.example.tank;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.astronomy.multilib.api.aggregate.AggregateGroup;
 import net.astronomy.multilib.api.component.FluidTankComponent;
-import net.astronomy.multilib.example.tank.FluidAggregateTank;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;

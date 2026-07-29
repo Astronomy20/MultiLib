@@ -103,6 +103,16 @@ is cut, its entries move under a new version heading and this section resets to 
   required to give a symbol to the tiered positions - procedural patterns have none of their own).
   Also fixes the same fragile check in `MultiblockDefinition#synthesizePatternProviderPreview`'s
   activation/core symbol detection for the 3D preview/ghost overlay.
+- Any mod consuming the published jar crashed on client startup with `NoClassDefFoundError`.
+  `ExampleAggregateTankRenderers`/`FluidAggregateTankRenderer` lived under `client/render/`, outside
+  the `example/**` package the jar task excludes, but referenced classes that are excluded
+  (`example.tank.ExampleAggregateTankSetup`/`FluidAggregateTank`) — and `ExampleAggregateTankRenderers`
+  is an `@EventBusSubscriber` that FML loads on every client, unresolvable import and all. Moved both
+  into `example/tank/` so the existing exclude covers them. Also affected: two orphaned tank textures
+  (`example_red_tank.png`/`example_green_tank.png`) shipped despite their blockstates/models being
+  excluded, and the blanket `blockstates/**`/`models/**` excludes dropped the real devtool
+  `dev_block`/`dev_wrench` blockstate and models along with the example ones — both now excluded (or
+  kept) by an `example_*` filename pattern instead of a package/directory blanket.
 
 ## Released versions
 
