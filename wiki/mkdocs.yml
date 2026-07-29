@@ -6,7 +6,6 @@ site_dir: ../site
 
 theme:
   name: material
-  custom_dir: overrides
   logo: multilib_icon.png
   favicon: multilib_icon.png
   palette:
