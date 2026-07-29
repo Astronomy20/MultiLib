@@ -50,4 +50,17 @@ class AbilityBlockIngredient implements BlockIngredient {
     public BlockState getRenderState() {
         return previewBlock.defaultBlockState();
     }
+
+    /** Value equality by capability + preview block - see {@link SingleBlockIngredient#equals} for why this matters. */
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof AbilityBlockIngredient other
+                && capability.equals(other.capability)
+                && previewBlock == other.previewBlock;
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * capability.hashCode() + System.identityHashCode(previewBlock);
+    }
 }

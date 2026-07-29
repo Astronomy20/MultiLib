@@ -91,6 +91,18 @@ is cut, its entries move under a new version heading and this section resets to 
   rotation aligns it closest to the player's facing; `OverlayRequestHandler`'s player-facing branch and
   `AutoPlaceRequestHandler`'s live-facing fallback both use it now. Reproduces the exact old
   SOUTH/WEST/NORTH/EAST mapping for the common Z-anchored case, so no behavior change there.
+- `.tier(symbol, ...)` silently resolved no positions (and no tier) for any `.pattern(PatternProvider)`-based
+  definition, including nested ones like `RevolutionProvider`/`CompositeProvider`. `FunctionalMatcher`
+  assigns a symbol to a provider-generated cell by matching its `BlockIngredient` against the
+  definition's `blockMap` via `.equals()`, but `SingleBlockIngredient`/`TagBlockIngredient`/
+  `AnyOfBlockIngredient`/`StatePropertyIngredient`/`AbilityBlockIngredient` never overrode
+  `equals()`/`hashCode()` — two separately-constructed-but-equivalent ingredients (e.g.
+  `BlockIngredient.of(SOME_BLOCK)` called once for `.key(...)` and again inside the provider) compared
+  unequal by default identity equality. Added structural equality to all five, so tier now works
+  uniformly for `.layer(...)` and `.pattern(...)` definitions (`.key(symbol, ingredient)` is still
+  required to give a symbol to the tiered positions - procedural patterns have none of their own).
+  Also fixes the same fragile check in `MultiblockDefinition#synthesizePatternProviderPreview`'s
+  activation/core symbol detection for the 3D preview/ghost overlay.
 
 ## Released versions
 

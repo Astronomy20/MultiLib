@@ -30,4 +30,15 @@ class AnyOfBlockIngredient implements BlockIngredient {
         }
         return result;
     }
+
+    /** Value equality by member list (order-sensitive) - see {@link SingleBlockIngredient#equals} for why this matters. */
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof AnyOfBlockIngredient other && ingredients.equals(other.ingredients);
+    }
+
+    @Override
+    public int hashCode() {
+        return ingredients.hashCode();
+    }
 }

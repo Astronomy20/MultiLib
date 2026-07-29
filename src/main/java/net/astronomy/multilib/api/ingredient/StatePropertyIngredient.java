@@ -6,6 +6,7 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public final class StatePropertyIngredient implements BlockIngredient {
@@ -35,6 +36,19 @@ public final class StatePropertyIngredient implements BlockIngredient {
     @Override
     public Set<Block> getCandidateBlocks() {
         return Set.of(block);
+    }
+
+    /** Value equality by block + required properties - see {@link SingleBlockIngredient#equals} for why this matters. */
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof StatePropertyIngredient other
+                && block == other.block
+                && requiredProperties.equals(other.requiredProperties);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * Objects.hashCode(block) + requiredProperties.hashCode();
     }
 
     /**
