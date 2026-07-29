@@ -8,7 +8,7 @@ MultiLib publishes a static Maven repository from this site:
 https://astronomy20.github.io/MultiLib/maven/
 ```
 
-Rebuilt on every push to `1.21.1`, not just on CurseForge/Modrinth releases — the Maven coordinate tracks the latest commit; player-facing releases stay their own, less frequent milestones. Published versions are never pruned. The version itself only changes when `mod_version` in `gradle.properties` is bumped.
+Rebuilt on every push to `1.21.1`, not just on CurseForge/Modrinth releases — the Maven coordinate tracks the latest commit; player-facing releases stay their own, less frequent milestones. The version itself only changes when `mod_version` in `gradle.properties` is bumped; every version published so far stays available — see the [Maven Version Index](Maven-Versions.md).
 
 ## Coordinates
 

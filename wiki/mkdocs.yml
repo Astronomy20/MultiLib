@@ -63,5 +63,6 @@ nav:
           - RotationUtils: api-reference/RotationUtils.md
           - Block Aggregation: api-reference/Block-Aggregation.md
   - Maven Releases: Maven-Releases.md
+  - Maven Version Index: Maven-Versions.md
   - Help:
       - FAQ & Troubleshooting: FAQ-Troubleshooting.md

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -30,11 +30,66 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # ./gradlew publish only ever adds the current mod_version's files (see build.gradle's
+      # `publishing` block, writing into ./repo) - it never touches other versions' directories. To
+      # keep every version that's ever been published (not just whatever the last deploy happened to
+      # produce), `repo/` is a checkout of a dedicated `maven-repo` branch that accumulates history
+      # across runs, committed back below. Falls back to an empty repo on the very first run, when
+      # that branch doesn't exist yet.
+      - name: Check out accumulated Maven repo (maven-repo branch)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --quiet --branch maven-repo --single-branch \
+            "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" repo \
+            || (mkdir -p repo && cd repo && git init -q -b maven-repo \
+                && git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git")
+
       # Publishes to ./repo (see build.gradle's `publishing` block) on every push to 1.21.1, not just
       # tagged CurseForge/Modrinth releases - a downstream mod embedding MultiLib via jarJar can track
       # the latest commit without waiting for a player-facing release. See wiki/Maven-Releases.md.
       - name: Publish Maven artifacts
         run: ./gradlew publish
+
+      - name: Commit and push accumulated Maven repo
+        working-directory: repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -q -m "Publish ${{ github.sha }}"
+          git push -q origin HEAD:maven-repo
+
+      # Generates wiki/Maven-Versions.md from the accumulated repo/ (every version directory found
+      # under the multilib artifact path), so the docs site lists every version ever published, not
+      # just the current one - see wiki/Maven-Versions.md's committed placeholder for the local-build
+      # fallback when this step hasn't run.
+      - name: Generate Maven version index
+        run: |
+          VERSIONS_DIR="repo/net/astronomy/multilib/multilib"
+          BASE_URL="https://astronomy20.github.io/MultiLib/maven/net/astronomy/multilib/multilib"
+          {
+            echo "[← Back to Home](index.md)"
+            echo
+            echo "# Maven Version Index"
+            echo
+            echo "Every version of \`net.astronomy.multilib:multilib\` published to the [hosted Maven repository](Maven-Releases.md), newest first."
+            echo
+            echo "| Version | Files |"
+            echo "|---|---|"
+            if [ -d "$VERSIONS_DIR" ]; then
+              for v in $(ls -1 "$VERSIONS_DIR" | sort -rV); do
+                dir="$VERSIONS_DIR/$v"
+                [ -d "$dir" ] || continue
+                files=""
+                for f in "$dir"/*; do
+                  name=$(basename "$f")
+                  files="$files[\`$name\`]($BASE_URL/$v/$name) "
+                done
+                echo "| \`$v\` | $files |"
+              done
+            fi
+          } > wiki/Maven-Versions.md
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -67,7 +122,7 @@ jobs:
       - name: Add Maven repository to site
         run: |
           mkdir -p site/maven
-          cp -r repo/. site/maven/
+          rsync -a --exclude='.git' repo/ site/maven/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
