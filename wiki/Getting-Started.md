@@ -11,7 +11,7 @@ From "MultiLib is on my classpath" to a working structure that fires a callback 
 
 ## 1. Add the dependency
 
-MultiLib is a library mod: depend on it at compile and runtime, as with any NeoForge library. Add it to `build.gradle` and as a required dependency in `neoforge.mods.toml`, and ensure a MultiLib jar is present at runtime. Exact Maven/Modrinth/CurseForge coordinates depend on where it's published for your project.
+MultiLib is a library mod: depend on it at compile and runtime, as with any NeoForge library. Add it to `build.gradle` and as a required dependency in `neoforge.mods.toml`, and ensure a MultiLib jar is present at runtime. See [Maven Releases](Maven-Releases.md) for the hosted Maven repository and `jarJar` embedding coordinates, or use it straight from source: add a MultiLib checkout as a Gradle composite build (`includeBuild('../MultiLib')` in `settings.gradle`) for zero-publish local development against the live source tree.
 
 ## 2. The classes you'll touch
 

@@ -40,6 +40,9 @@ is cut, its entries move under a new version heading and this section resets to 
   currently running (backwards-compatible: defaults to empty).
 - Jade tooltip now shows the multiblock's own display name instead of the looked-at block's name,
   for any block that's part of a **formed** instance.
+- A hosted Maven repository at `https://astronomy20.github.io/MultiLib/maven/`, republished on every
+  push to `1.21.1` (independent of CurseForge/Modrinth release cadence) — see
+  [wiki: Maven Releases](wiki/Maven-Releases.md) for `jarJar` embedding coordinates.
 
 ### Changed
 

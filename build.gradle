@@ -292,14 +292,18 @@ sourceSets.main.resources.srcDir generateModMetadata
 // To avoid having to run "generateModMetadata" manually, make it run on every project reload
 neoForge.ideSyncTask generateModMetadata
 
-// Example configuration to allow publishing using the maven-publish plugin
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
+            groupId = mod_group_id
+            artifactId = mod_id
+            version = mod_version
             from components.java
         }
     }
     repositories {
+        // Published on every push to the 1.21.1 branch by .github/workflows/docs.yml, merged into
+        // the same GitHub Pages deploy as the wiki - see wiki/Maven-Releases.md.
         maven {
             url "file://${project.projectDir}/repo"
         }
