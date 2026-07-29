@@ -72,7 +72,7 @@ public class AutoPlaceRequestHandler {
 
             MultiblockDefinition definition = findAutoPlaceDefinitionAt(level, corePos);
             if (definition == null) return;
-            if (definition.getLayers().isEmpty()) return;
+            if (definition.getPreviewLayers().isEmpty()) return;
 
             List<Candidate> candidates = computeCandidates(player, level, corePos, definition);
             if (candidates == null || candidates.isEmpty()) return;
@@ -133,8 +133,13 @@ public class AutoPlaceRequestHandler {
             return null;
         }
 
-        List<List<String>> layers = definition.getLayers();
-        Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
+        // getPreviewLayers()/getPreviewBlockMap() instead of getLayers()/getBlockMap(): identical to
+        // the static grid for a shaped (.layer()) definition, but also populated (via an exact sample
+        // of the provider) for a .pattern(PatternProvider)-based one, which has no static grid of its
+        // own - see MultiblockDefinition#getPreviewLayers' javadoc. OverlayRequestHandler already uses
+        // the same pair for the ghost overlay.
+        List<List<String>> layers = definition.getPreviewLayers();
+        Map<Character, BlockIngredient> blockMap = definition.getPreviewBlockMap();
         char coreSymbol = definition.getCoreSymbol();
         Set<Character> freeBlockSymbols = definition.getFreeBlocks().keySet();
 
@@ -157,8 +162,12 @@ public class AutoPlaceRequestHandler {
                 axis = active.axis();
                 rotation = active.rotation();
             } else {
+                // orientationForFacing, not orientationForFace: the latter assumes every definition's
+                // body grows along its declared local +Z relative to the core, which places the ghost
+                // to the player's side instead of behind them for a core anchored along local X (or
+                // off-center in general) - see StructureOrientation#orientationForFacing's javadoc.
                 StructureOrientation.Orientation fallback =
-                        StructureOrientation.orientationForFace(definition, player.getDirection());
+                        StructureOrientation.orientationForFacing(definition, player.getDirection(), coreSymbol);
                 axis = fallback.axis();
                 rotation = fallback.rotation();
             }

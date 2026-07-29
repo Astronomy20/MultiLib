@@ -1023,10 +1023,13 @@ public final class MultiblockBuilder {
      * {@code unique()} (an opt-in constraint on any symbol), this is enforced unconditionally whenever
      * {@link #core(char)} was called: a dev who genuinely needs that same block to appear more than
      * once should use {@link #activation(char)} instead for the extra positions (a trigger, not a
-     * unique controller).
+     * unique controller). {@code layers} is only populated by {@code .layer(...)}; a
+     * {@link #pattern(PatternProvider)}-based definition resolves core/activation by ingredient
+     * equality instead (see {@link net.astronomy.multilib.core.matching.FunctionalMatcher}), so this
+     * check is skipped rather than always failing on an empty grid.
      */
     private boolean validateUniqueCore(ResourceLocation id, List<List<String>> layers) {
-        if (coreSymbol == '\0' || shapeless) return true;
+        if (coreSymbol == '\0' || shapeless || layers.isEmpty()) return true;
 
         int count = 0;
         for (List<String> layer : layers) {
@@ -1052,9 +1055,11 @@ public final class MultiblockBuilder {
      * A {@code core}/{@code activation} symbol that never actually occurs in the pattern is always a
      * mistake - usually a typo, or a leftover from an edited pattern - so it's rejected the same way a
      * duplicate core is, rather than silently forming a structure with no real controller/trigger.
+     * Skipped for a {@link #pattern(PatternProvider)}-based definition (empty {@code layers}) the same
+     * way {@link #validateUniqueCore} is - see that method's note.
      */
     private boolean validateCoreActivationInPattern(ResourceLocation id, List<List<String>> layers) {
-        if (shapeless) return true;
+        if (shapeless || layers.isEmpty()) return true;
         if (coreSymbol != '\0' && !patternContainsSymbol(coreSymbol, layers)) {
             MultiLib.LOGGER.error("[MultiLib] Multiblock '{}': core symbol '{}' does not occur anywhere in the pattern.", id, coreSymbol);
             failValidation(id, "core symbol not found in the pattern");

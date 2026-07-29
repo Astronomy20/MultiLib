@@ -59,6 +59,35 @@ is cut, its entries move under a new version heading and this section resets to 
   bypassed the per-definition killswitch).
 - Removed leftover `TEMP DEBUG` logging left in `BlockActivationHandler`/`BlockBreakHandler` from a
   past investigation.
+- `.pattern(PatternProvider)`-based definitions with a `.core(...)`/`.activation(...)` symbol failed
+  `MultiblockBuilder` validation unconditionally and were silently never registered (core/activation
+  presence was checked against the `.layer(...)`-only grid, which a procedural pattern never
+  populates) — this also meant such definitions never showed up in the ghost overlay or JEI/REI/EMI,
+  since both read from the registry. `validateUniqueCore`/`validateCoreActivationInPattern` now skip
+  when there's no static grid to check, the same way `validateLayerDimensions` already did.
+- Autoplace (`.autoPlace()`/`.autoPlaceOverlay()`) now works for `.pattern(PatternProvider)`-based
+  definitions too: `AutoPlaceRequestHandler`/`AutoPlacePreviewRequestHandler` read
+  `getPreviewLayers()`/`getPreviewBlockMap()` (an exact sample of the provider) instead of the
+  always-empty `getLayers()`/`getBlockMap()`, matching what the ghost overlay already did.
+- `StructureOrientation.detectFromPlacedBlocks` — the "orient the ghost overlay/autoplace preview to
+  whatever's already physically built" check shared by the ghost overlay, autoplace, and
+  `MultiblockProgressAPI` — read raw `getLayers()`/`getBlockMap()` too, so it silently detected
+  nothing for any `.pattern(PatternProvider)`-based (or shapeless) definition, regardless of how much
+  of the structure existed in the world. Both callers would then fall back to a live/guessed
+  orientation instead of the real one, which could look like "autoplace only works once the ghost
+  overlay has been opened" (the overlay's one-shot guess, once pinned, is at least stable - the live
+  fallback isn't). Fixed the same way, with `getPreviewLayers()`/`getPreviewBlockMap()`; a no-op for
+  every shaped `.layer()` definition (same object references in that case).
+- Ghost overlay/autoplace's "orient to face the player" fallback (`StructureOrientation.orientationForFace`,
+  used whenever nothing's placed yet to detect ground-truth orientation from) rigidly assumed every
+  definition's body extends along its declared local +Z (row) axis relative to the core/activation
+  symbol, rotating that axis to face the player. A definition anchored off-center along local X instead
+  (or diagonally) previewed to the player's side instead of behind them. Added
+  `StructureOrientation#orientationForFacing`, which measures the pattern's real core-to-body direction
+  (from `getPreviewLayers()`/`getPreviewBlockMap()`, so it works for any provider) and picks whichever
+  rotation aligns it closest to the player's facing; `OverlayRequestHandler`'s player-facing branch and
+  `AutoPlaceRequestHandler`'s live-facing fallback both use it now. Reproduces the exact old
+  SOUTH/WEST/NORTH/EAST mapping for the common Z-anchored case, so no behavior change there.
 
 ## Released versions
 

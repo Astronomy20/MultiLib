@@ -45,7 +45,7 @@ public class AutoPlacePreviewRequestHandler {
      */
     static void sendPreviewUpdate(ServerPlayer player, ServerLevel level, BlockPos corePos) {
         MultiblockDefinition definition = AutoPlaceRequestHandler.findAutoPlaceDefinitionAt(level, corePos);
-        if (definition == null || !definition.isAutoPlaceOverlay() || definition.getLayers().isEmpty()) {
+        if (definition == null || !definition.isAutoPlaceOverlay() || definition.getPreviewLayers().isEmpty()) {
             PacketDistributor.sendToPlayer(player, new AutoPlacePreviewDataPacket(List.of()));
             return;
         }

@@ -142,18 +142,31 @@ public class OverlayRequestHandler {
                             .filter(net.astronomy.multilib.api.block.BlockDefinition::hasMainFace)
                             .map(bd -> extractMainFace(clickedState))
                             .orElse(null);
-                    Direction effectiveFace = mainFace != null
-                            ? mainFace
-                            : (packet.faceOrdinal() >= 0 && packet.faceOrdinal() < Direction.values().length
-                                    ? Direction.values()[packet.faceOrdinal()] : null);
-                    if (effectiveFace != null) {
-                        StructureOrientation.Orientation o = StructureOrientation.orientationForFace(definition, effectiveFace);
-                        axis = o.axis();
-                        rotation = o.rotation();
+                    Direction packetFace = (packet.faceOrdinal() >= 0 && packet.faceOrdinal() < Direction.values().length)
+                            ? Direction.values()[packet.faceOrdinal()] : null;
+                    StructureOrientation.Orientation o;
+                    if (mainFace != null) {
+                        // Rigid: the core's own placed facing wins outright, ignoring the player - see
+                        // BlockDefinition#hasMainFace's javadoc.
+                        o = StructureOrientation.orientationForFace(definition, mainFace);
+                    } else if (packetFace == Direction.UP || packetFace == Direction.DOWN) {
+                        // A literal clicked face (see GhostOverlayInputHandler) - no "player facing"
+                        // concept applies vertically, so the fixed UP/DOWN mapping (and DOWN's optional
+                        // flip) still applies as-is.
+                        o = StructureOrientation.orientationForFace(definition, packetFace);
+                    } else if (packetFace != null) {
+                        // For a horizontal trigger, packetFace is actually the player's own look
+                        // direction (see GhostOverlayInputHandler), not the clicked face - align the
+                        // pattern's real core-to-body direction with it instead of assuming every
+                        // definition's body grows along local +Z (orientationForFace's fixed table),
+                        // which put the preview to the side rather than behind the player for a
+                        // definition anchored along local X (or off-center in general).
+                        o = StructureOrientation.orientationForFacing(definition, packetFace, anchorSymbol);
                     } else {
-                        axis = "Y";
-                        rotation = 0;
+                        o = new StructureOrientation.Orientation("Y", 0);
                     }
+                    axis = o.axis();
+                    rotation = o.rotation();
                 }
             }
 

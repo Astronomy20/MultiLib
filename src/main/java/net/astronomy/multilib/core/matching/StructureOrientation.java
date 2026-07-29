@@ -90,6 +90,98 @@ public final class StructureOrientation {
     }
 
     /**
+     * Picks the horizontal (Y-axis) rotation that makes the pattern's own body extend as closely as
+     * possible toward {@code lookDirection} - i.e. away from the player, into their view - instead of
+     * {@link #orientationForFace}'s fixed assumption that every definition's body grows along its
+     * declared local +Z (row) axis relative to the anchor. That assumption breaks for a definition
+     * whose anchor sits off-center along local X instead (or diagonally): rotating local-south to face
+     * the player then swings the real body 90 degrees to one side rather than behind them. This instead
+     * measures {@code anchorSymbol}'s actual (relX, relZ) offset from every other filled cell in
+     * {@link MultiblockDefinition#getPreviewLayers()} (works the same for a real {@code .layer(...)}
+     * grid or a {@code .pattern(PatternProvider)}-synthesized one - see that method's javadoc), sums
+     * them into one "which way is the bulk of the structure, relative to the anchor" vector, and picks
+     * whichever of the 4 rotations rotates that vector closest to {@code lookDirection}.
+     *
+     * @return the best-aligned orientation, or the same fixed mapping {@link #orientationForFace} would
+     *         give for {@code lookDirection} if the anchor symbol isn't found or has no other filled
+     *         cells to measure against (e.g. a single-block definition).
+     */
+    public static Orientation orientationForFacing(MultiblockDefinition definition, Direction lookDirection, char anchorSymbol) {
+        Orientation fallback = orientationForFace(definition, lookDirection);
+        if (anchorSymbol == '\0') return fallback;
+
+        List<List<String>> layers = definition.getPreviewLayers();
+        Map<Character, BlockIngredient> blockMap = definition.getPreviewBlockMap();
+        Set<Character> freeBlockSymbols = definition.getFreeBlocks().keySet();
+
+        int[] anchorRel = findRelPosition(layers, anchorSymbol);
+        if (anchorRel == null) return fallback;
+
+        long sumX = 0, sumZ = 0;
+        int count = 0;
+        for (List<String> layer : layers) {
+            int height = layer.size();
+            if (height == 0) continue;
+            int width = layer.get(0).length();
+            int centerX = width / 2;
+            int centerZ = height / 2;
+
+            for (int row = 0; row < height; row++) {
+                String line = layer.get(row);
+                for (int col = 0; col < Math.min(width, line.length()); col++) {
+                    char symbol = line.charAt(col);
+                    if (symbol == ' ' || symbol == anchorSymbol) continue;
+                    if (freeBlockSymbols.contains(symbol)) continue;
+                    if (!blockMap.containsKey(symbol)) continue;
+
+                    sumX += (col - centerX) - anchorRel[0];
+                    sumZ += (row - centerZ) - anchorRel[1];
+                    count++;
+                }
+            }
+        }
+        if (count == 0) return fallback;
+
+        int dx = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, sumX));
+        int dz = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, sumZ));
+        int lookX = lookDirection.getStepX();
+        int lookZ = lookDirection.getStepZ();
+
+        int bestRotation = 0;
+        long bestDot = Long.MIN_VALUE;
+        for (int r = 0; r < 4; r++) {
+            int[] rotated = ShapedMatcher.applyTransform(dx, 0, dz, "Y", r);
+            long dot = (long) rotated[0] * lookX + (long) rotated[2] * lookZ;
+            if (dot > bestDot) {
+                bestDot = dot;
+                bestRotation = r;
+            }
+        }
+        return new Orientation("Y", bestRotation);
+    }
+
+    /** The first cell matching {@code symbol}'s (relX, relZ) offset from its own layer's centre, or {@code null} if it doesn't occur anywhere. */
+    private static int[] findRelPosition(List<List<String>> layers, char symbol) {
+        for (List<String> layer : layers) {
+            int height = layer.size();
+            if (height == 0) continue;
+            int width = layer.get(0).length();
+            int centerX = width / 2;
+            int centerZ = height / 2;
+
+            for (int row = 0; row < height; row++) {
+                String line = layer.get(row);
+                for (int col = 0; col < Math.min(width, line.length()); col++) {
+                    if (line.charAt(col) == symbol) {
+                        return new int[]{col - centerX, row - centerZ};
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Scans every orientation the pattern matcher would ever try (mirroring {@link ShapedMatcher}'s
      * own {@code tryAllTransformsForCell}/{@code tryGranularTransformsForCell} enumeration) and picks
      * whichever orientation has the most already-placed, matching pattern blocks (excluding
@@ -107,8 +199,14 @@ public final class StructureOrientation {
      */
     public static Optional<Orientation> detectFromPlacedBlocks(
             ServerLevel level, BlockPos anchorPos, MultiblockDefinition definition, char anchorSymbol) {
-        List<List<String>> layers = definition.getLayers();
-        Map<Character, BlockIngredient> blockMap = definition.getBlockMap();
+        // getPreviewLayers()/getPreviewBlockMap(), not getLayers()/getBlockMap(): identical references
+        // for a shaped (.layer()) definition, but also populated (via an exact provider sample) for a
+        // .pattern(PatternProvider)-based or shapeless one, which has no static declared grid of its
+        // own - see MultiblockDefinition#getPreviewLayers' javadoc. Without this, every caller of this
+        // method (ghost overlay AND autoplace) silently never detects an already-placed partial
+        // structure for such definitions, since the loop below would iterate zero layers either way.
+        List<List<String>> layers = definition.getPreviewLayers();
+        Map<Character, BlockIngredient> blockMap = definition.getPreviewBlockMap();
         Set<Character> freeBlockSymbols = definition.getFreeBlocks().keySet();
 
         List<String[]> orientationCandidates = new ArrayList<>();
