@@ -23,9 +23,29 @@ Rebuilt on every push to `1.21.1`, not just on CurseForge/Modrinth releases — 
 
 See the [Maven Version Index](Maven-Versions.md) for every version published.
 
+## Versions
+
+Every push publishes up to three version strings for the same content, so a version number is never silently overwritten with different bytes under the same name:
+
+| Version | Meaning |
+|---|---|
+| `1.1.0-SNAPSHOT` | Always the latest push to `1.21.1`. Mutable by Maven convention — Gradle re-checks it instead of caching it forever, unlike a bare release. Use this to track development without waiting for a release. |
+| `1.1.0-<build number>` | A new, immutable version every push (`MULTILIB_BUILD_NUMBER` = the CI run number). Pin this for a reproducible build tied to one exact push. |
+| `1.1.0` | A real release — published once, the first time that `mod_version` is seen, then never touched again. |
+
 ## Dependency
 
-Embed via `jarJar` (NeoForge's jar-in-jar) when MultiLib is a fundamental, non-optional dependency, so players don't need to install it separately:
+Embed via `jarJar` (NeoForge's jar-in-jar) when MultiLib is a fundamental, non-optional dependency, so players don't need to install it separately. Tracking development (`-SNAPSHOT`):
+
+```groovy
+dependencies {
+    implementation jarJar("net.astronomy.multilib:multilib:1.1.0-SNAPSHOT") {
+        jarJar.ranged(it, "[1.1.0-SNAPSHOT,)")
+    }
+}
+```
+
+Pinning a release instead, once one exists:
 
 ```groovy
 dependencies {

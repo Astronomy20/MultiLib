@@ -296,9 +296,33 @@ sourceSets.main.resources.srcDir generateModMetadata
 // To avoid having to run "generateModMetadata" manually, make it run on every project reload
 neoForge.ideSyncTask generateModMetadata
 
+// Three publications instead of one, so a version string is never silently overwritten with different
+// bytes under the same name - see .github/workflows/docs.yml for which of these tasks actually run on
+// a given push, and wiki/Maven-Releases.md for the consumer-facing explanation.
+//   - mavenSnapshot (<mod_version>-SNAPSHOT) - republished on every push. Maven/Gradle treat -SNAPSHOT
+//     as mutable by convention and re-check it instead of caching it forever the way a bare release
+//     version is cached, so this is the only one of the three safe to keep silently overwriting.
+//   - mavenBuild (<mod_version>-<MULTILIB_BUILD_NUMBER>) - a new, immutable version every push, for
+//     pinning one exact build reproducibly. MULTILIB_BUILD_NUMBER is CI-supplied (falls back to
+//     "local" outside CI, e.g. a dev running `./gradlew publish` by hand).
+//   - mavenRelease (bare <mod_version>) - only ever published the first time a given mod_version is
+//     seen (the workflow checks whether that version directory already exists before running its
+//     publish task) - once cut, a real release is never touched again.
 publishing {
     publications {
-        register('mavenJava', MavenPublication) {
+        register('mavenSnapshot', MavenPublication) {
+            groupId = mod_group_id
+            artifactId = mod_id
+            version = "${mod_version}-SNAPSHOT"
+            from components.java
+        }
+        register('mavenBuild', MavenPublication) {
+            groupId = mod_group_id
+            artifactId = mod_id
+            version = "${mod_version}-${System.getenv('MULTILIB_BUILD_NUMBER') ?: 'local'}"
+            from components.java
+        }
+        register('mavenRelease', MavenPublication) {
             groupId = mod_group_id
             artifactId = mod_id
             version = mod_version
@@ -311,7 +335,10 @@ publishing {
         // uri(Directory), not a hand-built "file://${projectDir}" string: projectDir renders with
         // backslashes on Windows, which isn't a valid URI path separator and fails at publish time
         // ("Cannot convert URI '...' to a file") - uri() builds a correct file: URI on every OS.
+        // name = "local": makes the generated publish*PublicationToLocalRepository task names
+        // deterministic, since the workflow invokes specific ones rather than the blanket `publish`.
         maven {
+            name = "local"
             url = uri(layout.projectDirectory.dir("repo"))
         }
     }

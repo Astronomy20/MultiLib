@@ -45,11 +45,34 @@ jobs:
             || (mkdir -p repo && cd repo && git init -q -b maven-repo \
                 && git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git")
 
+      # Whether this push is the first one seen with the current mod_version: if the bare <mod_version>
+      # directory doesn't already exist in the accumulated repo, this run also publishes the immutable
+      # "real release" version (see build.gradle's `publishing` block) - once cut, it's never touched
+      # again by a later push that hasn't bumped mod_version yet.
+      - name: Determine which Maven publications to run
+        id: maven_targets
+        run: |
+          MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
+          RELEASE_DIR="repo/net/astronomy/multilib/multilib/${MOD_VERSION}"
+          if [ -d "$RELEASE_DIR" ]; then
+            echo "publish_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # Publishes to ./repo (see build.gradle's `publishing` block) on every push to 1.21.1, not just
       # tagged CurseForge/Modrinth releases - a downstream mod embedding MultiLib via jarJar can track
-      # the latest commit without waiting for a player-facing release. See wiki/Maven-Releases.md.
+      # the latest commit without waiting for a player-facing release. See wiki/Maven-Releases.md for
+      # what each of the three published versions (SNAPSHOT / build number / bare release) means.
       - name: Publish Maven artifacts
-        run: ./gradlew publish
+        env:
+          MULTILIB_BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          TASKS="publishMavenSnapshotPublicationToLocalRepository publishMavenBuildPublicationToLocalRepository"
+          if [ "${{ steps.maven_targets.outputs.publish_release }}" = "true" ]; then
+            TASKS="$TASKS publishMavenReleasePublicationToLocalRepository"
+          fi
+          ./gradlew $TASKS
 
       - name: Commit and push accumulated Maven repo
         working-directory: repo
@@ -75,16 +98,21 @@ jobs:
             echo
             echo "Every version of \`net.astronomy.multilib:multilib\` published to the [hosted Maven repository](Maven-Releases.md), newest first."
             echo
-            echo "| Version | Jar | Sources | POM |"
-            echo "|---|---|---|---|"
+            echo "| Version | Type | Jar | Sources | POM |"
+            echo "|---|---|---|---|---|"
             if [ -d "$VERSIONS_DIR" ]; then
               for v in $(ls -1 "$VERSIONS_DIR" | sort -rV); do
                 dir="$VERSIONS_DIR/$v"
                 [ -d "$dir" ] || continue
+                case "$v" in
+                  *-SNAPSHOT) type="Snapshot (latest, mutable)" ;;
+                  *-*) type="Build (immutable pin)" ;;
+                  *) type="**Release**" ;;
+                esac
                 jar_link="—"; [ -f "$dir/multilib-$v.jar" ] && jar_link="[jar]($BASE_URL/$v/multilib-$v.jar)"
                 src_link="—"; [ -f "$dir/multilib-$v-sources.jar" ] && src_link="[sources]($BASE_URL/$v/multilib-$v-sources.jar)"
                 pom_link="—"; [ -f "$dir/multilib-$v.pom" ] && pom_link="[pom]($BASE_URL/$v/multilib-$v.pom)"
-                echo "| \`$v\` | $jar_link | $src_link | $pom_link |"
+                echo "| \`$v\` | $type | $jar_link | $src_link | $pom_link |"
               done
             fi
           } > wiki/Maven-Versions.md
