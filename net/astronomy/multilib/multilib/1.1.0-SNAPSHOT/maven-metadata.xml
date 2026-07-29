@@ -3,26 +3,26 @@
   <groupId>net.astronomy.multilib</groupId>
   <artifactId>multilib</artifactId>
   <versioning>
-    <lastUpdated>20260729155626</lastUpdated>
+    <lastUpdated>20260729172543</lastUpdated>
     <snapshot>
-      <timestamp>20260729.155626</timestamp>
-      <buildNumber>2</buildNumber>
+      <timestamp>20260729.172543</timestamp>
+      <buildNumber>3</buildNumber>
     </snapshot>
     <snapshotVersions>
       <snapshotVersion>
-        <extension>jar</extension>
-        <value>1.1.0-20260729.155626-2</value>
-        <updated>20260729155626</updated>
-      </snapshotVersion>
-      <snapshotVersion>
         <extension>module</extension>
-        <value>1.1.0-20260729.155626-2</value>
-        <updated>20260729155626</updated>
+        <value>1.1.0-20260729.172543-3</value>
+        <updated>20260729172543</updated>
       </snapshotVersion>
       <snapshotVersion>
         <extension>pom</extension>
-        <value>1.1.0-20260729.155626-2</value>
-        <updated>20260729155626</updated>
+        <value>1.1.0-20260729.172543-3</value>
+        <updated>20260729172543</updated>
+      </snapshotVersion>
+      <snapshotVersion>
+        <extension>jar</extension>
+        <value>1.1.0-20260729.172543-3</value>
+        <updated>20260729172543</updated>
       </snapshotVersion>
     </snapshotVersions>
   </versioning>
