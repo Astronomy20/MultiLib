@@ -3,11 +3,13 @@
   <groupId>net.astronomy.multilib</groupId>
   <artifactId>multilib</artifactId>
   <versioning>
-    <latest>1.1.0</latest>
-    <release>1.1.0</release>
+    <latest>1.1.0-SNAPSHOT</latest>
+    <release>1.1.0-25</release>
     <versions>
       <version>1.1.0</version>
+      <version>1.1.0-25</version>
+      <version>1.1.0-SNAPSHOT</version>
     </versions>
-    <lastUpdated>20260729140420</lastUpdated>
+    <lastUpdated>20260729155314</lastUpdated>
   </versioning>
 </metadata>
