@@ -109,9 +109,16 @@ jobs:
                   *-*) type="Build (immutable pin)" ;;
                   *) type="**Release**" ;;
                 esac
-                jar_link="—"; [ -f "$dir/multilib-$v.jar" ] && jar_link="[jar]($BASE_URL/$v/multilib-$v.jar)"
-                src_link="—"; [ -f "$dir/multilib-$v-sources.jar" ] && src_link="[sources]($BASE_URL/$v/multilib-$v-sources.jar)"
-                pom_link="—"; [ -f "$dir/multilib-$v.pom" ] && pom_link="[pom]($BASE_URL/$v/multilib-$v.pom)"
+                # Glob, not a predicted filename: a -SNAPSHOT version is published with Maven's unique
+                # timestamped snapshot naming (multilib-1.1.0-<timestamp>-<n>.jar, not literally
+                # multilib-1.1.0-SNAPSHOT.jar), and every push adds another one to the same directory -
+                # `sort | tail -1` picks the most recently published file.
+                jar_file=$(ls "$dir"/multilib-*.jar 2>/dev/null | grep -v -- '-sources\.jar$' | sort | tail -1)
+                src_file=$(ls "$dir"/multilib-*-sources.jar 2>/dev/null | sort | tail -1)
+                pom_file=$(ls "$dir"/multilib-*.pom 2>/dev/null | sort | tail -1)
+                jar_link="—"; [ -n "$jar_file" ] && jar_link="[jar]($BASE_URL/$v/$(basename "$jar_file"))"
+                src_link="—"; [ -n "$src_file" ] && src_link="[sources]($BASE_URL/$v/$(basename "$src_file"))"
+                pom_link="—"; [ -n "$pom_file" ] && pom_link="[pom]($BASE_URL/$v/$(basename "$pom_file"))"
                 echo "| \`$v\` | $type | $jar_link | $src_link | $pom_link |"
               done
             fi
