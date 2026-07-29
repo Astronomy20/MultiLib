@@ -152,7 +152,11 @@ if (!ext.hasKubeJSLib) sourceSets.main.resources.exclude 'kubejs.plugins.txt'
 tasks.named('jar', Jar) {
     exclude 'net/astronomy/multilib/example/**'
 
-    include 'assets/multilib/lang/**'
+    // No include(...) here: Gradle's PatternFilterable turns the whole CopySpec into a whitelist as
+    // soon as any include() is added, silently dropping compiled classes and everything else not
+    // explicitly re-included - a previous `include 'assets/multilib/lang/**'` here did exactly that
+    // (the published jar had only META-INF/MANIFEST.MF and the lang file). Lang files were never
+    // excluded by anything below, so they're already included by the implicit default (**).
     exclude 'assets/multilib/blockstates/**'
     exclude 'assets/multilib/models/**'
     exclude 'assets/multilib/guides/**'
