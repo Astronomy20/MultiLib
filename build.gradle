@@ -304,8 +304,11 @@ publishing {
     repositories {
         // Published on every push to the 1.21.1 branch by .github/workflows/docs.yml, merged into
         // the same GitHub Pages deploy as the wiki - see wiki/Maven-Releases.md.
+        // uri(Directory), not a hand-built "file://${projectDir}" string: projectDir renders with
+        // backslashes on Windows, which isn't a valid URI path separator and fails at publish time
+        // ("Cannot convert URI '...' to a file") - uri() builds a correct file: URI on every OS.
         maven {
-            url "file://${project.projectDir}/repo"
+            url = uri(layout.projectDirectory.dir("repo"))
         }
     }
 }
