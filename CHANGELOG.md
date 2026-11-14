@@ -113,6 +113,12 @@ is cut, its entries move under a new version heading and this section resets to 
   excluded, and the blanket `blockstates/**`/`models/**` excludes dropped the real devtool
   `dev_block`/`dev_wrench` blockstate and models along with the example ones — both now excluded (or
   kept) by an `example_*` filename pattern instead of a package/directory blanket.
+- Dedicated servers with MultiLib installed crashed during mod loading with `Attempted to load class
+  net/astronomy/multilib/client/network/ClientPacketHandler for invalid dist DEDICATED_SERVER`.
+  `MultiLib#registerPayloads` (which runs on both sides) passed the client-bound packet handlers as
+  method references to the `@OnlyIn(Dist.CLIENT)` `ClientPacketHandler`, and the JVM resolves a
+  method reference's target class as soon as the handler is created. The handlers are now lambdas,
+  so `ClientPacketHandler` is only loaded when a client actually handles one of those packets.
 
 ## Released versions
 

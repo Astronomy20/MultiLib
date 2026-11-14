@@ -142,6 +142,15 @@ public class MultiLib {
         }
     }
 
+    /**
+     * Registers every payload on both sides. This runs on dedicated servers too, so the client-bound
+     * ({@code playToClient}) handlers must go through lambdas, never method references to
+     * {@link ClientPacketHandler}: a method reference makes the JVM resolve {@code ClientPacketHandler}
+     * as soon as the handler object is created, right here, and that class is
+     * {@code @OnlyIn(Dist.CLIENT)}, so a dedicated server crashes at mod loading. A lambda compiles to a
+     * synthetic method in this class, and {@code ClientPacketHandler} is only resolved if the lambda
+     * body runs, which NeoForge only does on the client.
+     */
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
         registrar.playToServer(
@@ -159,16 +168,17 @@ public class MultiLib {
             RequestAutoPlacePreviewPacket.STREAM_CODEC,
             AutoPlacePreviewRequestHandler::handleRequest
         );
-        // playToClient handler is only invoked on the client side by NeoForge
+        // playToClient handlers are only invoked on the client side by NeoForge (see the javadoc above
+        // for why they're lambdas)
         registrar.playToClient(
             OverlayDataPacket.TYPE,
             OverlayDataPacket.STREAM_CODEC,
-            ClientPacketHandler::handleOverlayData
+            (packet, context) -> ClientPacketHandler.handleOverlayData(packet, context)
         );
         registrar.playToClient(
             AutoPlacePreviewDataPacket.TYPE,
             AutoPlacePreviewDataPacket.STREAM_CODEC,
-            ClientPacketHandler::handleAutoPlacePreviewData
+            (packet, context) -> ClientPacketHandler.handleAutoPlacePreviewData(packet, context)
         );
         registrar.playToServer(
             RequestDevScanPacket.TYPE,
@@ -188,12 +198,12 @@ public class MultiLib {
         registrar.playToClient(
             DevScanResultPacket.TYPE,
             DevScanResultPacket.STREAM_CODEC,
-            ClientPacketHandler::handleDevScanResult
+            (packet, context) -> ClientPacketHandler.handleDevScanResult(packet, context)
         );
         registrar.playToClient(
             DevExportResultPacket.TYPE,
             DevExportResultPacket.STREAM_CODEC,
-            ClientPacketHandler::handleDevExportResult
+            (packet, context) -> ClientPacketHandler.handleDevExportResult(packet, context)
         );
         registrar.playToServer(
             RequestDevAutoDetectTogglePacket.TYPE,
@@ -208,7 +218,7 @@ public class MultiLib {
         registrar.playToClient(
             DevListVisibilityPacket.TYPE,
             DevListVisibilityPacket.STREAM_CODEC,
-            ClientPacketHandler::handleDevListVisibility
+            (packet, context) -> ClientPacketHandler.handleDevListVisibility(packet, context)
         );
         registrar.playToServer(
             RequestDevRenderTogglePacket.TYPE,
@@ -223,7 +233,7 @@ public class MultiLib {
         registrar.playToClient(
             DevLoadListPacket.TYPE,
             DevLoadListPacket.STREAM_CODEC,
-            ClientPacketHandler::handleDevLoadList
+            (packet, context) -> ClientPacketHandler.handleDevLoadList(packet, context)
         );
         registrar.playToServer(
             RequestDevLoadPacket.TYPE,
@@ -233,7 +243,7 @@ public class MultiLib {
         registrar.playToClient(
             DevLoadResultPacket.TYPE,
             DevLoadResultPacket.STREAM_CODEC,
-            ClientPacketHandler::handleDevLoadResult
+            (packet, context) -> ClientPacketHandler.handleDevLoadResult(packet, context)
         );
         registrar.playToServer(
             RequestSetPreferredDefinitionPacket.TYPE,
@@ -243,7 +253,7 @@ public class MultiLib {
         registrar.playToClient(
             PreferredDefinitionResultPacket.TYPE,
             PreferredDefinitionResultPacket.STREAM_CODEC,
-            ClientPacketHandler::handlePreferredDefinitionResult
+            (packet, context) -> ClientPacketHandler.handlePreferredDefinitionResult(packet, context)
         );
     }
 }
