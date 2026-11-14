@@ -1,0 +1,60 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "net.astronomy.multilib",
+    "module": "multilib",
+    "version": "1.1.0-SNAPSHOT",
+    "attributes": {
+      "org.gradle.status": "integration"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.2.0"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "multilib-1.1.0-SNAPSHOT.jar",
+          "url": "multilib-1.1.0-SNAPSHOT.jar",
+          "size": 804961,
+          "sha512": "c3de84ee4b9fd9c3b7af1ad0e908f5e2408659e4ab0519f1a835ede372ec7bb74223fb610196add7c8a3d438b3e474171cdeab18e7ef37516db8f37264303aa9",
+          "sha256": "2c0b964cfd768e7e2df4d89da8d9251e35458f477f8bcdf47e7b31af88936c9b",
+          "sha1": "0a9872203f0cc17eb5b44f6f8b12314eb13f7295",
+          "md5": "d2416dd7b3d4ce664ca2787be0a834fa"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "multilib-1.1.0-SNAPSHOT.jar",
+          "url": "multilib-1.1.0-SNAPSHOT.jar",
+          "size": 804961,
+          "sha512": "c3de84ee4b9fd9c3b7af1ad0e908f5e2408659e4ab0519f1a835ede372ec7bb74223fb610196add7c8a3d438b3e474171cdeab18e7ef37516db8f37264303aa9",
+          "sha256": "2c0b964cfd768e7e2df4d89da8d9251e35458f477f8bcdf47e7b31af88936c9b",
+          "sha1": "0a9872203f0cc17eb5b44f6f8b12314eb13f7295",
+          "md5": "d2416dd7b3d4ce664ca2787be0a834fa"
+        }
+      ]
+    }
+  ]
+}
